@@ -1,0 +1,11 @@
+CC=g++
+CFLAGS=-O3 -ffast-math
+LDFLAGS=-static -lm
+
+all: TMalign
+
+TMalign: TMalign.cpp basic_fun.h  Kabsch.h  NW.h TMalign.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
+clean:
+	rm -f TMalign
