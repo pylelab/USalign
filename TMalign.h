@@ -289,10 +289,21 @@ double TMscore8_search( double **xtm,
 
 	//iterative parameters
 	int n_it=20;            //maximum number of iterations
-    const int n_init_max=6; //maximum number of different fragment length 
-    int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+    int n_init_max=6; //maximum number of different fragment length 
     int L_ini_min=4;
-    if(Lali<4) L_ini_min=Lali;   
+
+    if (f_opt)
+    {
+        //n_it-=fast_level; if (n_it<1) n_it=1;
+        //n_init_max-=fast_level; if (n_init_max<1) n_init_max=1;
+        L_ini_min+=fast_level;
+        int max_segment=(10-fast_level)>0?(10-fast_level):1;
+        if (L_ini_min<Lali/max_segment) L_ini_min=Lali/max_segment;
+    }
+
+    int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+    if(Lali<L_ini_min) L_ini_min=Lali;   
+
     int n_init=0, i_init;      
     for(i=0; i<n_init_max-1; i++)
     {
@@ -456,10 +467,21 @@ double TMscore8_search_standard(double **xtm,
 
 	//iterative parameters
 	int n_it = 20;            //maximum number of iterations
-	const int n_init_max = 6; //maximum number of different fragment length 
-	int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+	int n_init_max = 6; //maximum number of different fragment length 
 	int L_ini_min = 4;
-	if (Lali<4) L_ini_min = Lali;
+
+    if (f_opt)
+    {
+        //n_it-=fast_level; if (n_it<1) n_it=1;
+        //n_init_max-=fast_level; if (n_init_max<1) n_init_max=1;
+        L_ini_min+=fast_level;
+        int max_segment=(10-fast_level)>0?(10-fast_level):1;
+        if (L_ini_min<Lali/max_segment) L_ini_min=Lali/max_segment;
+    }
+
+	int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+	if (Lali<L_ini_min) L_ini_min = Lali;
+
 	int n_init = 0, i_init;
 	for (i = 0; i<n_init_max - 1; i++)
 	{

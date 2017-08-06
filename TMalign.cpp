@@ -25,38 +25,38 @@
 */
 #include "basic_define.h"
 
-char version[20];                          //version 
+char version[20];                 //version 
  
  
 //global variables
-double D0_MIN;                             //for d0
-double Lnorm;                              //normalization length
-double score_d8, d0, d0_search, dcu0;      //for TMscore search
-double **score;            			       //Input score table for dynamic programming
-bool   **path;                             //for dynamic programming  
-double **val;                              //for dynamic programming  
-int    xlen, ylen, minlen;                 //length of proteins
-int tempxlen, tempylen, tempMinlen;
-double **xa, **ya;                         //for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2]
-                                           //in general, ya is regarded as native structure --> superpose xa onto ya
-int    *xresno, *yresno;                   //residue numbers, used in fragment gapless threading 
-double **xtm, **ytm;                       //for TMscore search engine
-double **xt;                               //for saving the superposed version of r_1 or xtm
-char   *seqx, *seqy;                       //for the protein sequence 
-int    *secx, *secy;                       //for the secondary structure 
-double **r1, **r2;                         //for Kabsch rotation 
-double t[3], u[3][3];                      //Kabsch translation vector and rotation matrix
+double D0_MIN;                    //for d0
+double Lnorm;                     //normalization length
+double score_d8,d0,d0_search,dcu0;//for TMscore search
+double **score;            		  //Input score table for dynamic programming
+bool   **path;                    //for dynamic programming  
+double **val;                     //for dynamic programming  
+int    xlen, ylen, minlen;        //length of proteins
+int tempxlen, tempylen;
+double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2]
+                        //in general, ya is regarded as native structure --> superpose xa onto ya
+int    *xresno, *yresno;//residue numbers, used in fragment gapless threading 
+double **xtm, **ytm;    //for TMscore search engine
+double **xt;            //for saving the superposed version of r_1 or xtm
+char   *seqx, *seqy;    //for the protein sequence 
+int    *secx, *secy;    //for the secondary structure 
+double **r1, **r2;      //for Kabsch rotation 
+double t[3], u[3][3];   //Kabsch translation vector and rotation matrix
 
-int atomxlen, atomylen;        // length of atoms
-int *ia1, *ia2;                // ATOM indices, used for display
-char  **aa1, **aa2;           // "N", or "CA", or "C" 
-double **xyza1, **xyza2;      // for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2], just for display
-char **ra1, **ra2;           // for the protein sequence 
-int  *ir1, *ir2;             // residue numbers, used in fragment gapless threading 
+int atomxlen, atomylen; // length of atoms
+int *ia1, *ia2;         // ATOM indices, used for display
+char  **aa1, **aa2;     // "N", or "CA", or "C" 
+double **xyza1, **xyza2;// for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2], just for display
+char **ra1, **ra2;      // for the protein sequence 
+int  *ir1, *ir2;        // residue numbers, used in fragment gapless threading 
 
 char sequence[10][MAXLEN];// get value from alignment file
-double TM_ali, rmsd_ali;// TMscore and rmsd from standard_TMscore func, 
-int L_ali;// Aligned length from standard_TMscore func, 
+double TM_ali, rmsd_ali;  // TMscore and rmsd from standard_TMscore func, 
+int L_ali;                // Aligned length from standard_TMscore func, 
 
 char *ins1, *ins2, *ains1, *ains2;// flag characters for data read from PDB file, which begins with "ATOM", and locates at s(27), usually are spaces
 int **nres1, **nres2;// number of atoms, nres1(i,j): the number of atoms for ith residue, j usually is 32 for a space
@@ -69,6 +69,9 @@ bool o_opt, a_opt, u_opt, d_opt, v_opt;
 bool i_opt;// flags for -i, with user given initial alignment file
 bool m_opt;// flags for -m, output rotation matrix
 bool I_opt;// flags for -I, stick to user given initial alignment file
+
+int  fast_level; // 0 - default, 1 - faster
+bool f_opt; // flags for -f, fast but inaccurate alignment
 
 double TM3, TM4, TM5;
 
@@ -83,7 +86,6 @@ using namespace std;
 
 void print_help(char *arg)
 {
-
 	cout <<
 "\n"
 "*****************************************************************************\n"
@@ -131,7 +133,6 @@ void print_help(char *arg)
 "    TMalign PDB1.pdb PDB2.pdb -m matrix.txt\n\n";
        
   exit(EXIT_SUCCESS);
-
 }
 
 
@@ -181,23 +182,18 @@ void parameter_set4final(double len)
 	d0_search=d0;	
 	if(d0_search>8) d0_search=8;
 	if(d0_search<4.5) d0_search=4.5;  
-
 }
 
 
 void parameter_set4scale(int len, double d_s)
 {
- 
 	d0=d_s;          
 	Lnorm=len;            //normaliz TMscore by this in searching
 
 	d0_search=d0;	
 	if(d0_search>8) d0_search=8;
 	if(d0_search<4.5) d0_search=4.5;  
-
 }
-
-
 
 
 int main(int argc, char *argv[])
@@ -213,9 +209,9 @@ int main(int argc, char *argv[])
 	clock_t t1, t2;
 	t1 = clock();
 
-    /*********************************************************************************/
-	/*                                get argument                                   */ 
-    /*********************************************************************************/
+    /**********************/
+    /*    get argument    */ 
+    /**********************/
     char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
 	bool A_opt, B_opt, h_opt=false;
 	A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = v_opt = false;
@@ -224,6 +220,8 @@ int main(int argc, char *argv[])
 	char fname_lign[MAXLEN] = "";
 	char fname_matrix[MAXLEN] = "";// set names to ""
 	I_opt = false;// set -I flag to be false
+    fast_level = 0;
+    f_opt = false;
 
 	int nameIdx = 0;
 	for(int i = 1; i < argc; i++)
@@ -263,6 +261,10 @@ int main(int argc, char *argv[])
 		else if (!strcmp(argv[i], "-I") && i < (argc-1) ) 
 		{
 			strcpy(fname_lign, argv[i + 1]);      I_opt = true; i++;
+		}
+		else if (!strcmp(argv[i], "-f") && i < (argc-1) ) 
+		{
+			fast_level=atoi(argv[i + 1]);      f_opt = true; i++;
 		}
 		else
 		{
@@ -415,19 +417,15 @@ int main(int argc, char *argv[])
 	}
 
 
-
-    /*********************************************************************************/
-	/*                                load data                                      */ 
-    /*********************************************************************************/
+    /*******************/
+    /*    load data    */ 
+    /*******************/
     load_PDB_allocate_memory(xname, yname);
 
 
-
-    
-
-    /*********************************************************************************/
-	/*                                parameter set                                  */ 
-    /*********************************************************************************/
+    /***********************/
+    /*    parameter set    */ 
+    /***********************/
 	parameter_set4search(xlen, ylen);          //please set parameters in the function
     int simplify_step     = 40;               //for similified search engine
     int score_sum_method  = 8;                //for scoring method, whether only sum over pairs with dis<score_d8
@@ -442,15 +440,14 @@ int main(int argc, char *argv[])
 	}	
 
 
-
 	double ddcc=0.4;
 	if(Lnorm <= 40) ddcc=0.1;   //Lnorm was setted in parameter_set4search
 	double local_d0_search = d0_search;
 
-	//*********************************************************************************//
-	//                  get initial alignment from user's input:                       //
-	//                  Stick to the initial alignment                                 //
-	//*********************************************************************************//
+	//************************************************//
+	//    get initial alignment from user's input:    //
+	//    Stick to the initial alignment              //
+	//************************************************//
 	char dest[1000];
 	bool bAlignStick = false;
 	if (I_opt)// if input has set parameter for "-I"
@@ -500,9 +497,9 @@ int main(int argc, char *argv[])
 		bAlignStick = true;
 	}
 
-    /*********************************************************************************/
-	/*         get initial alignment with gapless threading                          */ 
-    /*********************************************************************************/
+    /******************************************************/
+    /*    get initial alignment with gapless threading    */ 
+    /******************************************************/
 	if (!bAlignStick)
 	{
 		get_initial(xa, ya, xlen, ylen, invmap0);
@@ -524,11 +521,9 @@ int main(int argc, char *argv[])
 		}
 
 
-
-
-		/*********************************************************************************/
-		/*         get initial alignment based on secondary structure                    */
-		/*********************************************************************************/
+		/************************************************************/
+		/*    get initial alignment based on secondary structure    */
+		/************************************************************/
 		get_initial_ss(xa, ya, xlen, ylen, invmap);
 		TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
 		if (TM>TMmax)
@@ -553,10 +548,9 @@ int main(int argc, char *argv[])
 		}
 
 
-
-		/*********************************************************************************/
-		/*         get initial alignment based on local superposition                    */
-		/*********************************************************************************/
+		/************************************************************/
+		/*    get initial alignment based on local superposition    */
+		/************************************************************/
 		//=initial5 in original TM-align
 		if (get_initial5(xa, ya, xlen, ylen, invmap))
 		{
@@ -588,12 +582,9 @@ int main(int argc, char *argv[])
 		}
 
 
-
-
-
-		/*********************************************************************************/
-		/*    get initial alignment based on previous alignment+secondary structure      */
-		/*********************************************************************************/
+		/*******************************************************************************/
+		/*    get initial alignment based on previous alignment+secondary structure    */
+		/*******************************************************************************/
 		//=initial3 in original TM-align
 		get_initial_ssplus(xa, ya, xlen, ylen, invmap0, invmap);
 		TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
@@ -619,12 +610,9 @@ int main(int argc, char *argv[])
 		}
 
 
-
-
-
-		/*********************************************************************************/
-		/*        get initial alignment based on fragment gapless threading              */
-		/*********************************************************************************/
+		/*******************************************************************/
+		/*    get initial alignment based on fragment gapless threading    */
+		/*******************************************************************/
 		//=initial4 in original TM-align
 		get_initial_fgt(xa, ya, xlen, ylen, xresno, yresno, invmap);
 		TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
@@ -650,9 +638,9 @@ int main(int argc, char *argv[])
 		}
 
 
-		//*********************************************************************************//
-		//                  get initial alignment from user's input:                       //
-		//*********************************************************************************//
+		//************************************************//
+		//    get initial alignment from user's input:    //
+		//************************************************//
 		if (i_opt)// if input has set parameter for "-i"
 		{
 			for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
@@ -712,9 +700,9 @@ int main(int argc, char *argv[])
 
 
 	
-    //*********************************************************************************//
-    //     The alignment will not be changed any more in the following                 //
-    //*********************************************************************************//
+    //*******************************************************************//
+    //    The alignment will not be changed any more in the following    //
+    //*******************************************************************//
 	//check if the initial alignment is generated approately	
 	bool flag=false;
 	for(i=0; i<ylen; i++)
@@ -733,12 +721,9 @@ int main(int argc, char *argv[])
 	}
 
 
-
-
-
-    //*********************************************************************************//
-    //       Detailed TMscore search engine  --> prepare for final TMscore             //
-    //*********************************************************************************//       
+    //********************************************************************//
+    //    Detailed TMscore search engine --> prepare for final TMscore    //
+    //********************************************************************//       
     //run detailed TMscore search engine for the best alignment, and 
 	//extract the best rotation matrix (t, u) for the best alginment
 	simplify_step=1;
@@ -793,12 +778,10 @@ int main(int argc, char *argv[])
 	rmsd0 = sqrt(rmsd0 / n_ali8);
 
 
-
-
-    //*********************************************************************************//
-    //                               Final TMscore                                     //
-    //                     Please set parameters for output                            //
-    //*********************************************************************************//
+    //****************************************//
+    //              Final TMscore             //
+    //    Please set parameters for output    //
+    //****************************************//
 	double rmsd;
 	double t0[3], u0[3][3];
 	double TM1, TM2;
@@ -823,9 +806,6 @@ int main(int argc, char *argv[])
 	d0B=d0;
 	local_d0_search = d0_search;
 	TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
-
-
-
 
 
 	if(a_opt)
@@ -863,26 +843,19 @@ int main(int argc, char *argv[])
 		TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
 		TM_0=TM5;
 	}
-
-   
         
 	output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix);
 
 
-
-
-
-
-    //*********************************************************************************//
-    //                            Done! Free memory                                    //
-    //*********************************************************************************//           
+    //*************************//
+    //    Done! Free memory    //
+    //*************************//
 	free_memory();
 
     delete [] invmap0;
     delete [] invmap;
 	delete [] m1;
 	delete [] m2;
-
 
     t2 = clock();    
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
