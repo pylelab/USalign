@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
-LDFLAGS=-static -lm
+LDFLAGS=-static# -lm
 
 all: TMalign
 

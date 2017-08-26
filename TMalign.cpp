@@ -181,11 +181,11 @@ int main(int argc, char *argv[])
 		if(v_opt)
 		{
 			cout<<endl<<
-"*****************************************************************************"
-"* TM-align (Version "<< version <<"): A protein structural alignment algorithm *"
-"* Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *"
-"* Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *"
-"*****************************************************************************"
+"*****************************************************************************\n"
+"* TM-align (Version "<< version <<"): A protein structural alignment algorithm *\n"
+"* Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
+"* Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
+"*****************************************************************************\n"
                 <<endl;
 			exit(EXIT_FAILURE);
 		}
