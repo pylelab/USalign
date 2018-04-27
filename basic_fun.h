@@ -32,8 +32,12 @@
 #include <iterator>
 #include <algorithm>
 
+#include <map>
+#include <sstream>
+
 #include "basic_define.h"
 
+using namespace std;
 
 
 void PrintErrorAndQuit(string sErrorString)
@@ -225,6 +229,7 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres)
     string atom ("ATOM "); 
 	string ter("TER");
 	string du1, i8;
+    map<string,int> resn_map;
     
 	int mk = 1;
     ifstream fin (filename);
@@ -244,15 +249,36 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres)
 						line.compare(12, 4, " CA ")==0 ||\
 						line.compare(12, 4, "  CA")==0 )
 					{
-						du1 = line.substr(26, 1);
+						du1 = line.substr(26, 1); // insertion code
 						int nDu1 = *(du1.c_str());// the ASCII code of du1
 
 						mk = 1;
 						if (line.compare(16, 1, "") != 0)
 						{
 							i8 = line.substr(22, 4);// get index of residue
-							const char* pi8 = i8.c_str();
-							int numi8 = atoi(pi8);
+							int numi8 = atoi(i8.c_str());
+
+                            // map residue index to 1 to L
+                            if (resn_map.find(i8)==resn_map.end())
+                            {
+                                numi8=resn_map.size()+1;
+                                resn_map[i8]=numi8;
+                            }
+                            else
+                            {
+                                numi8=resn_map[i8];
+                            }
+
+                            // change residue index in line
+                            stringstream i8_stream;
+                            i8_stream << numi8;
+                            i8=i8_stream.str();
+                            if (i8.size()<4)
+                            {
+                                i8=string(4-i8.size(), ' ')+i8;
+                            }
+                            line=line.substr(0,22)+i8+line.substr(26);
+
 							if (nres[numi8][nDu1] >= 1)// atom0[i][j]: i,j index begin from one
 								mk = -1;
 						}
