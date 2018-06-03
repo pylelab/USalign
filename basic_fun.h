@@ -245,9 +245,7 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres)
 			{
 				if(line.compare(0, atom.length(), atom)==0)
 				{
-					if( line.compare(12, 4, "CA  ")==0 ||\
-						line.compare(12, 4, " CA ")==0 ||\
-						line.compare(12, 4, "  CA")==0 )
+					if (line.compare(12, 4, " CA ")==0)
 					{
 						du1 = line.substr(26, 1); // insertion code
 						int nDu1 = *(du1.c_str());// the ASCII code of du1
@@ -378,9 +376,7 @@ int read_PDB_fullatom(char *filename, double **a, char *seq, int *resno, int *ia
 							strcpy(&ains[na], du1.c_str());
 							na++;
 
-							if (line.compare(12, 4, "CA  ") == 0 || \
-								line.compare(12, 4, " CA ") == 0 || \
-								line.compare(12, 4, "  CA") == 0)
+							if (line.compare(12, 4, " CA ") == 0)
 							{
 								get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
 								strcpy(&ins[i], du1.c_str());
