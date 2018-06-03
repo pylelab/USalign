@@ -227,7 +227,7 @@ int get_PDB_len(char *filename)
 	return i;
 }
 
-int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_opt=3)
+int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_opt=3, const string atom_opt=" CA ")
 {
     int i=0; // resi
     string line, str, i8;    
@@ -248,10 +248,10 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_op
 			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
                (line[16]==' ' || line[16]=='A'))
 			{
-				if (line.compare(12, 4, " CA ")==0)
+				if (line.compare(12, 4, atom_opt)==0)
 				{
                     if (!chainID) chainID=line[21];
-                    else if (ter_opt>=2 && chainID!=line[21]) break;
+                    else if (ter_opt>=2 && chainID!=line[21]) continue;
 
                     if (resn==line.substr(22,5))
                         cerr<<"Warning! Duplicated residue "<<resn<<endl;
@@ -286,10 +286,11 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_op
 }
 
 int read_PDB_fullatom(char *filename, double **a, char *seq, int *resno, int *ia, char **aa, char **ra, int *ir, double **xyza,
-	int **nres, string **atom0, char* ains, char* ins, int& atomlen)
+    int **nres, string **atom0, char* ains, char* ins, int& atomlen, 
+    const int ter_opt=3, const string atom_opt=" CA ")
 {
 	char dest[1000];
-
+    char chainID=0;
 
 	int i = 0;
 	string line, str;
@@ -303,71 +304,68 @@ int read_PDB_fullatom(char *filename, double **a, char *seq, int *resno, int *ia
 	ifstream fin(filename);
 	if (fin.is_open())
 	{
-		bool bGoRead = true;
-		while (fin.good() && bGoRead)
+		while (fin.good())
 		{
 			getline(fin, line);
-			if (i > 0 && line.compare(0, 3, ter) == 0)
+			if (i > 0)
+            {
+                if ((ter_opt>=1 && line.compare(0,3,"END")==0) || 
+                    (ter_opt>=3 && line.compare(0,3,"TER")==0)) break;
+            }
+			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54)
 			{
-				bGoRead = false;
-			}
-			else
-			{			
-				if (line.compare(0, atom.length(), atom) == 0)
+                if (!chainID) chainID=line[21];
+                else if (ter_opt>=2 && chainID!=line[21]) continue;
+
+				du1 = line.substr(26, 1);
+				int nDu1 = *(du1.c_str());// the ASCII code of du1
+
+				mk = 1;// Get flag for determination of nres, and atom0
+				if (line.compare(16, 1, " ") != 0)//if(s(17:17).ne.' '), find alternate atom
 				{
-					du1 = line.substr(26, 1);
-					int nDu1 = *(du1.c_str());// the ASCII code of du1
+					du2 = line.substr(12, 4);//get name of atom0
+					int idxBegin = du2.find_first_not_of(" ");
+					int idxEnd = du2.find_last_not_of(" ");
+					if (idxBegin>=0 && idxEnd >=0)
+						du2 = du2.substr(idxBegin, idxEnd + 1 - idxBegin);
 
-					mk = 1;// Get flag for determination of nres, and atom0
-					if (line.compare(16, 1, " ") != 0)//if(s(17:17).ne.' '), find alternate atom
+					i8 = line.substr(22, 4);// get index of residue
+					const char* pi8 = i8.c_str();
+					int numi8 = atoi(pi8);
+					int tempNo = nres[numi8][nDu1];// nres[i][j]: i index begins from one, j index begins from 32 to 122
+					for (int i1 = 1; i1 <= tempNo; i1++)
 					{
-						du2 = line.substr(12, 4);//get name of atom0
-						int idxBegin = du2.find_first_not_of(" ");
-						int idxEnd = du2.find_last_not_of(" ");
-						if (idxBegin>=0 && idxEnd >=0)
-							du2 = du2.substr(idxBegin, idxEnd + 1 - idxBegin);
-
-						i8 = line.substr(22, 4);// get index of residue
-						const char* pi8 = i8.c_str();
-						int numi8 = atoi(pi8);
-						int tempNo = nres[numi8][nDu1];// nres[i][j]: i index begins from one, j index begins from 32 to 122
-						for (int i1 = 1; i1 <= tempNo; i1++)
-						{
-							if (du2 == atom0[numi8][i1])// atom0[i][j]: i,j index begin from one
-								mk = -1;
-						}
+						if (du2 == atom0[numi8][i1])// atom0[i][j]: i,j index begin from one
+							mk = -1;
 					}
+				}
 
-					if (mk == 1)
+				if (mk == 1)
+				{
+					ntt++;
+					if (ntt >= NMAX2) break;
+					
+					get_xyz(line, &ia[na], &aa[na][0], &ra[na][0], &ir[na], &xyza[na][0], &xyza[na][1], &xyza[na][2]);// Get data for output	
+					
+					int numi8 = ir[na];
+					int tempNo = nres[numi8][nDu1];
+					if (tempNo < AtomLenMax - 1)
 					{
-						ntt++;
-						if (ntt < NMAX2)
-						{
-							get_xyz(line, &ia[na], &aa[na][0], &ra[na][0], &ir[na], &xyza[na][0], &xyza[na][1], &xyza[na][2]);// Get data for output	
-						
-							int numi8 = ir[na];
-							int tempNo = nres[numi8][nDu1];
-							if (tempNo < AtomLenMax - 1)
-							{
-								tempNo++;
-								nres[numi8][nDu1] = tempNo;
-								atom0[numi8][tempNo] = aa[na];
-							}
-							strcpy(&ains[na], du1.c_str());
-							na++;
+						tempNo++;
+						nres[numi8][nDu1] = tempNo;
+						atom0[numi8][tempNo] = aa[na];
+					}
+					strcpy(&ains[na], du1.c_str());
+					na++;
 
-							if (line.compare(12, 4, " CA ") == 0)
-							{
-								get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
-								strcpy(&ins[i], du1.c_str());
-								i++;
-							}// end if("CA")
-						}// end if (ntt < NMAX2)
-						else
-							bGoRead = false;// Stop reading data from PDB file
-					}				
-				}// end if (line.compare(0, atom.length(), atom) == 0), "ATOM"
-			}
+					if (line.compare(12, 4, atom_opt) == 0)
+					{
+						get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+						strcpy(&ins[i], du1.c_str());
+						i++;
+					}// end if("CA")
+				}				
+			}// end if (line.compare(0, atom.length(), atom) == 0), "ATOM"
 		}
 		fin.close();
 	}

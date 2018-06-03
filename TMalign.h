@@ -15,21 +15,10 @@
 */
 #include "basic_define.h"
 
-void load_PDB_allocate_memory(char *xname, char *yname, const int ter_opt=3)
+void load_PDB_allocate_memory(char *xname, char *yname, 
+    const int ter_opt=3, const string atom_opt=" CA ")
 {    
 
-    //------load data------>  
-	NewArray(&nres1, NMAX, ASCIILimit);// Only data from nres1[0~ NMAX-1][32~122] is used
-	NewArray(&nres2, NMAX, ASCIILimit);
-	for (int i = 0; i < NMAX; i++)// Initialization
-	{
-		for (int j = 0; j < ASCIILimit; j++)
-		{
-			nres1[i][j] = 0;
-			nres2[i][j] = 0;
-		}
-	}	
-	
 	tempxlen = get_PDB_len(xname);// Get predicted length
 	tempylen = get_PDB_len(yname);
 
@@ -46,12 +35,24 @@ void load_PDB_allocate_memory(char *xname, char *yname, const int ter_opt=3)
 
 	if (!o_opt)
 	{
-		xlen = read_PDB(xname, xa, seqx, xresno, ter_opt);// Get exact length
-		ylen = read_PDB(yname, ya, seqy, yresno, ter_opt);
+		xlen = read_PDB(xname, xa, seqx, xresno, ter_opt, atom_opt);// Get exact length
+		ylen = read_PDB(yname, ya, seqy, yresno, ter_opt, atom_opt);
 		minlen = min(xlen, ylen);
 	}
 	else
 	{
+        // nres1 and nres2 will be eventually be obsolete in the future
+	    NewArray(&nres1, NMAX, ASCIILimit);// Only data from nres1[0~ NMAX-1][32~122] is used
+	    NewArray(&nres2, NMAX, ASCIILimit);
+	    for (int i = 0; i < NMAX; i++)// Initialization
+	    {
+		    for (int j = 0; j < ASCIILimit; j++)
+		    {
+			    nres1[i][j] = 0;
+			    nres2[i][j] = 0;
+		    }
+	    }	
+
 		ia1 = new int[tempxlen];
 		NewArray(&aa1, tempxlen, charmax);
 		NewArray(&ra1, tempxlen, charmax);
@@ -85,8 +86,12 @@ void load_PDB_allocate_memory(char *xname, char *yname, const int ter_opt=3)
 			}
 		}
 
-		xlen = read_PDB_fullatom(xname, xa, seqx, xresno, ia1, aa1, ra1, ir1, xyza1, nres1, atom1, ains1, ins1, atomxlen);
-		ylen = read_PDB_fullatom(yname, ya, seqy, yresno, ia2, aa2, ra2, ir2, xyza2, nres2, atom2, ains2, ins2, atomylen);
+        xlen = read_PDB_fullatom(xname, xa, seqx, xresno, ia1, aa1, ra1, ir1,
+            xyza1, nres1, atom1, ains1, ins1, 
+            atomxlen, ter_opt, atom_opt);
+        ylen = read_PDB_fullatom(yname, ya, seqy, yresno, ia2, aa2, ra2, ir2,
+            xyza2, nres2, atom2, ains2, ins2, 
+            atomylen, ter_opt, atom_opt);
 		minlen = min(xlen, ylen);
 	}
     
@@ -141,11 +146,10 @@ void free_memory()
 		delete[]ins2;
 		delete[]ains1;
 		delete[]ains2;
-	}
 
-	DeleteArray(&nres1, NMAX);
-	DeleteArray(&nres2, NMAX);
-    
+	    DeleteArray(&nres1, NMAX);
+	    DeleteArray(&nres2, NMAX);
+	}
 }
 
 
@@ -1707,7 +1711,8 @@ void output_superpose(char *xname,
 					  double seq_id,
 					  double TM_0,
 					  double Lnorm_0,
-					  double d0_0
+					  double d0_0,
+                      const string atom_opt=" CA "
 					 )
 {
 	int i, j, j1;
@@ -1761,7 +1766,8 @@ void output_superpose(char *xname,
 	{
 		j=m1[i];
 		AAmap3(seqx[j], AA);
-		fprintf(fp, "ATOM  %5d  CA  %3s A%4d%c   %8.3f%8.3f%8.3f\n", j + 1, AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
+		fprintf(fp, "ATOM  %5d %4s %3s A%4d%c   %8.3f%8.3f%8.3f\n", 
+            j + 1, atom_opt.c_str(), AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
 	}
 	fprintf(fp, "TER\n");
 
@@ -1776,7 +1782,8 @@ void output_superpose(char *xname,
 	{
 		j=m2[i];
 		AAmap3(seqy[j], AA);
-		fprintf(fp, "ATOM  %5d  CA  %3s B%4d%c   %8.3f%8.3f%8.3f\n", j + max+ 1, AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
+		fprintf(fp, "ATOM  %5d %4s %3s B%4d%c   %8.3f%8.3f%8.3f\n",
+            j + max+ 1, atom_opt.c_str(), AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
 	}
 	fprintf(fp, "TER\n");
 	for(i=1; i<n_ali8; i++)
@@ -1835,7 +1842,8 @@ void output_superpose(char *xname,
 	{
 		j=i;
 		AAmap3(seqx[j], AA);
-		fprintf(fp, "ATOM  %5d  CA  %3s A%4d%c   %8.3f%8.3f%8.3f\n", j + 1, AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
+		fprintf(fp, "ATOM  %5d %4s %3s A%4d%c   %8.3f%8.3f%8.3f\n",
+            j + 1, atom_opt.c_str(), AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
 	}
 	fprintf(fp, "TER\n");
 
@@ -1848,7 +1856,8 @@ void output_superpose(char *xname,
 	{
 		j=i;
 		AAmap3(seqy[j], AA);
-		fprintf(fp, "ATOM  %5d  CA  %3s B%4d%c   %8.3f%8.3f%8.3f\n", j + max + 1, AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
+		fprintf(fp, "ATOM  %5d %4s %3s B%4d%c   %8.3f%8.3f%8.3f\n",
+            j + max + 1, atom_opt.c_str(), AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
 	}
 	fprintf(fp, "TER\n");
 	for(i=1; i<y_len; i++)
@@ -2016,7 +2025,8 @@ void output_results(char *xname,
 					 double TM_0,
 					 double Lnorm_0,
 					 double d0_0,
-					 char* matrix_name
+					 char* matrix_name,
+                     const string atom_opt=" CA "
 					 )
 {
     double seq_id;          
@@ -2186,10 +2196,9 @@ void output_results(char *xname,
 
 
 
-	if(o_opt)
-	{
-		output_superpose(xname, yname, x_len, y_len, t, u, rmsd, d0_out, m1, m2, n_ali8, seq_id, TM_0, Lnorm_0, d0_0);
-	}
+    if(o_opt)
+        output_superpose(xname, yname, x_len, y_len, t, u, rmsd, 
+            d0_out, m1, m2, n_ali8, seq_id, TM_0, Lnorm_0, d0_0, atom_opt);
 
 
 	delete [] seqM;

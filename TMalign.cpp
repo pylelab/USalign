@@ -49,8 +49,8 @@ void print_extra_help()
 //"             under 'chain2_folder'\n"
 //"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
 //"\n"
-//"    -atom    4-character atom name used to represent a residue\n"
-//"             default is ' CA '\n"
+"    -atom    4-character atom name used to represent a residue\n"
+"             default is ' CA '\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (default) 'TER', 'END', or different chain ID\n"
 "             2: 'END', or different chain ID\n"
@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
 	char fname_matrix[MAXLEN] = "";// set names to ""
 	I_opt = false;// set -I flag to be false
     fast_opt = false;// set -fast flag to be false
+    string atom_opt=" CA "; // read CA
 
 	int nameIdx = 0;
 	for(int i = 1; i < argc; i++)
@@ -181,6 +182,12 @@ int main(int argc, char *argv[])
 		else if ( !strcmp(argv[i],"-ter") && i < (argc-1) )
 		{
 			ter_opt=atoi(argv[i + 1]); i++;
+		}
+		else if ( !strcmp(argv[i],"-atom") && i < (argc-1) )
+		{
+			atom_opt=argv[i + 1]; i++;
+            if (atom_opt.size()!=4)
+                PrintErrorAndQuit("ERROR! atom name must be 4 characters, including space.");
 		}
 		else
 		{
@@ -333,7 +340,7 @@ int main(int argc, char *argv[])
     /*******************/
     /*    load data    */ 
     /*******************/
-    load_PDB_allocate_memory(xname, yname, ter_opt);
+    load_PDB_allocate_memory(xname, yname, ter_opt, atom_opt);
 
 
     /***********************/
@@ -758,7 +765,7 @@ int main(int argc, char *argv[])
 		TM_0=TM5;
 	}
         
-	output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix);
+	output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix, atom_opt);
 
 
     //*************************//
