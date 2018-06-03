@@ -1659,6 +1659,7 @@ void output_superpose(char *xname, double t[3], double u[3][3],
 	ofstream fp(out_reg);
     fp<<buf.str();
 	fp.close();
+    buf.str(string()); // clear stream
 }
 
 
