@@ -290,18 +290,8 @@ double TMscore8_search( double **xtm,
 	//iterative parameters
 	int n_it=20;            //maximum number of iterations
     int n_init_max=6; //maximum number of different fragment length 
-    int L_ini_min=4;
-
-    if (f_opt)
-    {
-        //n_it-=fast_level; if (n_it<1) n_it=1;
-        //n_init_max-=fast_level; if (n_init_max<1) n_init_max=1;
-        L_ini_min+=fast_level;
-        int max_segment=(10-fast_level)>0?(10-fast_level):1;
-        if (L_ini_min<Lali/max_segment) L_ini_min=Lali/max_segment;
-    }
-
     int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+    int L_ini_min=4;
     if(Lali<L_ini_min) L_ini_min=Lali;   
 
     int n_init=0, i_init;      
@@ -468,18 +458,8 @@ double TMscore8_search_standard(double **xtm,
 	//iterative parameters
 	int n_it = 20;            //maximum number of iterations
 	int n_init_max = 6; //maximum number of different fragment length 
-	int L_ini_min = 4;
-
-    if (f_opt)
-    {
-        //n_it-=fast_level; if (n_it<1) n_it=1;
-        //n_init_max-=fast_level; if (n_init_max<1) n_init_max=1;
-        L_ini_min+=fast_level;
-        int max_segment=(10-fast_level)>0?(10-fast_level):1;
-        if (L_ini_min<Lali/max_segment) L_ini_min=Lali/max_segment;
-    }
-
 	int L_ini[n_init_max];  //fragment lengths, Lali, Lali/2, Lali/4 ... 4   
+	int L_ini_min = 4;
 	if (Lali<L_ini_min) L_ini_min = Lali;
 
 	int n_init = 0, i_init;
@@ -899,7 +879,7 @@ double get_initial( double **x,
     double tmscore, tmscore_max=-1;
 
     k_best=n1;
-    for(k=n1; k<=n2; k++)
+    for(k=n1; k<=n2; k+=(fast_opt)?5:1)
     {
         //get the map
         for(j=0; j<y_len; j++)
@@ -1155,7 +1135,7 @@ void get_initial_ss(  double **x,
 }
 
 
-// get_initial5 in TMalign
+// get_initial5 in TMalign fortran, get_intial_local in TMalign c by yangji
 //get initial alignment of local structure superposition
 //input: x, y, x_len, y_len
 //output: y2x stores the best alignment: e.g., 
@@ -1169,96 +1149,99 @@ bool get_initial5(double **x,
 	int *y2x
 	)
 {
-	double GL, rmsd;
-	double t[3];
-	double u[3][3];
+    double GL, rmsd;
+    double t[3];
+    double u[3][3];
 
-	double d01 = d0 + 1.5;
-	if (d01 < D0_MIN) d01 = D0_MIN;
-	double d02 = d01*d01;
+    double d01 = d0 + 1.5;
+    if (d01 < D0_MIN) d01 = D0_MIN;
+    double d02 = d01*d01;
 
-	double GLmax = 0;
-	int aL = getmin(x_len, y_len);
-	int *invmap = new int[y_len + 1];
+    double GLmax = 0;
+    int aL = getmin(x_len, y_len);
+    int *invmap = new int[y_len + 1];
 
-	// jump on sequence1-------------->
-	int n_jump1 = 0;
-	if (x_len > 250)
-		n_jump1 = 45;
-	else if (x_len > 200)
-		n_jump1 = 35;
-	else if (x_len > 150)
-		n_jump1 = 25;
-	else
-		n_jump1 = 15;
-	if (n_jump1 > (x_len / 3))
-		n_jump1 = x_len / 3;
+    // jump on sequence1-------------->
+    int n_jump1 = 0;
+    if (x_len > 250)
+        n_jump1 = 45;
+    else if (x_len > 200)
+        n_jump1 = 35;
+    else if (x_len > 150)
+        n_jump1 = 25;
+    else
+        n_jump1 = 15;
+    if (n_jump1 > (x_len / 3))
+        n_jump1 = x_len / 3;
 
-	// jump on sequence2-------------->
-	int n_jump2 = 0;
-	if (y_len > 250)
-		n_jump2 = 45;
-	else if (y_len > 200)
-		n_jump2 = 35;
-	else if (y_len > 150)
-		n_jump2 = 25;
-	else
-		n_jump2 = 15;
-	if (n_jump2 > (y_len / 3))
-		n_jump2 = y_len / 3;
+    // jump on sequence2-------------->
+    int n_jump2 = 0;
+    if (y_len > 250)
+        n_jump2 = 45;
+    else if (y_len > 200)
+        n_jump2 = 35;
+    else if (y_len > 150)
+        n_jump2 = 25;
+    else
+        n_jump2 = 15;
+    if (n_jump2 > (y_len / 3))
+        n_jump2 = y_len / 3;
 
-	// fragment to superimpose-------------->
-	int n_frag[2] = { 20, 100 };
-	if (n_frag[0] > (aL / 3))
-		n_frag[0] = aL / 3;
-	if (n_frag[1] > (aL / 2))
-		n_frag[1] = aL / 2;
+    // fragment to superimpose-------------->
+    int n_frag[2] = { 20, 100 };
+    if (n_frag[0] > (aL / 3))
+        n_frag[0] = aL / 3;
+    if (n_frag[1] > (aL / 2))
+        n_frag[1] = aL / 2;
 
-	// start superimpose search-------------->
-	bool flag = false;
-	for (int i_frag = 0; i_frag < 2; i_frag++)
-	{
-		int m1 = x_len - n_frag[i_frag] + 1;
-		int m2 = y_len - n_frag[i_frag] + 1;
+    // start superimpose search-------------->
+    if (fast_opt)
+    {
+        n_jump1*=5;
+        n_jump2*=5;
+    }
+    bool flag = false;
+    for (int i_frag = 0; i_frag < 2; i_frag++)
+    {
+        int m1 = x_len - n_frag[i_frag] + 1;
+        int m2 = y_len - n_frag[i_frag] + 1;
 
-		//for (int i = 1; i<m1; i = i + n_jump1) //index starts from 0, different from FORTRAN
-		// for debug
-		for (int i = 0; i<m1; i = i + n_jump1) //index starts from 0, different from FORTRAN
-		{
-			//for (int j = 1; j<m2; j = j + n_jump2)
-			for (int j = 0; j<m2; j = j + n_jump2)
-			{
-				for (int k = 0; k<n_frag[i_frag]; k++) //fragment in y
-				{
-					r1[k][0] = x[k + i][0];
-					r1[k][1] = x[k + i][1];
-					r1[k][2] = x[k + i][2];
+        for (int i = 0; i<m1; i = i + n_jump1) //index starts from 0, different from FORTRAN
+        {
+            for (int j = 0; j<m2; j = j + n_jump2)
+            {
+                for (int k = 0; k<n_frag[i_frag]; k++) //fragment in y
+                {
+                    r1[k][0] = x[k + i][0];
+                    r1[k][1] = x[k + i][1];
+                    r1[k][2] = x[k + i][2];
 
-					r2[k][0] = y[k + j][0];
-					r2[k][1] = y[k + j][1];
-					r2[k][2] = y[k + j][2];
-				}
+                    r2[k][0] = y[k + j][0];
+                    r2[k][1] = y[k + j][1];
+                    r2[k][2] = y[k + j][2];
+                }
 
-				// superpose the two structures and rotate it
-				Kabsch(r1, r2, n_frag[i_frag], 1, &rmsd, t, u);
+                // superpose the two structures and rotate it
+                Kabsch(r1, r2, n_frag[i_frag], 1, &rmsd, t, u);
 
-				double gap_open = 0.0;
-				NWDP_TM(x, y, x_len, y_len, t, u, d02, gap_open, invmap);
-				GL = get_score_fast(x, y, x_len, y_len, invmap);
-				if (GL>GLmax)
-				{
-					GLmax = GL;
-					for (int ii = 0; ii<y_len; ii++)
-					{
-						y2x[ii] = invmap[ii];
-					}
-					flag = true;
-				}
-			}
-		}
-	}
-	delete[] invmap;
-	return flag;
+                double gap_open = 0.0;
+                NWDP_TM(x, y, x_len, y_len, t, u, d02, gap_open, invmap);
+                GL = get_score_fast(x, y, x_len, y_len, invmap);
+                if (GL>GLmax)
+                {
+                    GLmax = GL;
+                    for (int ii = 0; ii<y_len; ii++)
+                    {
+                        y2x[ii] = invmap[ii];
+                    }
+                    flag = true;
+                }
+            }
+        }
+    }
+
+    delete[] invmap;
+    return flag;
 }
 
 //with invmap(i) calculate score(i,j) using RMSD rotation
@@ -1390,6 +1373,7 @@ void get_initial_ssplus( double **x,
 void find_max_frag(double **x, int *resno, int len, int *start_max, int *end_max)
 {
 	int r_min, fra_min=4;           //minimum fragment for search
+    if (fast_opt) fra_min=8;
 	double d;
 	int start;
 	int Lfr_max=0, flag;
@@ -1479,6 +1463,7 @@ double get_initial_fgt( double **x,
 						)
 {
 	int fra_min=4;           //minimum fragment for search
+    if (fast_opt) fra_min=8;
 	int fra_min1=fra_min-1;  //cutoff for shift, save time
 
 	int xstart=0, ystart=0, xend=0, yend=0;
@@ -1544,7 +1529,7 @@ double get_initial_fgt( double **x,
 		n2 = L1-min_ali;
 
 		int i, j, k;
-		for(k=n1; k<=n2; k++)
+		for(k=n1; k<=n2; k+=(fast_opt)?3:1)
 		{
 			//get the map
 			for(j=0; j<y_len; j++)

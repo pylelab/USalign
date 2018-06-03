@@ -35,8 +35,24 @@ using namespace std;
 #include "Kabsch.h"
 #include "TMalign.h"
 
+void print_extra_help()
+{
+	cout <<
+"Additional options: \n"
+"    -fast    Fast but slightly inaccurate alignment\n"
+"\n"
+//"    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
+//"             under 'chain1_folder'\n"
+//"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
+//"\n"
+//"    -ter     Strings to mark the end of a chain\n"
+//"             3: (default) 'TER', 'END', or different chain ID\n"
+//"             2: 'END', or different chain ID\n"
+//"             1: 'END'\n"
+    <<endl;
+}
 
-void print_help(char *arg)
+void print_help(bool h_opt=false)
 {
 	cout <<
 "\n"
@@ -63,17 +79,17 @@ void print_help(char *arg)
 "    -m    Output TM-align rotation matrix:\n\n"
 "    -d    TM-score scaled by an assigned d0, e.g. 5 Angstroms\n\n"
 "    -o    output the superposition to TM.sup, TM.sup_all and TM.sup_atm\n"
-"          >TMalign chain1 chain2 -o TM.sup\n"
+"          $ TMalign chain1 chain2 -o TM.sup\n"
 "          To view superimposed C-alpha traces of aligned regions by rasmol:\n"
-"          >rasmol -script TM.sup\n"
+"          $ rasmol -script TM.sup\n"
 "          To view superimposed C-alpha traces of all regions:\n"
-"          >rasmol -script TM.sup_all\n\n"
+"          $ rasmol -script TM.sup_all\n\n"
 "          To view superimposed full-atom structures of aligned regions:\n"
-"          >rasmol -script TM.sup_atm\n\n"
+"          $ rasmol -script TM.sup_atm\n\n"
 "          To view superimposed full-atom structures of all regions:\n"
-"          >rasmol -script TM.sup_all_atm\n\n"
+"          $ rasmol -script TM.sup_all_atm\n\n"
 "          To view superimposed full-atom structures of all regions with ligands:\n"
-"          >rasmol -script TM.sup_all_atm_lig\n\n"
+"          $ rasmol -script TM.sup_all_atm_lig\n\n"
 "    -v    print the version of TM-align\n\n"
 "    -h    print this help\n\n"
 "    (Options -u, -a, -d -o won't change the final structure alignment)\n\n"
@@ -82,18 +98,17 @@ void print_help(char *arg)
 "    TMalign PDB1.pdb PDB2.pdb -u 100 -d 5.0\n"
 "    TMalign PDB1.pdb PDB2.pdb -a T -o PDB1.sup\n"
 "    TMalign PDB1.pdb PDB2.pdb -i align.txt\n"
-"    TMalign PDB1.pdb PDB2.pdb -m matrix.txt\n\n";
-       
-  exit(EXIT_SUCCESS);
-}
+"    TMalign PDB1.pdb PDB2.pdb -m matrix.txt\n"
+    <<endl;
 
+    if (h_opt) print_extra_help();
+       
+    exit(EXIT_SUCCESS);
+}
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) 
-    {
-        print_help(argv[0]);        
-    } 
+    if (argc < 2) print_help();
 	
 	
 	clock_t t1, t2;
@@ -110,8 +125,7 @@ int main(int argc, char *argv[])
 	char fname_lign[MAXLEN] = "";
 	char fname_matrix[MAXLEN] = "";// set names to ""
 	I_opt = false;// set -I flag to be false
-    fast_level = 0;
-    f_opt = false;
+    fast_opt = false;// set -fast flag to be false
 
 	int nameIdx = 0;
 	for(int i = 1; i < argc; i++)
@@ -152,9 +166,9 @@ int main(int argc, char *argv[])
 		{
 			strcpy(fname_lign, argv[i + 1]);      I_opt = true; i++;
 		}
-		else if (!strcmp(argv[i], "-f") && i < (argc-1) ) 
+		else if (!strcmp(argv[i], "-fast"))
 		{
-			fast_level=atoi(argv[i + 1]);      f_opt = true; i++;
+			fast_opt = true;
 		}
 		else
 		{
@@ -173,10 +187,7 @@ int main(int argc, char *argv[])
 	if(!B_opt || !A_opt)
 	{
 
-		if( h_opt )
-		{
-			print_help(argv[0]);    			
-		}
+		if( h_opt ) print_help(h_opt);
 		
 		if(v_opt)
 		{
@@ -400,7 +411,7 @@ int main(int argc, char *argv[])
 			TMmax = TM;
 		}
 		//run dynamic programing iteratively to find the best alignment
-		TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 30, local_d0_search);
+		TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
 		if (TM>TMmax)
 		{
 			TMmax = TM;
@@ -426,7 +437,7 @@ int main(int argc, char *argv[])
 		}
 		if (TM > TMmax*0.2)
 		{
-			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 30, local_d0_search);
+			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
 			if (TM>TMmax)
 			{
 				TMmax = TM;
@@ -488,7 +499,7 @@ int main(int argc, char *argv[])
 		}
 		if (TM > TMmax*ddcc)
 		{
-			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 30, local_d0_search);
+			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
 			if (TM>TMmax)
 			{
 				TMmax = TM;
@@ -576,7 +587,7 @@ int main(int argc, char *argv[])
 				for (i = 0; i<ylen; i++)
 					invmap0[i] = invmap[i];
 			}
-			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 30, local_d0_search);// Different from get_initial, get_initial_ss and get_initial_ssplus
+			TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);// Different from get_initial, get_initial_ss and get_initial_ssplus
 			if (TM>TMmax)
 			{
 				TMmax = TM;
@@ -617,6 +628,7 @@ int main(int argc, char *argv[])
     //run detailed TMscore search engine for the best alignment, and 
 	//extract the best rotation matrix (t, u) for the best alginment
 	simplify_step=1;
+    if (fast_opt) simplify_step=40;
     score_sum_method=8;
 	TM = detailed_search_standard(xa, ya, xlen, ylen, invmap0, t, u, simplify_step, score_sum_method, local_d0_search, false);
 		

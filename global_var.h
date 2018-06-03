@@ -42,8 +42,6 @@ bool o_opt, a_opt, u_opt, d_opt, v_opt;
 bool i_opt;// flags for -i, with user given initial alignment file
 bool m_opt;// flags for -m, output rotation matrix
 bool I_opt;// flags for -I, stick to user given initial alignment file
-
-int  fast_level; // 0 - default, 1 - faster
-bool f_opt; // flags for -f, fast but inaccurate alignment
+bool fast_opt; // flags for -fast, fast but inaccurate alignment
 
 double TM3, TM4, TM5;
