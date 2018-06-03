@@ -15,7 +15,7 @@
 */
 #include "basic_define.h"
 
-void load_PDB_allocate_memory(char *xname, char *yname)
+void load_PDB_allocate_memory(char *xname, char *yname, const int ter_opt=3)
 {    
 
     //------load data------>  
@@ -46,8 +46,8 @@ void load_PDB_allocate_memory(char *xname, char *yname)
 
 	if (!o_opt)
 	{
-		xlen = read_PDB(xname, xa, seqx, xresno, nres1);// Get exact length
-		ylen = read_PDB(yname, ya, seqy, yresno, nres2);
+		xlen = read_PDB(xname, xa, seqx, xresno, ter_opt);// Get exact length
+		ylen = read_PDB(yname, ya, seqy, yresno, ter_opt);
 		minlen = min(xlen, ylen);
 	}
 	else

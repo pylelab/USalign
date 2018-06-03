@@ -14,10 +14,6 @@
 ===============================================================================
 */
 
-#define ATOMNMAX 90000//upper limit for number of ATOM, 
-#define CANMAX 5000//upper limit for number of C-alpha, 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -31,6 +27,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <string>
 
 #include <map>
 #include <sstream>
@@ -64,61 +61,69 @@ template <class A> void DeleteArray(A *** array, int Narray)
 
 char AAmap(string AA)
 {
-    char A=' ';
-    if(     AA.compare("BCK")==0)   A='X';
-    else if(AA.compare("GLY")==0)   A='G';
-    else if(AA.compare("ALA")==0)   A='A';
-    else if(AA.compare("SER")==0)   A='S';
-    else if(AA.compare("CYS")==0)   A='C';
-    else if(AA.compare("VAL")==0)   A='V';     
-    else if(AA.compare("THR")==0)   A='T';
-    else if(AA.compare("ILE")==0)   A='I';
-    else if(AA.compare("PRO")==0)   A='P';
-    else if(AA.compare("MET")==0)   A='M';
-    else if(AA.compare("ASP")==0)   A='D';
-    else if(AA.compare("ASN")==0)   A='N';
-    else if(AA.compare("LEU")==0)   A='L';
-    else if(AA.compare("LYS")==0)   A='K';
-    else if(AA.compare("GLU")==0)   A='E';
-    else if(AA.compare("GLN")==0)   A='Q';
-    else if(AA.compare("ARG")==0)   A='R';
-    else if(AA.compare("HIS")==0)   A='H';
-    else if(AA.compare("PHE")==0)   A='F';
-    else if(AA.compare("TYR")==0)   A='Y';
-    else if(AA.compare("TRP")==0)   A='W';    
-    else if(AA.compare("CYX")==0)   A='C';
-    else
-        A='Z'; //ligand
-        
+    char A='X';
+    if      (AA.compare("ALA")==0) A='A';
+    else if (AA.compare("ASX")==0) A='B';
+    else if (AA.compare("CYS")==0 || AA.compare("CYX")==0) A='C';
+    else if (AA.compare("ASP")==0) A='D';
+    else if (AA.compare("GLU")==0) A='E';
+    else if (AA.compare("PHE")==0) A='F';
+    else if (AA.compare("GLY")==0) A='G';
+    else if (AA.compare("HIS")==0) A='H';
+    else if (AA.compare("ILE")==0) A='I';
+    else if (AA.compare("LYS")==0) A='K';
+    else if (AA.compare("LEU")==0) A='L';
+    else if (AA.compare("MET")==0 || AA.compare("MSE")==0) A='M';
+    else if (AA.compare("ASN")==0) A='N';
+    else if (AA.compare("PYL")==0) A='O';
+    else if (AA.compare("PRO")==0) A='P';
+    else if (AA.compare("GLN")==0) A='Q';
+    else if (AA.compare("ARG")==0) A='R';
+    else if (AA.compare("SER")==0) A='S';
+    else if (AA.compare("THR")==0) A='T';
+    else if (AA.compare("SEC")==0) A='U';
+    else if (AA.compare("VAL")==0) A='V';     
+    else if (AA.compare("TRP")==0) A='W';    
+    else if (AA.compare("TYR")==0) A='Y';
+    else if (AA.compare("GLX")==0) A='Z';
+
+    if      (AA.compare(0,2," D")==0) A=tolower(AA[2]);
+    else if (AA.compare(0,2,"  ")==0) A=tolower(AA[2]);
     return A;
 }
 
 void AAmap3(char A, char AA[3])
 {
-    if     ( A=='X')   strcpy(AA, "BCK");
-	else if( A=='G')   strcpy(AA, "GLY");
-	else if( A=='A')   strcpy(AA, "ALA");
-	else if( A=='S')   strcpy(AA, "SER");
-	else if( A=='C')   strcpy(AA, "CYS");
-	else if( A=='V')   strcpy(AA, "VAL");
-	else if( A=='T')   strcpy(AA, "THR");
-	else if( A=='I')   strcpy(AA, "ILE");
-	else if( A=='P')   strcpy(AA, "PRO");
-	else if( A=='M')   strcpy(AA, "MET");
-	else if( A=='D')   strcpy(AA, "ASP");
-	else if( A=='N')   strcpy(AA, "ASN");
-	else if( A=='L')   strcpy(AA, "LEU");
-	else if( A=='K')   strcpy(AA, "LYS");
-	else if( A=='E')   strcpy(AA, "GLU");
-	else if( A=='Q')   strcpy(AA, "GLN");
-	else if( A=='R')   strcpy(AA, "ARG");
-	else if( A=='H')   strcpy(AA, "HIS");
-	else if( A=='F')   strcpy(AA, "PHE");
-	else if( A=='Y')   strcpy(AA, "TYR");
-	else if( A=='W')   strcpy(AA, "TRP");
-	else if( A=='C')   strcpy(AA, "CYX");
-    else
-        strcpy(AA, "UNK");           
+    if (islower(A))
+    {
+        strcpy(AA,"   ");
+        AA[2]=toupper(A);
+    }
+    else if (A=='A') strcpy(AA,"ALA");
+    else if (A=='B') strcpy(AA,"ASX");
+	else if (A=='C') strcpy(AA,"CYS");
+	else if (A=='D') strcpy(AA,"ASP");
+	else if (A=='E') strcpy(AA,"GLU");
+	else if (A=='F') strcpy(AA,"PHE");
+	else if (A=='G') strcpy(AA,"GLY");
+	else if (A=='H') strcpy(AA,"HIS");
+	else if (A=='I') strcpy(AA,"ILE");
+	else if (A=='K') strcpy(AA,"LYS");
+	else if (A=='L') strcpy(AA,"LEU");
+	else if (A=='M') strcpy(AA,"MET");
+	else if (A=='N') strcpy(AA,"ASN");
+	else if (A=='O') strcpy(AA,"PYL");
+	else if (A=='P') strcpy(AA,"PRO");
+	else if (A=='Q') strcpy(AA,"GLN");
+	else if (A=='R') strcpy(AA,"ARG");
+	else if (A=='S') strcpy(AA,"SER");
+	else if (A=='T') strcpy(AA,"THR");
+	else if (A=='U') strcpy(AA,"SEC");
+	else if (A=='V') strcpy(AA,"VAL");
+	else if (A=='W') strcpy(AA,"TRP");
+	else if (A=='Y') strcpy(AA,"TYR");
+	else if (A=='Z') strcpy(AA,"GLX");
+    else             strcpy(AA,"UNK");           
 }
 
 
@@ -222,75 +227,50 @@ int get_PDB_len(char *filename)
 	return i;
 }
 
-int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres)
+int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_opt=3)
 {
-    int i=0;
-    string line, str;    
-    string atom ("ATOM "); 
-	string ter("TER");
-	string du1, i8;
-    map<string,int> resn_map;
+    int i=0; // resi
+    string line, str, i8;    
+    char chainID=0;
+	string resn="";
     
-	int mk = 1;
     ifstream fin (filename);
     if (fin.is_open())
     {
-		bool bGoRead = true;
-		while (fin.good() && bGoRead)
+		while (fin.good())
         {
             getline(fin, line);
-			if (i > 0 && line.compare(0, 3, ter) == 0)
-				bGoRead = false;
-			else
+			if (i > 0)
+            {
+                if ((ter_opt>=1 && line.compare(0,3,"END")==0) || 
+                    (ter_opt>=3 && line.compare(0,3,"TER")==0)) break;
+            }
+			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
+               (line[16]==' ' || line[16]=='A'))
 			{
-				if(line.compare(0, atom.length(), atom)==0)
+				if (line.compare(12, 4, " CA ")==0)
 				{
-					if (line.compare(12, 4, " CA ")==0)
-					{
-						du1 = line.substr(26, 1); // insertion code
-						int nDu1 = *(du1.c_str());// the ASCII code of du1
+                    if (!chainID) chainID=line[21];
+                    else if (ter_opt>=2 && chainID!=line[21]) break;
 
-						mk = 1;
-						if (line.compare(16, 1, "") != 0)
-						{
-							i8 = line.substr(22, 4);// get index of residue
-							int numi8 = atoi(i8.c_str());
+                    if (resn==line.substr(22,5))
+                        cerr<<"Warning! Duplicated residue "<<resn<<endl;
+                    resn=line.substr(22,5);
 
-                            // map residue index to 1 to L
-                            if (resn_map.find(i8)==resn_map.end())
-                            {
-                                numi8=resn_map.size()+1;
-                                resn_map[i8]=numi8;
-                            }
-                            else
-                            {
-                                numi8=resn_map[i8];
-                            }
+                    // change residue index in line
+                    stringstream i8_stream;
+                    i8_stream << i;
+                    i8=i8_stream.str();
+                    if (i8.size()<4)
+                    {
+                        i8=string(4-i8.size(), ' ')+i8;
+                    }
+                    line=line.substr(0,22)+i8+line.substr(26);
 
-                            // change residue index in line
-                            stringstream i8_stream;
-                            i8_stream << numi8;
-                            i8=i8_stream.str();
-                            if (i8.size()<4)
-                            {
-                                i8=string(4-i8.size(), ' ')+i8;
-                            }
-                            line=line.substr(0,22)+i8+line.substr(26);
-
-							if (nres[numi8][nDu1] >= 1)// atom0[i][j]: i,j index begin from one
-								mk = -1;
-						}
-						
-						if (mk == 1)
-						{  
-							get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
-							
-							nres[resno[i]][nDu1] ++;
-							i++;
-						}
-					}                  
-				}    			
-			}        
+					get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+                    i++;
+				}
+			}
         }
         fin.close();
     }

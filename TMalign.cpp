@@ -45,10 +45,17 @@ void print_extra_help()
 //"             under 'chain1_folder'\n"
 //"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
 //"\n"
-//"    -ter     Strings to mark the end of a chain\n"
-//"             3: (default) 'TER', 'END', or different chain ID\n"
-//"             2: 'END', or different chain ID\n"
-//"             1: 'END'\n"
+//"    -dir2    Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
+//"             under 'chain2_folder'\n"
+//"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
+//"\n"
+//"    -atom    4-character atom name used to represent a residue\n"
+//"             default is ' CA '\n"
+"    -ter     Strings to mark the end of a chain\n"
+"             3: (default) 'TER', 'END', or different chain ID\n"
+"             2: 'END', or different chain ID\n"
+"             1: 'END'\n"
+"             0:  end of file\n"
     <<endl;
 }
 
@@ -119,6 +126,7 @@ int main(int argc, char *argv[])
     /**********************/
     char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
 	bool A_opt, B_opt, h_opt=false;
+    int ter_opt = 3; // TER, END, or different chainID
 	A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = v_opt = false;
 	i_opt = false;// set -i flag to be false
 	m_opt = false;// set -m flag to be false
@@ -169,6 +177,10 @@ int main(int argc, char *argv[])
 		else if (!strcmp(argv[i], "-fast"))
 		{
 			fast_opt = true;
+		}
+		else if ( !strcmp(argv[i],"-ter") && i < (argc-1) )
+		{
+			ter_opt=atoi(argv[i + 1]); i++;
 		}
 		else
 		{
@@ -321,7 +333,7 @@ int main(int argc, char *argv[])
     /*******************/
     /*    load data    */ 
     /*******************/
-    load_PDB_allocate_memory(xname, yname);
+    load_PDB_allocate_memory(xname, yname, ter_opt);
 
 
     /***********************/
