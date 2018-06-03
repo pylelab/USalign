@@ -1763,23 +1763,6 @@ void output_results(char *xname,
 
 	seq_id=seq_id/( n_ali8+0.00000001); //what did by TMalign, but not reasonable, it should be n_ali8    
 
-
-
-
- 
-
-
-
-	
-	cout <<endl;	
-	cout << " *****************************************************************************" << endl
-		 << " * TM-align (Version "<< version <<"): A protein structural alignment algorithm     *" << endl
-		 << " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *" << endl
-		 << " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *" << endl
-		 << " *****************************************************************************" << endl;	
-
-
-	
 	printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n", xname); 
 	printf("Name of Chain_2: %s\n", yname);
 	printf("Length of Chain_1: %d residues\n", x_len);

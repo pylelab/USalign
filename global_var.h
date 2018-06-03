@@ -1,4 +1,4 @@
-const char *version="20160521";   //version 
+const char *TMalign_version="20160521";   //version 
  
  
 //global variables
@@ -20,13 +20,6 @@ int    *secx, *secy;    //for the secondary structure
 double **r1, **r2;      //for Kabsch rotation 
 double t[3], u[3][3];   //Kabsch translation vector and rotation matrix
 
-int atomxlen, atomylen; // length of atoms
-int *ia1, *ia2;         // ATOM indices, used for display
-char  **aa1, **aa2;     // "N", or "CA", or "C" 
-double **xyza1, **xyza2;// for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2], just for display
-char **ra1, **ra2;      // for the protein sequence 
-int  *ir1, *ir2;        // residue numbers, used in fragment gapless threading 
-
 char sequence[10][MAXLEN];// get value from alignment file
 double TM_ali, rmsd_ali;  // TMscore and rmsd from standard_TMscore func, 
 int L_ali;                // Aligned length from standard_TMscore func, 
@@ -34,7 +27,7 @@ int L_ali;                // Aligned length from standard_TMscore func,
 //argument variables
 char out_reg[MAXLEN];
 double Lnorm_ass, Lnorm_d0, d0_scale, d0A, d0B, d0u, d0a;
-bool o_opt, a_opt, u_opt, d_opt, v_opt;
+bool o_opt, a_opt, u_opt, d_opt;
 bool i_opt;// flags for -i, with user given initial alignment file
 bool m_opt;// flags for -m, output rotation matrix
 bool I_opt;// flags for -I, stick to user given initial alignment file

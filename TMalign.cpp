@@ -60,12 +60,23 @@ void print_extra_help()
     <<endl;
 }
 
+void print_version()
+{
+	cout << "\n *****************************************************************************\n"
+            " * TM-align (Version "<< TMalign_version <<
+            "): A protein structural alignment algorithm     *\n"
+		    " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
+		    " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
+		    " *****************************************************************************"
+         << endl;
+}
+
 void print_help(bool h_opt=false)
 {
 	cout <<
 "\n"
 "*****************************************************************************\n"
-"* TM-align (Version "<< version
+"* TM-align (Version "<< TMalign_version
                       <<    "): An algorithm for protein structure alignment *\n"
 "* Based on statistics:                                                      *\n"
 "*          0.0 < TM-score < 0.30, random structural similarity              *\n"
@@ -129,8 +140,9 @@ int main(int argc, char *argv[])
     /**********************/
     char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
 	bool A_opt, B_opt, h_opt=false;
+    bool v_opt = false;
     int ter_opt = 3; // TER, END, or different chainID
-	A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = v_opt = false;
+	A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = false;
 	i_opt = false;// set -i flag to be false
 	m_opt = false;// set -m flag to be false
 	char fname_lign[MAXLEN] = "";
@@ -213,13 +225,7 @@ int main(int argc, char *argv[])
 		
 		if(v_opt)
 		{
-			cout<<endl<<
-"*****************************************************************************\n"
-"* TM-align (Version "<< version <<"): A protein structural alignment algorithm *\n"
-"* Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
-"* Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
-"*****************************************************************************\n"
-                <<endl;
+            print_version();
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -501,7 +507,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			cout << endl << endl << "Warning: initial alignment from local superposition fail!" << endl << endl << endl;
+			cout << "\n\nWarning: initial alignment from local superposition fail!\n\n" << endl;
 		}
 
 
@@ -767,7 +773,8 @@ int main(int argc, char *argv[])
 		TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
 		TM_0=TM5;
 	}
-        
+    
+    print_version();
     output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix, ter_opt);
 
 
