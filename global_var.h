@@ -31,10 +31,6 @@ char sequence[10][MAXLEN];// get value from alignment file
 double TM_ali, rmsd_ali;  // TMscore and rmsd from standard_TMscore func, 
 int L_ali;                // Aligned length from standard_TMscore func, 
 
-char *ins1, *ins2, *ains1, *ains2;// flag characters for data read from PDB file, which begins with "ATOM", and locates at s(27), usually are spaces
-int **nres1, **nres2;// number of atoms, nres1(i,j): the number of atoms for ith residue, j usually is 32 for a space
-
-
 //argument variables
 char out_reg[MAXLEN];
 double Lnorm_ass, Lnorm_d0, d0_scale, d0A, d0B, d0u, d0a;

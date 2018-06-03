@@ -30,7 +30,6 @@
 #include <string>
 
 #include <map>
-#include <sstream>
 
 #include "basic_define.h"
 
@@ -92,41 +91,6 @@ char AAmap(string AA)
     return A;
 }
 
-void AAmap3(char A, char AA[3])
-{
-    if (islower(A))
-    {
-        strcpy(AA,"   ");
-        AA[2]=toupper(A);
-    }
-    else if (A=='A') strcpy(AA,"ALA");
-    else if (A=='B') strcpy(AA,"ASX");
-	else if (A=='C') strcpy(AA,"CYS");
-	else if (A=='D') strcpy(AA,"ASP");
-	else if (A=='E') strcpy(AA,"GLU");
-	else if (A=='F') strcpy(AA,"PHE");
-	else if (A=='G') strcpy(AA,"GLY");
-	else if (A=='H') strcpy(AA,"HIS");
-	else if (A=='I') strcpy(AA,"ILE");
-	else if (A=='K') strcpy(AA,"LYS");
-	else if (A=='L') strcpy(AA,"LEU");
-	else if (A=='M') strcpy(AA,"MET");
-	else if (A=='N') strcpy(AA,"ASN");
-	else if (A=='O') strcpy(AA,"PYL");
-	else if (A=='P') strcpy(AA,"PRO");
-	else if (A=='Q') strcpy(AA,"GLN");
-	else if (A=='R') strcpy(AA,"ARG");
-	else if (A=='S') strcpy(AA,"SER");
-	else if (A=='T') strcpy(AA,"THR");
-	else if (A=='U') strcpy(AA,"SEC");
-	else if (A=='V') strcpy(AA,"VAL");
-	else if (A=='W') strcpy(AA,"TRP");
-	else if (A=='Y') strcpy(AA,"TYR");
-	else if (A=='Z') strcpy(AA,"GLX");
-    else             strcpy(AA,"UNK");           
-}
-
-
 void get_xyz(string line, double *x, double *y, double *z, char *resname, int *no)
 {
     char cstr[50];    
@@ -145,59 +109,6 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
 
     strcpy(cstr, (line.substr(22, 4)).c_str());
 	sscanf(cstr, "%d", no);
-}
-
-string Trim(string inputString)
-{
-	string result = inputString;
-	int idxBegin = inputString.find_first_not_of(" ");
-	int idxEnd = inputString.find_last_not_of(" ");
-	if (idxBegin >= 0 && idxEnd >= 0)
-		result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
-	return result;
-}
-
-// This function is used to get data for output, the data will not be used for alignment
-void get_xyz(string line, int *ia1, char *aa, char *ra, int *ir, double *x, double *y, double *z)
-{
-	string tempLine = line.substr(6, 5);
-	tempLine = Trim(tempLine);
-	sscanf(tempLine.c_str(), "%d", ia1);
-
-	tempLine = line.substr(12, 4);
-	tempLine = Trim(tempLine);
-	strcpy(aa, tempLine.c_str());
-
-	strcpy(ra, (line.substr(17, 3)).c_str());
-
-	char cstr[50];
-	strcpy(cstr, (line.substr(22, 4)).c_str());
-	sscanf(cstr, "%d", ir);
-
-	strcpy(cstr, (line.substr(30, 8)).c_str());
-	sscanf(cstr, "%lf", x);
-
-	strcpy(cstr, (line.substr(38, 8)).c_str());
-	sscanf(cstr, "%lf", y);
-
-	strcpy(cstr, (line.substr(46, 8)).c_str());
-	sscanf(cstr, "%lf", z);
-}
-
-void get_xyz(string line, double *x, double *y, double *z, string *resname)
-{
-	char cstr[50];
-
-	strcpy(cstr, (line.substr(30, 8)).c_str());
-	sscanf(cstr, "%lf", x);
-
-	strcpy(cstr, (line.substr(38, 8)).c_str());
-	sscanf(cstr, "%lf", y);
-
-	strcpy(cstr, (line.substr(46, 8)).c_str());
-	sscanf(cstr, "%lf", z);
-
-	(*resname) = line.substr(0, 30);
 }
 
 int get_PDB_len(char *filename)
@@ -227,7 +138,8 @@ int get_PDB_len(char *filename)
 	return i;
 }
 
-int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_opt=3, const string atom_opt=" CA ")
+int read_PDB(char *filename, double **a, char *seq, int *resno, 
+    const int ter_opt=3, const string atom_opt=" CA ")
 {
     int i=0; // resi
     string line, str, i8;    
@@ -242,8 +154,8 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_op
             getline(fin, line);
 			if (i > 0)
             {
-                if ((ter_opt>=1 && line.compare(0,3,"END")==0) || 
-                    (ter_opt>=3 && line.compare(0,3,"TER")==0)) break;
+                if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
+                else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
 			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
                (line[16]==' ' || line[16]=='A'))
@@ -251,7 +163,7 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_op
 				if (line.compare(12, 4, atom_opt)==0)
 				{
                     if (!chainID) chainID=line[21];
-                    else if (ter_opt>=2 && chainID!=line[21]) continue;
+                    else if (ter_opt>=2 && chainID!=line[21]) break;
 
                     if (resn==line.substr(22,5))
                         cerr<<"Warning! Duplicated residue "<<resn<<endl;
@@ -285,180 +197,6 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, const int ter_op
     return i;
 }
 
-int read_PDB_fullatom(char *filename, double **a, char *seq, int *resno, int *ia, char **aa, char **ra, int *ir, double **xyza,
-    int **nres, string **atom0, char* ains, char* ins, int& atomlen, 
-    const int ter_opt=3, const string atom_opt=" CA ")
-{
-	char dest[1000];
-    char chainID=0;
-
-	int i = 0;
-	string line, str;
-	string atom("ATOM ");
-	string ter("TER");
-
-	int na = 0;
-	int ntt = 0;
-	int mk = 1;
-	string du1, du2, i8;
-	ifstream fin(filename);
-	if (fin.is_open())
-	{
-		while (fin.good())
-		{
-			getline(fin, line);
-			if (i > 0)
-            {
-                if ((ter_opt>=1 && line.compare(0,3,"END")==0) || 
-                    (ter_opt>=3 && line.compare(0,3,"TER")==0)) break;
-            }
-			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54)
-			{
-                if (!chainID) chainID=line[21];
-                else if (ter_opt>=2 && chainID!=line[21]) continue;
-
-				du1 = line.substr(26, 1);
-				int nDu1 = *(du1.c_str());// the ASCII code of du1
-
-				mk = 1;// Get flag for determination of nres, and atom0
-				if (line.compare(16, 1, " ") != 0)//if(s(17:17).ne.' '), find alternate atom
-				{
-					du2 = line.substr(12, 4);//get name of atom0
-					int idxBegin = du2.find_first_not_of(" ");
-					int idxEnd = du2.find_last_not_of(" ");
-					if (idxBegin>=0 && idxEnd >=0)
-						du2 = du2.substr(idxBegin, idxEnd + 1 - idxBegin);
-
-					i8 = line.substr(22, 4);// get index of residue
-					const char* pi8 = i8.c_str();
-					int numi8 = atoi(pi8);
-					int tempNo = nres[numi8][nDu1];// nres[i][j]: i index begins from one, j index begins from 32 to 122
-					for (int i1 = 1; i1 <= tempNo; i1++)
-					{
-						if (du2 == atom0[numi8][i1])// atom0[i][j]: i,j index begin from one
-							mk = -1;
-					}
-				}
-
-				if (mk == 1)
-				{
-					ntt++;
-					if (ntt >= NMAX2) break;
-					
-					get_xyz(line, &ia[na], &aa[na][0], &ra[na][0], &ir[na], &xyza[na][0], &xyza[na][1], &xyza[na][2]);// Get data for output	
-					
-					int numi8 = ir[na];
-					int tempNo = nres[numi8][nDu1];
-					if (tempNo < AtomLenMax - 1)
-					{
-						tempNo++;
-						nres[numi8][nDu1] = tempNo;
-						atom0[numi8][tempNo] = aa[na];
-					}
-					strcpy(&ains[na], du1.c_str());
-					na++;
-
-					if (line.compare(12, 4, atom_opt) == 0)
-					{
-						get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
-						strcpy(&ins[i], du1.c_str());
-						i++;
-					}// end if("CA")
-				}				
-			}// end if (line.compare(0, atom.length(), atom) == 0), "ATOM"
-		}
-		fin.close();
-	}
-	else
-	{
-		char message[5000];
-		sprintf(message, "Can not open file: %s\n", filename);
-		PrintErrorAndQuit(message);
-	}
-	seq[i] = '\0';
-	
-	ins[i] = '\0';
-	ains[na] = '\0';
-
-	atomlen = na;
-	return i;
-}
-
-int get_ligand_len(char *filename)
-{
-    int i=0;
-    string line;    
-	string atom1("ATOM  ");
-	string atom2("HETATM");
-    string finish ("END"); 
-    
-    ifstream fin (filename);
-    if (fin.is_open())
-    {
-        while ( fin.good() )
-        {
-            getline(fin, line);
-			if (line.compare(0, atom1.length(), atom1) == 0 || line.compare(0, atom2.length(), atom2) == 0)
-            {
-               i++;
-            }
-            else if(line.compare(0, finish.length(), finish)==0) 
-            {
-                break;
-            }          
-        }
-        fin.close();
-    }
-    else
-    {
-		char message[5000];
-		sprintf(message, "Can not open file: %s\n", filename);
-        PrintErrorAndQuit(message);
-    } 
-    
-    return i;
-}
-
-int read_ligand(char *filename, double **a, string *seq)
-{
-    int i=0;
-    char cstr[100];    
-    string line, du;    
-	string atom1("ATOM  ");
-	string atom2 ("HETATM"); 
-    string finish ("END"); 
-    
-    
-    ifstream fin (filename);
-    if (fin.is_open())
-    {
-        while ( fin.good() )
-        {
-            getline(fin, line);
-            if(line.compare(0, atom1.length(), atom1)==0 || line.compare(0, atom2.length(), atom2)==0)
-            {
-				get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i]);
-                i++;
-            }
-            else if(line.compare(0, finish.length(), finish)==0) 
-            {
-                break;
-            }          
-        }
-        fin.close();
-    }
-    else
-    {
-		char message[5000];
-		sprintf(message, "Can not open file: %s\n", filename);
-        PrintErrorAndQuit(message);     
-    } 
-    
-    return i;
-}
-
-
-
 double dist(double x[3], double y[3])
 {
 	double d1=x[0]-y[0];
@@ -487,8 +225,6 @@ void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
         transform(t, u, &x[i][0], &x1[i][0]);
     }    
 }
-
-
 
 void output_align1(int *invmap0, int len)
 {

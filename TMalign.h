@@ -14,6 +14,7 @@
 ===============================================================================
 */
 #include "basic_define.h"
+#include <iomanip>
 
 void load_PDB_allocate_memory(char *xname, char *yname, 
     const int ter_opt=3, const string atom_opt=" CA ")
@@ -33,67 +34,10 @@ void load_PDB_allocate_memory(char *xname, char *yname,
 	yresno = new int[tempylen];
 	secy = new int[tempylen];
 
-	if (!o_opt)
-	{
-		xlen = read_PDB(xname, xa, seqx, xresno, ter_opt, atom_opt);// Get exact length
-		ylen = read_PDB(yname, ya, seqy, yresno, ter_opt, atom_opt);
-		minlen = min(xlen, ylen);
-	}
-	else
-	{
-        // nres1 and nres2 will be eventually be obsolete in the future
-	    NewArray(&nres1, NMAX, ASCIILimit);// Only data from nres1[0~ NMAX-1][32~122] is used
-	    NewArray(&nres2, NMAX, ASCIILimit);
-	    for (int i = 0; i < NMAX; i++)// Initialization
-	    {
-		    for (int j = 0; j < ASCIILimit; j++)
-		    {
-			    nres1[i][j] = 0;
-			    nres2[i][j] = 0;
-		    }
-	    }	
-
-		ia1 = new int[tempxlen];
-		NewArray(&aa1, tempxlen, charmax);
-		NewArray(&ra1, tempxlen, charmax);
-		ir1 = new int[tempxlen];
-		NewArray(&xyza1, tempxlen, 3);
-
-		ia2 = new int[tempylen];
-		NewArray(&aa2, tempylen, charmax);
-		NewArray(&ra2, tempylen, charmax);
-		ir2 = new int[tempylen];
-		NewArray(&xyza2, tempylen, 3);
-
-		ins1 = new char[NMAX];
-		ins2 = new char[NMAX];
-		memset(ins1, 0, sizeof(ins1));// Initialization
-		memset(ins2, 0, sizeof(ins2));
-
-		ains1 = new char[NMAX2];
-		ains2 = new char[NMAX2];
-		memset(ains1, 0, sizeof(ains1));// Initialization
-		memset(ains2, 0, sizeof(ains2));
-
-		NewArray(&atom1, NMAX, AtomLenMax);// character*500 atom1(nmax,30),atom2(nmax,30) !atom name
-		NewArray(&atom2, NMAX, AtomLenMax);// Here atom1[][0], atom2[][0] are not used, the index of position begins from one
-		for (int i = 0; i < NMAX; i++)// Initialization
-		{
-			for (int j = 0; j < AtomLenMax; j++)
-			{
-				atom1[i][j] = "";
-				atom2[i][j] = "";
-			}
-		}
-
-        xlen = read_PDB_fullatom(xname, xa, seqx, xresno, ia1, aa1, ra1, ir1,
-            xyza1, nres1, atom1, ains1, ins1, 
-            atomxlen, ter_opt, atom_opt);
-        ylen = read_PDB_fullatom(yname, ya, seqy, yresno, ia2, aa2, ra2, ir2,
-            xyza2, nres2, atom2, ains2, ins2, 
-            atomylen, ter_opt, atom_opt);
-		minlen = min(xlen, ylen);
-	}
+    // Get exact length
+	xlen = read_PDB(xname, xa, seqx, xresno, ter_opt, atom_opt);
+	ylen = read_PDB(yname, ya, seqy, yresno, ter_opt, atom_opt);
+	minlen = min(xlen, ylen);
     
     //------allocate memory for other temporary varialbes------>
  	NewArray(&r1, minlen, 3);
@@ -127,29 +71,6 @@ void free_memory()
     delete [] secy;
     delete [] xresno;
     delete [] yresno;
-
-	if (o_opt)
-	{
-		DeleteArray(&xyza1, tempxlen);
-		DeleteArray(&aa1, tempxlen);
-		DeleteArray(&ra1, tempxlen);
-		delete[] ia1;
-		delete[] ir1;
-
-		DeleteArray(&xyza2, tempylen);
-		DeleteArray(&aa2, tempylen);
-		DeleteArray(&ra2, tempylen);
-		delete[] ia2;
-		delete[] ir2;
-
-		delete[]ins1;
-		delete[]ins2;
-		delete[]ains1;
-		delete[]ains2;
-
-	    DeleteArray(&nres1, NMAX);
-	    DeleteArray(&nres2, NMAX);
-	}
 }
 
 
@@ -1697,313 +1618,47 @@ double DP_iter( double **x,
 }
 
 
-void output_superpose(char *xname,
-					  char *yname,
-					  int x_len,
-					  int y_len,
-					  double t[3],
-					  double u[3][3],
-					  double rmsd,
-					  double d0_out,
-					  int m1[], 
-					  int m2[],
-					  int n_ali8,
-					  double seq_id,
-					  double TM_0,
-					  double Lnorm_0,
-					  double d0_0,
-                      const string atom_opt=" CA "
-					 )
+void output_superpose(char *xname, double t[3], double u[3][3], 
+    const int ter_opt=3)
 {
-	int i, j, j1;
-	double dis2;
-
-	int max=5000;
-
-
-	//aligned region
-	FILE *fp = fopen(out_reg, "w");
-	fprintf(fp, "load inline\n");
-	fprintf(fp, "select *A\n");
-	fprintf(fp, "wireframe .45\n");
-	fprintf(fp, "select *B\n");
-	fprintf(fp, "wireframe .20\n");
-	fprintf(fp, "select all\n");
-	fprintf(fp, "color white\n");
-
-
-	do_rotation(xa, xt, x_len, t, u);
-	for(i=0; i<n_ali8; i++)
+    ifstream fin(xname);
+    stringstream buf;
+    string line;
+    double x[3];  // before transform
+    double x1[3]; // after transform
+    if (fin.is_open())
+    {
+		while (fin.good())
+        {
+            getline(fin, line);
+            if (line.compare(0, 6, "ATOM  ")==0 || 
+                line.compare(0, 6, "HETATM")==0)
+            {
+                x[0]=atof(line.substr(30,8).c_str());
+                x[1]=atof(line.substr(38,8).c_str());
+                x[2]=atof(line.substr(46,8).c_str());
+                transform(t, u, x, x1);
+                buf<<line.substr(0,30)<<setiosflags(ios::fixed)
+                    <<setprecision(3)
+                    <<setw(8)<<x1[0] <<setw(8)<<x1[1] <<setw(8)<<x1[2]
+                    <<line.substr(54)<<'\n';
+            }
+            else if (line.size())
+                buf<<line<<'\n';
+            if (ter_opt>=1 && line.compare(0,3,"END")==0) break;
+        }
+        fin.close();
+    }
+    else
 	{
-		j=m1[i];
-		j1=m2[i];
-		dis2=sqrt(dist(&xt[j][0], &ya[j1][0])) ;
-		if(dis2<=d0_out)
-		{
-			fprintf(fp, "select %4d:A,%4d:B\n", xresno[j], yresno[j1]);
-			fprintf(fp, "color red\n");
-		}
+		char message[5000];
+		sprintf(message, "Can not open file: %s\n", xname);
+		PrintErrorAndQuit(message);
 	}
 
-	fprintf(fp, "select all\n");
-	fprintf(fp, "exit\n");
-	fprintf(fp, "REMARK TM-align Version %s\n", version);
-	string basename(xname);
-	int idx = basename.find_last_of("\\");
-	string xtempbase = basename.substr(idx + 1, basename.length());
-	fprintf(fp, "REMARK Structure A:%s   Size=%4d\n", xtempbase.c_str(), x_len);
-	basename = string(yname);
-	idx = basename.find_last_of("\\");
-	string ytempbase = basename.substr(idx + 1, basename.length());
-	fprintf(fp, "REMARK Structure B:%s   Size=%4d\n", ytempbase.c_str(), y_len);
-	fprintf(fp, "(TM-score is normalized by %4d, d0=%6.2f)\n", int(Lnorm_0), d0_0);
-	fprintf(fp, "REMARK Aligned length=%4d, RMSD=%6.2f, TM-score=%7.5f, ID=%5.3f\n", n_ali8, rmsd, TM_0, seq_id);
-
-
-	char AA[4];
-	//superposed structure B
-	for(i=0; i<n_ali8; i++)
-	{
-		j=m1[i];
-		AAmap3(seqx[j], AA);
-		fprintf(fp, "ATOM  %5d %4s %3s A%4d%c   %8.3f%8.3f%8.3f\n", 
-            j + 1, atom_opt.c_str(), AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
-	}
-	fprintf(fp, "TER\n");
-
-	for(i=1; i<n_ali8; i++)
-	{
-		j=m1[i-1]+1;
-		j1=m1[i]+1;
-		fprintf(fp, "CONECT%5d%5d\n", j, j1);
-	}
-	//structure A
-	for(i=0; i<n_ali8; i++)
-	{
-		j=m2[i];
-		AAmap3(seqy[j], AA);
-		fprintf(fp, "ATOM  %5d %4s %3s B%4d%c   %8.3f%8.3f%8.3f\n",
-            j + max+ 1, atom_opt.c_str(), AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
-	}
-	fprintf(fp, "TER\n");
-	for(i=1; i<n_ali8; i++)
-	{
-		j=max+m2[i-1]+1;
-		j1=max+m2[i]+1;
-		fprintf(fp, "CONECT%5d%5d\n", j, j1);
-	}
-
-	fclose(fp);
-
-
-
-
-
-
-
-	//  output CA - trace of whole chain in 'TM.sup_all' -------->
-	//all regions
-	char str[3000];
-	sprintf(str, "%s_all", out_reg);
-	fp=fopen(str, "w");
-	fprintf(fp, "load inline\n");
-	fprintf(fp, "select *A\n");
-	fprintf(fp, "wireframe .45\n");
-	fprintf(fp, "select none\n");
-	fprintf(fp, "select *B\n");
-	fprintf(fp, "wireframe .20\n");
-	fprintf(fp, "color white\n");
-
-	for(i=0; i<n_ali8; i++)
-	{
-		j=m1[i];
-		j1=m2[i];
-		dis2=sqrt(dist(&xt[j][0], &ya[j1][0])) ;
-		if(dis2<=d0_out)
-		{
-			fprintf(fp, "select %4d:A,%4d:B\n", xresno[j], yresno[j1]);
-			fprintf(fp, "color red\n");
-		}
-	}
-
-
-	fprintf(fp, "select all\n");
-	fprintf(fp, "exit\n");
-	fprintf(fp, "REMARK TM-align Version %s\n", version);
-	fprintf(fp, "REMARK Structure A:%s   Size=%4d\n", xtempbase.c_str(), x_len);
-	fprintf(fp, "REMARK Structure B:%s   Size=%4d ", ytempbase.c_str(), y_len);
-	fprintf(fp, "(TM-score is normalized by %4d, d0=%6.2f)\n", int(Lnorm_0), d0_0);
-	fprintf(fp, "REMARK Aligned length=%4d, RMSD=%6.2f, TM-score=%7.5f, ID=%5.3f\n", n_ali8, rmsd, TM_0, seq_id);
-
-
-
-	//superposed structure B
-	for(i=0; i<x_len; i++)
-	{
-		j=i;
-		AAmap3(seqx[j], AA);
-		fprintf(fp, "ATOM  %5d %4s %3s A%4d%c   %8.3f%8.3f%8.3f\n",
-            j + 1, atom_opt.c_str(), AA, xresno[j], ins1[j], xt[j][0], xt[j][1], xt[j][2]);
-	}
-	fprintf(fp, "TER\n");
-
-	for(i=1; i<x_len; i++)
-	{
-		fprintf(fp, "CONECT%5d%5d\n", i, i+1);
-	}
-	//structure A
-	for(i=0; i<y_len; i++)
-	{
-		j=i;
-		AAmap3(seqy[j], AA);
-		fprintf(fp, "ATOM  %5d %4s %3s B%4d%c   %8.3f%8.3f%8.3f\n",
-            j + max + 1, atom_opt.c_str(), AA, yresno[j], ins2[j], ya[j][0], ya[j][1], ya[j][2]);
-	}
-	fprintf(fp, "TER\n");
-	for(i=1; i<y_len; i++)
-	{
-		fprintf(fp, "CONECT%5d%5d\n", max+i, max+i+1);
-	}
-	fclose(fp);
-
-
-	///////  output full - atomic structure of whole chain in 'TM.sup_atm' -------->
-	sprintf(str, "%s_atm", out_reg);
-	fp = fopen(str, "w");
-	fprintf(fp, "load inline\n");
-	fprintf(fp, "select *A\n");
-	fprintf(fp, "color blue\n");
-	fprintf(fp, "select *B\n");
-	fprintf(fp, "color red\n");
-	fprintf(fp, "select all\n");
-	fprintf(fp, "cartoon\n");
-	fprintf(fp, "exit\n");
-
-	fprintf(fp, "REMARK TM-align Version %s\n", version);
-	fprintf(fp, "REMARK Structure A:%s   Size=%4d\n", xtempbase.c_str(), x_len);
-	fprintf(fp, "REMARK Structure B:%s   Size=%4d ", ytempbase.c_str(), y_len);
-	fprintf(fp, "(TM-score is normalized by %4d, d0=%6.2f)\n", int(Lnorm_0), d0_0);
-	fprintf(fp, "REMARK Aligned length=%4d, RMSD=%6.2f, TM-score=%7.5f, ID=%5.3f\n", n_ali8, rmsd, TM_0, seq_id);
-
-	// chain_1: structure A
-	double **coord;
-	NewArray(&coord, atomxlen, 3);
-	do_rotation(xyza1, coord, atomxlen, t, u);
-	for (i = 0; i < atomxlen; i++)
-	{
-		for (j = 0; j < n_ali8; j++)
-		{
-			if (ir1[i] == xresno[m1[j]])
-			{
-				if (ains1[i] == ins1[m1[j]])
-					fprintf(fp, "ATOM  %5d  %-4s%3s A%4d%c   %8.3f%8.3f%8.3f\n", ia1[i], aa1[i], ra1[i], ir1[i], ains1[i], coord[i][0], coord[i][1], coord[i][2]);
-			}
-		}
-	}
-	fprintf(fp, "TER\n");
-
-	// chain_2: structure B, coordinates don't change at all
-	for (i = 0; i < atomylen; i++)
-	{
-		for (j = 0; j < n_ali8; j++)
-		{
-			if (ir2[i] == yresno[m2[j]])
-			{
-				if (ains2[i] == ins2[m2[j]])
-					fprintf(fp, "ATOM  %5d  %-4s%3s B%4d%c   %8.3f%8.3f%8.3f\n", ia2[i], aa2[i], ra2[i], ir2[i], ains2[i], xyza2[i][0], xyza2[i][1], xyza2[i][2]);
-			}
-		}
-	}
-	fprintf(fp, "TER\n");
-
-	fclose(fp);
-
-
-	///////  output full - atomic structure of whole chain in 'TM.sup_all_atm' -------->
-	sprintf(str, "%s_all_atm", out_reg);
-	fp = fopen(str, "w");
-	fprintf(fp, "load inline\n");
-	fprintf(fp, "select *A\n");
-	fprintf(fp, "color blue\n");
-	fprintf(fp, "select *B\n");
-	fprintf(fp, "color red\n");
-	fprintf(fp, "select all\n");
-	fprintf(fp, "cartoon\n");
-	fprintf(fp, "exit\n");
-
-	fprintf(fp, "REMARK TM-align Version %s\n", version);
-	fprintf(fp, "REMARK Structure A:%s   Size=%4d\n", xtempbase.c_str(), x_len);
-	fprintf(fp, "REMARK Structure B:%s   Size=%4d ", ytempbase.c_str(), y_len);
-	fprintf(fp, "(TM-score is normalized by %4d, d0=%.2f)\n", int(Lnorm_0), d0_0);
-	fprintf(fp, "REMARK Aligned length=%4d, RMSD=%6.2f, TM-score=%7.5f, ID=%5.3f\n", n_ali8, rmsd, TM_0, seq_id);
-
-	// chain_1: structure A
-	for (i = 0; i < atomxlen; i++)
-		fprintf(fp, "ATOM  %5d  %-4s%3s A%4d%c   %8.3f%8.3f%8.3f\n", ia1[i], aa1[i], ra1[i], ir1[i], ains1[i], coord[i][0], coord[i][1], coord[i][2]);
-	fprintf(fp, "TER\n");
-	DeleteArray(&coord, atomxlen);
-
-	// chain_2: structure B, coordinates don't change at all
-	for (i = 0; i < atomylen; i++)
-		fprintf(fp, "ATOM  %5d  %-4s%3s B%4d%c   %8.3f%8.3f%8.3f\n", ia2[i], aa2[i], ra2[i], ir2[i], ains2[i], xyza2[i][0], xyza2[i][1], xyza2[i][2]);
-	fprintf(fp, "TER\n");
-	fclose(fp);
-
-
-	///////  output full - atomic structure of whole chain in 'TM.sup_all_atm_lig' -------->
-	sprintf(str, "%s_all_atm_lig", out_reg);
-	fp = fopen(str, "w");
-	fprintf(fp, "load inline\n");
-	fprintf(fp, "select all\n");
-	fprintf(fp, "cartoon\n");
-	fprintf(fp, "select *A\n");
-	fprintf(fp, "color blue\n");
-	fprintf(fp, "select *B\n");
-	fprintf(fp, "color red\n");
-	fprintf(fp, "select ligand\n");
-	fprintf(fp, "wireframe 0.25\n");
-	fprintf(fp, "select solvent\n");
-	fprintf(fp, "spacefill 0.25\n");
-	fprintf(fp, "select all\n");
-	fprintf(fp, "exit\n");
-
-	fprintf(fp, "REMARK TM-align Version %s\n", version);
-	fprintf(fp, "REMARK Structure A:%s   Size=%4d\n", xtempbase.c_str(), x_len);
-	fprintf(fp, "REMARK Structure B:%s   Size=%4d ", ytempbase.c_str(), y_len);
-	fprintf(fp, "(TM-score is normalized by %4d, d0=%.2f)\n", int(Lnorm_0), d0_0);
-	fprintf(fp, "REMARK Aligned length=%4d, RMSD=%6.2f, TM-score=%7.5f, ID=%5.3f\n", n_ali8, rmsd, TM_0, seq_id);
-
-	// chain_1: structure A
-	int ligLen = get_ligand_len(xname);
-	NewArray(&coord, ligLen, 3);
-	string* strSeq = new string[ligLen];
-	double** coord2;
-	NewArray(&coord2, ligLen, 3);
-	read_ligand(xname, coord, strSeq);
-	do_rotation(coord, coord2, ligLen, t, u);
-	for (i = 0; i < ligLen; i++)
-	{
-		fprintf(fp, "%21sA%8s%8.3f%8.3f%8.3f\n", strSeq[i].substr(0, 21).c_str(), strSeq[i].substr(22, 8).c_str(), coord2[i][0], coord2[i][1], coord2[i][2]);
-	}
-	fprintf(fp, "TER\n");
-	DeleteArray(&coord, ligLen);
-	DeleteArray(&coord2, ligLen);
-	delete []strSeq;
-
-	// chain_2: structure B, coordinates don't change at all
-	ligLen = get_ligand_len(yname);
-	NewArray(&coord, ligLen, 3);
-	strSeq = new string[ligLen];
-	read_ligand(yname, coord, strSeq);
-	for (i = 0; i < ligLen; i++)
-	{
-		fprintf(fp, "%21sB%8s%8.3f%8.3f%8.3f\n", strSeq[i].substr(0, 21).c_str(), strSeq[i].substr(22, 8).c_str(), coord[i][0], coord[i][1], coord[i][2]);
-	}
-	fprintf(fp, "TER\n");
-	DeleteArray(&coord, ligLen);
-	delete []strSeq;
-
-	fclose(fp);
+	ofstream fp(out_reg);
+    fp<<buf.str();
+	fp.close();
 }
 
 
@@ -2026,7 +1681,7 @@ void output_results(char *xname,
 					 double Lnorm_0,
 					 double d0_0,
 					 char* matrix_name,
-                     const string atom_opt=" CA "
+                     const int ter_opt=3
 					 )
 {
     double seq_id;          
@@ -2196,10 +1851,7 @@ void output_results(char *xname,
 
 
 
-    if(o_opt)
-        output_superpose(xname, yname, x_len, y_len, t, u, rmsd, 
-            d0_out, m1, m2, n_ali8, seq_id, TM_0, Lnorm_0, d0_0, atom_opt);
-
+    if(o_opt) output_superpose(xname, t, u, ter_opt);
 
 	delete [] seqM;
 	delete [] seqxA;
