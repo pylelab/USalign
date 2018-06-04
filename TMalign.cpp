@@ -60,6 +60,11 @@ void print_extra_help()
 "             2: 'END', or different chain ID\n"
 "             1: 'END'\n"
 "             0: (default in the first C++ version of TMalign) end of file\n"
+"\n"
+"    -outfmt  Output format\n"
+"             0: (default) full output\n"
+"             1: fasta format compact output\n"
+"             2: tabular format very compact output\n"
     <<endl;
 }
 
@@ -92,7 +97,7 @@ void print_help(bool h_opt=false)
 "\n"
 "    -I    Ask TM-align to stick the alignment to 'align.txt'\n"
 "\n"
-"    -m    Output TM-align rotation matrix:\n"
+"    -m    Output TM-align rotation matrix\n"
 "\n"
 "    -d    TM-score scaled by an assigned d0, e.g. 5 Angstroms\n"
 "\n"
@@ -134,6 +139,7 @@ int main(int argc, char *argv[])
     bool A_opt, B_opt, h_opt=false;
     bool v_opt = false;
     int ter_opt = 3; // TER, END, or different chainID
+    int outfmt_opt=0;  // set -outfmt to full output
     A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = false;
     i_opt = false;// set -i flag to be false
     m_opt = false;// set -m flag to be false
@@ -212,6 +218,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-suffix") && i < (argc-1) )
         {
             suffix_opt=argv[i + 1]; i++;
+        }
+        else if ( !strcmp(argv[i],"-outfmt") && i < (argc-1) )
+        {
+            outfmt_opt=atoi(argv[i + 1]); i++;
         }
         else
         {
@@ -410,6 +420,9 @@ int main(int argc, char *argv[])
     }
 
     /* loop over file names */
+    if (outfmt_opt==2)
+        cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\tRMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
+
     for (int i=0;i<chain1_list.size();i++)
     {
         strcpy(xname,chain1_list[i].c_str());
@@ -422,13 +435,10 @@ int main(int argc, char *argv[])
 
             /* entry function for structure alignment */
             TMalign_main(xname, yname, fname_matrix, ter_opt, 
-                dir1_opt, dir2_opt);
+                dir1_opt, dir2_opt, outfmt_opt);
 
             /* Done! Free memory */
             free_memory();
-
-            if (dir1_opt.size() || dir2_opt.size())
-                cout<<"$$$$\n"<<endl;
         }
     }
 

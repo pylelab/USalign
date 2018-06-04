@@ -1675,9 +1675,38 @@ void output_superpose(const char *xname, double t[3], double u[3][3],
     buf.str(string()); // clear stream
 }
 
+/* extract rotation matrix based on TMscore8 */
+void output_rotation_matrix(const char* fname_matrix,
+    const double t[3], const double u[3][3])
+{
+    fstream fout;
+    fout.open(fname_matrix, ios::out | ios::trunc);
+    if (fout)// succeed
+    {
+        fout << "------ The rotation matrix to rotate Chain_1 to Chain_2 ------\n";
+        char dest[1000];
+        sprintf(dest, "m %18s %14s %14s %14s\n", "t[m]", "u[m][0]", "u[m][1]", "u[m][2]");
+        fout << string(dest);
+        for (int k = 0; k < 3; k++)
+        {
+            sprintf(dest, "%d %18.10f %14.10f %14.10f %14.10f\n", k, t[k], u[k][0], u[k][1], u[k][2]);
+            fout << string(dest);
+        }
+        fout << "\nCode for rotating Structure A from (x,y,z) to (X,Y,Z):\n"
+                "for(i=0; i<L; i++)\n"
+                "{\n"
+                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i]\n"
+                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i]\n"
+                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i]\n"
+                "}\n";
+        fout.close();
+    }
+    else
+        cout << "Open file to output rotation matrix fail.\n";
+}
 
 //output the final results
-void output_compact_results(
+void output_results(
     const char *xname,
     const char *yname,
     int x_len,
@@ -1688,122 +1717,18 @@ void output_compact_results(
     double TM2,
     double rmsd,
     double d0_out,
-    int m1[], 
+    int m1[],
     int m2[],
     int n_ali8,
     int n_ali,
     double TM_0,
     double Lnorm_0,
     double d0_0,
+    const char* fname_matrix,
     const string dir1_opt,
-    const string dir2_opt)
-{
-    double seq_id; 
-    int i, j, k;
-    double d;
-    int ali_len=x_len+y_len; //maximum length of alignment
-    char *seqxA, *seqyA;
-    seqxA=new char[ali_len];
-    seqyA=new char[ali_len];
-    
-    seq_id=0;
-    int kk=0, i_old=0, j_old=0;
-    for(k=0; k<n_ali8; k++)
-    {
-        for(i=i_old; i<m1[k]; i++)
-        {
-            //align x to gap
-            seqxA[kk]=seqx[i];
-            seqyA[kk]='-';
-            kk++;
-        }
-
-        for(j=j_old; j<m2[k]; j++)
-        {
-            //align y to gap
-            seqxA[kk]='-';
-            seqyA[kk]=seqy[j];
-            kk++;
-        }
-
-        seqxA[kk]=seqx[m1[k]];
-        seqyA[kk]=seqy[m2[k]];
-        if(seqxA[kk]==seqyA[kk])
-        {
-            seq_id++;
-        }
-        kk++;  
-        i_old=m1[k]+1;
-        j_old=m2[k]+1;
-    }
-
-    //tail
-    for(i=i_old; i<x_len; i++)
-    {
-        //align x to gap
-        seqxA[kk]=seqx[i];
-        seqyA[kk]='-';
-        kk++;
-    }    
-    for(j=j_old; j<y_len; j++)
-    {
-        //align y to gap
-        seqxA[kk]='-';
-        seqyA[kk]=seqy[j];
-        kk++;
-    }
- 
-    seqxA[kk]='\0';
-    seqyA[kk]='\0';
-    
-    //output structure derived sequence alignment
-    printf(">%s\tL=%d\td0=%.2f\tseqID=%4.3f\tTM-score=%6.5f\n", 
-        xname+dir1_opt.size(), x_len, d0B, seq_id/x_len, TM2);
-    printf("%s\n", seqxA);
-    printf(">%s\tL=%d\td0=%.2f\tseqID=%4.3f\tTM-score=%6.5f\n",
-        yname+dir2_opt.size(), y_len, d0A, seq_id/y_len, TM1);
-    printf("%s\n", seqyA);
-
-    if (i_opt || I_opt)
-        printf("# User-specified initial alignment: TM/Lali/rmsd= %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
-
-    printf("# Lali=%d, RMSD=%6.2f, seqID_ali=%4.3f\n",
-        n_ali8, rmsd, seq_id/(n_ali8+0.00000001));
-
-    if(a_opt)
-        printf("# TM-score=%6.5f (normalized by average length of two structures: L=%.2f, d0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
-
-    if(u_opt)
-        printf("# TM-score=%6.5f (normalized by user-specified L=%.2f, d0=%.2f)\n", TM4, Lnorm_ass, d0u);
-
-    if(d_opt)
-        printf("# TM-score=%6.5f (scaled by user-specified d0=%.2f, L=%.2f)\n", TM5, d0_scale, Lnorm_0);
-
-    delete [] seqxA;
-    delete [] seqyA;
-}
-
-//output the final results
-void output_results(const char *xname,
-                    const char *yname,
-                     int x_len,
-                     int y_len,
-                     double t[3],
-                     double u[3][3],
-                     double TM1,
-                     double TM2,
-                     double rmsd,
-                     double d0_out,
-                     int m1[], 
-                     int m2[],
-                     int n_ali8,
-                     int n_ali,
-                     double TM_0,
-                     double Lnorm_0,
-                     double d0_0,
-                     const char* matrix_name,
-                     const int ter_opt=3
-                     )
+    const string dir2_opt,
+    const int outfmt_opt,    
+    const int ter_opt)
 {
     double seq_id;          
     int i, j, k;
@@ -1814,8 +1739,7 @@ void output_results(const char *xname,
     seqxA=new char[ali_len];
     seqyA=new char[ali_len];
     
-
-    do_rotation(xa, xt, x_len, t, u);
+    if (outfmt_opt<=0) do_rotation(xa, xt, x_len, t, u);
 
     seq_id=0;
     int kk=0, i_old=0, j_old=0;
@@ -1845,14 +1769,11 @@ void output_results(const char *xname,
         {
             seq_id++;
         }
-        d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
-        if(d<d0_out)
+        if (outfmt_opt<=0)
         {
-            seqM[kk]=':';
-        }
-        else
-        {
-            seqM[kk]='.';
+            d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
+            if(d<d0_out) seqM[kk]=':';
+            else         seqM[kk]='.';
         } 
         kk++;  
         i_old=m1[k]+1;
@@ -1881,86 +1802,78 @@ void output_results(const char *xname,
     seqyA[kk]='\0';
     seqM[kk]='\0';
     
-
-    seq_id=seq_id/( n_ali8+0.00000001); //what did by TMalign, but not reasonable, it should be n_ali8    
-
-    printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n", xname); 
-    printf("Name of Chain_2: %s\n", yname);
-    printf("Length of Chain_1: %d residues\n", x_len);
-    printf("Length of Chain_2: %d residues\n\n", y_len);
-
-    if (i_opt || I_opt)
+    if (outfmt_opt<=0)
     {
-        printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
-    }
+        printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n",
+            xname+dir1_opt.size());
+        printf("Name of Chain_2: %s\n", yname+dir2_opt.size());
+        printf("Length of Chain_1: %d residues\n", x_len);
+        printf("Length of Chain_2: %d residues\n\n", y_len);
 
-    printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, seq_id); 
-    printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, x_len, d0B);
-    printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, y_len, d0A);
-    if(a_opt)
-    {
-      double L_ave=(x_len+y_len)*0.5;
-      printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.2f, d0= %.2f)\n", TM3, L_ave, d0a);
-    }
-    if(u_opt)
-    {        
-      printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
-    }
-    if(d_opt)
-      {        
-        printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %.2f)\n", TM5, d0_scale, Lnorm_0);
-    }
-    printf("(You should use TM-score normalized by length of the reference protein)\n");
+        if (i_opt || I_opt)
+            printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
+
+        printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, seq_id/( n_ali8+0.00000001));
+        printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, x_len, d0B);
+        printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, y_len, d0A);
+
+        if(a_opt)
+            printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.2f, d0= %.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+        if(u_opt)
+            printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
+        if(d_opt)
+            printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %.2f)\n", TM5, d0_scale, Lnorm_0);
+        printf("(You should use TM-score normalized by length of the reference protein)\n");
     
-    // ********* extract rotation matrix based on TMscore8 ------------>
-    if (m_opt)
-    {
-        fstream fout;
-        fout.open(matrix_name, ios::out | ios::trunc);
-        if (fout)// succeed
-        {
-            fout << "------ The rotation matrix to rotate Chain_1 to Chain_2 ------\n";
-            char dest[1000];
-            sprintf(dest, "m %18s %14s %14s %14s\n", "t[m]", "u[m][0]", "u[m][1]", "u[m][2]");
-            fout << string(dest);
-            for (k = 0; k < 3; k++)
-            {
-                sprintf(dest, "%d %18.10f %14.10f %14.10f %14.10f\n", k, t[k], u[k][0], u[k][1], u[k][2]);
-                fout << string(dest);
-            }
-            fout << "\nCode for rotating Structure A from (x,y,z) to (X,Y,Z):\n";
-            fout << "for(i=0; i<L; i++)\n";
-            fout << "{\n";
-            fout << "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i]\n";
-            fout << "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i]\n";
-            fout << "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i]\n";
-            fout << "}\n";
-
-            fout.close();
-        }
-        else
-            cout << "Open file to output rotation matrix fail.\n";
+        //output alignment
+        printf("\n(\":\" denotes residue pairs of d < %4.1f Angstrom, ", d0_out);
+        printf("\".\" denotes other aligned residues)\n");
+        printf("%s\n", seqxA);
+        printf("%s\n", seqM);
+        printf("%s\n", seqyA);
     }
+    else if (outfmt_opt==1)
+    {
+        printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
+            xname+dir1_opt.size(), x_len, d0B, seq_id/x_len, TM2);
+        printf("%s\n", seqxA);
+        printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
+            yname+dir2_opt.size(), y_len, d0A, seq_id/y_len, TM1);
+        printf("%s\n", seqyA);
 
-    
-    //output structure alignment
-    printf("\n(\":\" denotes residue pairs of d < %4.1f Angstrom, ", d0_out);
-    printf("\".\" denotes other aligned residues)\n");
-    printf("%s\n", seqxA);
-    printf("%s\n", seqM);
-    printf("%s\n", seqyA);
+        printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
+            n_ali8, rmsd, seq_id/(n_ali8+0.00000001));
 
+        if (i_opt || I_opt)
+            printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
+
+        if(a_opt)
+            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.2f\td0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+
+        if(u_opt)
+            printf("# TM-score=%.5f (normalized by user-specified L=%.2f\td0=%.2f)\n", TM4, Lnorm_ass, d0u);
+
+        if(d_opt)
+            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%.2f)\n", TM5, d0_scale, Lnorm_0);
+
+        printf("$$$$\n");
+    }
+    else if (outfmt_opt==2)
+    {
+        printf("%s\t%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
+            xname+dir1_opt.size(), yname+dir2_opt.size(),
+            TM2, TM1, rmsd,
+            seq_id/x_len, seq_id/y_len, seq_id/( n_ali8+0.00000001),
+            x_len, y_len, n_ali8);
+    }
     cout << endl;
 
-
-
-
-    if(o_opt) output_superpose(xname, t, u, ter_opt);
+    if (m_opt) output_rotation_matrix(fname_matrix, t, u);
+    if (o_opt) output_superpose(xname, t, u, ter_opt);
 
     delete [] seqM;
     delete [] seqxA;
     delete [] seqyA;
-    
 }
 
 double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap[], int& L_ali, double& RMSD )
@@ -2024,7 +1937,7 @@ double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap
 /* entry function for TMalign */
 int TMalign_main(const char *xname, const char *yname,
     const char *fname_matrix, const int ter_opt,
-    const string dir1_opt, const string dir2_opt)
+    const string dir1_opt, const string dir2_opt, const int outfmt_opt)
 {
     /***********************/
     /*    parameter set    */
@@ -2449,17 +2362,10 @@ int TMalign_main(const char *xname, const char *yname,
     }
 
     /* print result */
-    if (dir1_opt.size()|| dir2_opt.size())
-    {
-        output_compact_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2,
-            rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, 
-            dir1_opt, dir1_opt);
-    }
-    else
-    {
-        print_version();
-        output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix, ter_opt);
-    }
+    if (outfmt_opt==0) print_version();
+    output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out,
+        m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix,
+        dir1_opt, dir2_opt, outfmt_opt, ter_opt);
 
     /* free memory */
     delete [] invmap0;
