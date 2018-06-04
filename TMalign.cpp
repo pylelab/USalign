@@ -41,19 +41,19 @@ void print_extra_help()
 "Additional options: \n"
 "    -fast    Fast but slightly inaccurate alignment\n"
 "\n"
-//"    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
-//"             under 'chain1_folder'. Note that the slash is necessary.\n"
-//"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
-//"\n"
-//"    -dir2    Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
-//"             under 'chain2_folder'\n"
-//"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
-//"\n"
-//"    -suffix  (Only when -dir1 and/or -dir2 are set)\n"
-//"             add file name suffix to files listed by chain1_list or chain2_list\n"
-//"\n"
+"    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
+"             under 'chain1_folder'. Note that the slash is necessary.\n"
+"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
+"\n"
+"    -dir2    Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
+"             under 'chain2_folder'\n"
+"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
+"\n"
+"    -suffix  (Only when -dir1 and/or -dir2 are set, default is empty)\n"
+"             add file name suffix to files listed by chain1_list or chain2_list\n"
+"\n"
 "    -atom    4-character atom name used to represent a residue\n"
-"             default is ' CA '\n"
+"             default is \" CA \" (note the space before and after CA)\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (current default) 'TER', 'END', or different chain ID\n"
@@ -141,7 +141,12 @@ int main(int argc, char *argv[])
     char fname_matrix[MAXLEN] = "";// set names to ""
     I_opt = false;// set -I flag to be false
     fast_opt = false;// set -fast flag to be false
-    string atom_opt=" CA "; // read CA
+    string atom_opt=" CA "; // use C alpha atom to represent a residue
+    string suffix_opt=""; // set -suffix to empty
+    string dir1_opt="";   // set -dir1 to empty
+    string dir2_opt="";   // set -dir2 to empty
+    vector<string> chain1_list; // only when -dir1 is set
+    vector<string> chain2_list; // only when -dir2 is set
 
     int nameIdx = 0;
     for(int i = 1; i < argc; i++)
@@ -196,6 +201,18 @@ int main(int argc, char *argv[])
             if (atom_opt.size()!=4)
                 PrintErrorAndQuit("ERROR! atom name must be 4 characters, including space.");
         }
+        else if ( !strcmp(argv[i],"-dir1") && i < (argc-1) )
+        {
+            dir1_opt=argv[i + 1]; i++;
+        }
+        else if ( !strcmp(argv[i],"-dir2") && i < (argc-1) )
+        {
+            dir2_opt=argv[i + 1]; i++;
+        }
+        else if ( !strcmp(argv[i],"-suffix") && i < (argc-1) )
+        {
+            suffix_opt=argv[i + 1]; i++;
+        }
         else
         {
             if (nameIdx == 0)
@@ -222,17 +239,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    if( !B_opt )
-    {
-        cout << "Please provide structure B" << endl;
-        exit(EXIT_FAILURE);
-    }
     if( !A_opt )
-    {
-        cout << "Please provide structure A" << endl;
-        exit(EXIT_FAILURE);
-    }
+        PrintErrorAndQuit("Please provide structure A");
+    if( !B_opt )
+        PrintErrorAndQuit("Please provide structure B");
 
+    if (suffix_opt.size() && dir1_opt.size()==0 && dir2_opt.size()==0)
+        PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
+    if ((dir1_opt.size() || dir2_opt.size()) && (m_opt || o_opt))
+        PrintErrorAndQuit("-m or -o cannot be set with -dir1 or -dir2");
 
     if( a_opt )
     {
@@ -337,21 +352,91 @@ int main(int argc, char *argv[])
         }
     }
 
+    /* parse file list */
+    if (dir1_opt.size()==0)
+        chain1_list.push_back(xname);
+    else
+    {
+        ifstream fp(xname);
+        if (! fp.is_open())
+        {
+		    char message[5000];
+		    sprintf(message, "Can not open file: %s\n", xname);
+            PrintErrorAndQuit(message);
+        }
+        string line;
+        string filename;
+        while (fp.good())
+        {
+            getline(fp, line);
+            if (! line.size()) continue;
+            filename=dir1_opt+Trim(line)+suffix_opt;
+            if (isfile_openable(filename))
+                chain1_list.push_back(filename);
+            else
+                cerr<<"Warning! Skipped inaccesible file"<<filename<<endl;
+        }
+        fp.close();
+        line.clear();
+        filename.clear();
+    }
 
-    /*******************/
-    /*    load data    */
-    /*******************/
-    load_PDB_allocate_memory(xname, yname, ter_opt, atom_opt);
+    if (dir2_opt.size()==0)
+        chain2_list.push_back(yname);
+    else
+    {
+        ifstream fp(yname);
+        if (! fp.is_open())
+        {
+		    char message[5000];
+		    sprintf(message, "Can not open file: %s\n", yname);
+            PrintErrorAndQuit(message);
+        }
+        string line;
+        string filename;
+        while (fp.good())
+        {
+            getline(fp, line);
+            if (! line.size()) continue;
+            filename=dir2_opt+Trim(line)+suffix_opt;
+            if (isfile_openable(filename))
+                chain2_list.push_back(filename);
+            else
+                cerr<<"Warning! Skipped inaccesible file"<<filename<<endl;
+        }
+        fp.close();
+        line.clear();
+        filename.clear();
+    }
 
-    TMalign_main(xname, yname, fname_matrix, ter_opt);
+    /* loop over file names */
+    for (int i=0;i<chain1_list.size();i++)
+    {
+        strcpy(xname,chain1_list[i].c_str());
+        for (int j=0;j<chain2_list.size();j++)
+        {
+            strcpy(yname,chain2_list[j].c_str());
 
-    //*************************//
-    //    Done! Free memory    //
-    //*************************//
-    free_memory();
+            /* load data */
+            load_PDB_allocate_memory(xname, yname, ter_opt, atom_opt);
+
+            /* entry function for structure alignment */
+            TMalign_main(xname, yname, fname_matrix, ter_opt, 
+                dir1_opt, dir2_opt);
+
+            /* Done! Free memory */
+            free_memory();
+
+            if (dir1_opt.size() || dir2_opt.size())
+                cout<<"$$$$\n"<<endl;
+        }
+    }
+
+    chain1_list.clear();
+    chain2_list.clear();
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
-    printf("\nTotal running time is %5.2f seconds\n", diff);
+    printf("Total running time is %5.2f seconds\n", diff);
     return 0;
 }

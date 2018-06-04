@@ -115,7 +115,7 @@ int get_PDB_len(char *filename)
 {
 	int i = 0;
 	string line;
-	string atom("ATOM ");
+	string atom("ATOM  ");
 
 	ifstream fin(filename);
 	if (fin.is_open())
@@ -284,23 +284,24 @@ string output_align_to_string(int *invmap, int len)
 	return result;
 }
 
-// output aligned coords to string
-string output_coord_to_string(double **x, double **y, int len)
+/* strip white space at the begining or end of string */
+string Trim(string inputString)
 {
-	string result = "";
-	int i, k;
-	char temp[1000];
-	result += "xtm coords:\n";
-	for (i = 0; i<len; i++)
-	{
-		sprintf(temp, "%8.3f %8.3f %8.3f\n", x[i][0], x[i][1], x[i][2]);
-		result += string(temp);
-	}
-	result += "ytm coords:\n";
-	for (i = 0; i<len; i++)
-	{
-		sprintf(temp, "%8.3f %8.3f %8.3f\n", y[i][0], y[i][1], y[i][2]);
-		result += string(temp);
-	}
+	string result = inputString;
+	int idxBegin = inputString.find_first_not_of(" \n\r\t");
+	int idxEnd = inputString.find_last_not_of(" \n\r\t");
+	if (idxBegin >= 0 && idxEnd >= 0)
+		result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
 	return result;
+}
+
+/* check file accessibility */
+bool isfile_openable(const string &name)
+{
+    if (FILE *file = fopen(name.c_str(), "r")) 
+    {
+        fclose(file);
+        return true;
+    } 
+    return false;
 }

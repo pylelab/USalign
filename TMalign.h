@@ -53,7 +53,7 @@ void load_PDB_allocate_memory(char *xname, char *yname,
     minlen = min(xlen, ylen);
     
     //------allocate memory for other temporary varialbes------>
-     NewArray(&r1, minlen, 3);
+    NewArray(&r1, minlen, 3);
     NewArray(&r2, minlen, 3);
     NewArray(&xtm, minlen, 3);
     NewArray(&ytm, minlen, 3);
@@ -1677,6 +1677,113 @@ void output_superpose(const char *xname, double t[3], double u[3][3],
 
 
 //output the final results
+void output_compact_results(
+    const char *xname,
+    const char *yname,
+    int x_len,
+    int y_len,
+    double t[3],
+    double u[3][3],
+    double TM1,
+    double TM2,
+    double rmsd,
+    double d0_out,
+    int m1[], 
+    int m2[],
+    int n_ali8,
+    int n_ali,
+    double TM_0,
+    double Lnorm_0,
+    double d0_0,
+    const string dir1_opt,
+    const string dir2_opt)
+{
+    double seq_id; 
+    int i, j, k;
+    double d;
+    int ali_len=x_len+y_len; //maximum length of alignment
+    char *seqxA, *seqyA;
+    seqxA=new char[ali_len];
+    seqyA=new char[ali_len];
+    
+    seq_id=0;
+    int kk=0, i_old=0, j_old=0;
+    for(k=0; k<n_ali8; k++)
+    {
+        for(i=i_old; i<m1[k]; i++)
+        {
+            //align x to gap
+            seqxA[kk]=seqx[i];
+            seqyA[kk]='-';
+            kk++;
+        }
+
+        for(j=j_old; j<m2[k]; j++)
+        {
+            //align y to gap
+            seqxA[kk]='-';
+            seqyA[kk]=seqy[j];
+            kk++;
+        }
+
+        seqxA[kk]=seqx[m1[k]];
+        seqyA[kk]=seqy[m2[k]];
+        if(seqxA[kk]==seqyA[kk])
+        {
+            seq_id++;
+        }
+        kk++;  
+        i_old=m1[k]+1;
+        j_old=m2[k]+1;
+    }
+
+    //tail
+    for(i=i_old; i<x_len; i++)
+    {
+        //align x to gap
+        seqxA[kk]=seqx[i];
+        seqyA[kk]='-';
+        kk++;
+    }    
+    for(j=j_old; j<y_len; j++)
+    {
+        //align y to gap
+        seqxA[kk]='-';
+        seqyA[kk]=seqy[j];
+        kk++;
+    }
+ 
+    seqxA[kk]='\0';
+    seqyA[kk]='\0';
+    
+    //output structure derived sequence alignment
+    printf(">%s\tL=%d\td0=%.2f\tseqID=%4.3f\tTM-score=%6.5f\n", 
+        xname+dir1_opt.size(), x_len, d0B, seq_id/x_len, TM2);
+    printf("%s\n", seqxA);
+    printf(">%s\tL=%d\td0=%.2f\tseqID=%4.3f\tTM-score=%6.5f\n",
+        yname+dir2_opt.size(), y_len, d0A, seq_id/y_len, TM1);
+    printf("%s\n", seqyA);
+
+    if (i_opt || I_opt)
+        printf("# User-specified initial alignment: TM/Lali/rmsd= %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
+
+    printf("# Lali=%d, RMSD=%6.2f, seqID_ali=%4.3f\n",
+        n_ali8, rmsd, seq_id/(n_ali8+0.00000001));
+
+    if(a_opt)
+        printf("# TM-score=%6.5f (normalized by average length of two structures: L=%.2f, d0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+
+    if(u_opt)
+        printf("# TM-score=%6.5f (normalized by user-specified L=%.2f, d0=%.2f)\n", TM4, Lnorm_ass, d0u);
+
+    if(d_opt)
+        printf("# TM-score=%6.5f (scaled by user-specified d0=%.2f, L=%.2f)\n", TM5, d0_scale, Lnorm_0);
+
+    delete [] seqxA;
+    delete [] seqyA;
+}
+
+//output the final results
 void output_results(const char *xname,
                     const char *yname,
                      int x_len,
@@ -1916,7 +2023,8 @@ double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap
 
 /* entry function for TMalign */
 int TMalign_main(const char *xname, const char *yname,
-    const char *fname_matrix, int ter_opt = 3)
+    const char *fname_matrix, const int ter_opt,
+    const string dir1_opt, const string dir2_opt)
 {
     /***********************/
     /*    parameter set    */
@@ -2340,8 +2448,18 @@ int TMalign_main(const char *xname, const char *yname,
         TM_0=TM5;
     }
 
-    print_version();
-    output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix, ter_opt);
+    /* print result */
+    if (dir1_opt.size()|| dir2_opt.size())
+    {
+        output_compact_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2,
+            rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, 
+            dir1_opt, dir1_opt);
+    }
+    else
+    {
+        print_version();
+        output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out, m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix, ter_opt);
+    }
 
     /* free memory */
     delete [] invmap0;
