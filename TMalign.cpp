@@ -375,20 +375,14 @@ int main(int argc, char *argv[])
             PrintErrorAndQuit(message);
         }
         string line;
-        string filename;
         while (fp.good())
         {
             getline(fp, line);
             if (! line.size()) continue;
-            filename=dir1_opt+Trim(line)+suffix_opt;
-            if (isfile_openable(filename))
-                chain1_list.push_back(filename);
-            else
-                cerr<<"Warning! Skipped inaccesible file"<<filename<<endl;
+            chain1_list.push_back(dir1_opt+Trim(line)+suffix_opt);
         }
         fp.close();
         line.clear();
-        filename.clear();
     }
 
     if (dir2_opt.size()==0)
@@ -403,26 +397,22 @@ int main(int argc, char *argv[])
             PrintErrorAndQuit(message);
         }
         string line;
-        string filename;
         while (fp.good())
         {
             getline(fp, line);
             if (! line.size()) continue;
-            filename=dir2_opt+Trim(line)+suffix_opt;
-            if (isfile_openable(filename))
-                chain2_list.push_back(filename);
-            else
-                cerr<<"Warning! Skipped inaccesible file"<<filename<<endl;
+            chain2_list.push_back(dir2_opt+Trim(line)+suffix_opt);
         }
         fp.close();
         line.clear();
-        filename.clear();
     }
 
     /* loop over file names */
     if (outfmt_opt==2)
         cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\tRMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
 
+    vector<string> PDB_lines1; // text of chain1
+    vector<string> PDB_lines2; // text of chain2
     for (int i=0;i<chain1_list.size();i++)
     {
         strcpy(xname,chain1_list[i].c_str());
@@ -431,7 +421,18 @@ int main(int argc, char *argv[])
             strcpy(yname,chain2_list[j].c_str());
 
             /* load data */
-            load_PDB_allocate_memory(xname, yname, ter_opt, atom_opt);
+            int stat=load_PDB_allocate_memory(xname, yname,
+                PDB_lines1, PDB_lines2, ter_opt, atom_opt);
+            if (stat==1) // chain 1 failed
+            {
+		        cerr<<"Warning! Can not open file: "<<xname<<endl;
+                break;
+            }
+            else if (stat==2) // chain 2 failed
+            {
+		        cerr<<"Warning! Can not open file: "<<yname<<endl;
+                continue;
+            }
 
             /* entry function for structure alignment */
             TMalign_main(xname, yname, fname_matrix, ter_opt, 
@@ -439,9 +440,11 @@ int main(int argc, char *argv[])
 
             /* Done! Free memory */
             free_memory();
+            if (chain2_list.size()>1) PDB_lines2.clear();
         }
+        PDB_lines1.clear();
     }
-
+    PDB_lines2.clear();
     chain1_list.clear();
     chain2_list.clear();
 

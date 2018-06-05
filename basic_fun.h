@@ -111,34 +111,7 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
 	sscanf(cstr, "%d", no);
 }
 
-int get_PDB_len(char *filename)
-{
-	int i = 0;
-	string line;
-	string atom("ATOM  ");
-
-	ifstream fin(filename);
-	if (fin.is_open())
-	{
-		while (fin.good())
-		{
-			getline(fin, line);
-			if (line.compare(0, atom.length(), atom) == 0)
-				i++;
-		}
-		fin.close();
-	}
-	else
-	{
-		char message[5000];
-		sprintf(message, "Can not open file: %s\n", filename);
-		PrintErrorAndQuit(message);
-	}
-
-	return i;
-}
-
-int read_PDB(char *filename, double **a, char *seq, int *resno, 
+int get_PDB_lines(const char *filename, vector<string> &PDB_lines, 
     const int ter_opt=3, const string atom_opt=" CA ")
 {
     int i=0; // resi
@@ -178,22 +151,24 @@ int read_PDB(char *filename, double **a, char *seq, int *resno,
                         i8=string(4-i8.size(), ' ')+i8;
                     }
                     line=line.substr(0,22)+i8+line.substr(26);
-
-					get_xyz(line, &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+                    PDB_lines.push_back(line);
                     i++;
 				}
 			}
         }
         fin.close();
     }
-    else
-    {
-		char message[5000];
-		sprintf(message, "Can not open file: %s\n", filename);
-        PrintErrorAndQuit(message);
-    } 
-    seq[i]='\0';   
-    
+    else return 0;
+    line.clear();
+    return i;
+}
+
+int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
+{
+    int i;
+    for (i=0;i<PDB_lines.size();i++)
+		get_xyz(PDB_lines[i], &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+    seq[i]='\0'; 
     return i;
 }
 
@@ -208,7 +183,7 @@ double dist(double x[3], double y[3])
 
 double dot(double *a, double *b)
 {
-  return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
+    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
 void transform(double t[3], double u[3][3], double *x, double *x1)
@@ -226,64 +201,6 @@ void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
     }    
 }
 
-void output_align1(int *invmap0, int len)
-{
-	for(int i=0; i<len; i++)
-	{
-		if(invmap0[i]>=0)
-		{
-			cout << invmap0[i]+1 << " ";
-		}			
-		else
-			cout << invmap0[i] << " ";
-
-	}	
-	cout << endl << endl;	
-}
-
-
-int output_align(int *invmap0, int len)
-{
-	int n_ali=0;
-	for(int i=0; i<len; i++)
-	{		
-		cout <<  invmap0[i] << " ";
-		n_ali++;		
-	}	
-	cout << endl << endl;	
-
-	return n_ali;
-}
-// output aligned residues to string
-string output_align_to_string(int *invmap, int len)
-{
-	string result = "";
-	int step = 10;
-	int rest = len % step;
-	int loop = len / step;
-	int i,k;
-	char temp[1000];
-	for ( i = 0; i<loop; i++)
-	{
-		k = i * step;
-		for (int j = 0; j < step; j++)
-		{
-			sprintf(temp, "%4d ", invmap[k + j]);
-			result += string(temp);
-		}
-		result += "\n";
-	}
-	k = i * step;
-	for (int j = 0; j < rest; j++)
-	{
-		sprintf(temp, "%4d ", invmap[k + j]);
-		result += string(temp);
-	}
-	result += "\n";
-
-	return result;
-}
-
 /* strip white space at the begining or end of string */
 string Trim(string inputString)
 {
@@ -293,15 +210,4 @@ string Trim(string inputString)
 	if (idxBegin >= 0 && idxEnd >= 0)
 		result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
 	return result;
-}
-
-/* check file accessibility */
-bool isfile_openable(const string &name)
-{
-    if (FILE *file = fopen(name.c_str(), "r")) 
-    {
-        fclose(file);
-        return true;
-    } 
-    return false;
 }

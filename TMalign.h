@@ -29,12 +29,16 @@ void print_version()
     << endl;
 }
 
-void load_PDB_allocate_memory(char *xname, char *yname, 
+int load_PDB_allocate_memory(const char *xname, const char *yname,
+    vector<string> &PDB_lines1, vector<string> &PDB_lines2,
     const int ter_opt=3, const string atom_opt=" CA ")
-{    
-
-    tempxlen = get_PDB_len(xname);// Get predicted length
-    tempylen = get_PDB_len(yname);
+{
+    tempxlen=PDB_lines1.size();
+    tempylen=PDB_lines2.size();
+    if (!tempxlen) tempxlen=get_PDB_lines(xname,PDB_lines1,ter_opt,atom_opt);
+    if (!tempxlen) return 1; // fail to read chain1
+    if (!tempylen) tempylen=get_PDB_lines(yname,PDB_lines2,ter_opt,atom_opt);
+    if (!tempylen) return 2; // fail to read chain2
 
     //------allocate memory for x and y------>
     NewArray(&xa, tempxlen, 3);
@@ -48,8 +52,8 @@ void load_PDB_allocate_memory(char *xname, char *yname,
     secy = new int[tempylen];
 
     // Get exact length
-    xlen = read_PDB(xname, xa, seqx, xresno, ter_opt, atom_opt);
-    ylen = read_PDB(yname, ya, seqy, yresno, ter_opt, atom_opt);
+    xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
+    ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
     minlen = min(xlen, ylen);
     
     //------allocate memory for other temporary varialbes------>
@@ -62,6 +66,7 @@ void load_PDB_allocate_memory(char *xname, char *yname,
     NewArray(&score, xlen+1, ylen+1);
     NewArray(&path, xlen+1, ylen+1);
     NewArray(&val, xlen+1, ylen+1);  
+    return 0; // 0 for no error
 }
 
 
