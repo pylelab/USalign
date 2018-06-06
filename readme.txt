@@ -3,7 +3,7 @@
    is written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang 
    lab, Department of Computational Medicine and Bioinformatics, University of 
    Michigan, 100 Washtenaw Avenue, Ann Arbor, MI 48109-2218. Please report bugs 
-   and questions to jianjiew@umich.edu or zhng@umich.edu
+   and questions to zhng@umich.edu
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
@@ -17,10 +17,20 @@
    2012/01/24: A C/C++ code of TM-align was constructed by Jianyi Yang
    2016/05/21: Several updates of this program were made by Jianjie Wu, including
               (1) fixed several compiling bugs
-	      (2) made I/O of C/C++ version consistent with the Fortran version
-	      (3) added outputs including full-atom and ligand structures
-	      (4) added options of '-i', '-I' and '-m'
+              (2) made I/O of C/C++ version consistent with the Fortran version
+              (3) added outputs including full-atom and ligand structures
+              (4) added options of '-i', '-I' and '-m'
    2016/05/25: fixed a bug on PDB file reading
+   2018/06/04: Several updates were made by Chengxin Zhang, including
+              (1) Fixed bug in reading PDB files with negative residue index,
+                  at the expense of the '-o' option now only being able to
+                  output superposed structure instead of full rasmol script.
+              (2) Implemented by the '-fast' option the fTM-align algorithm
+                  as described in Dong R, Pan S, Peng Z, Zhang Y, & Yang J
+                  (2018) Nucleic acids research. gky430.
+              (3) Included option to perform TM-align against a whole 
+                  folder of PDB files. A full list of options not available
+                  in the Fortran version can be explored by TMalign -h
 ===============================================================================
 
 =========================

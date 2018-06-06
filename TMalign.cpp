@@ -17,10 +17,14 @@
    2012/01/24: A C/C++ code of TM-align was constructed by Jianyi Yang
    2016/05/21: Several updates of this program were made by Jianjie Wu, including
               (1) fixed several compiling bugs
-          (2) made I/O of C/C++ version consistent with the Fortran version
-          (3) added outputs including full-atom and ligand structures
-          (4) added options of '-i', '-I' and '-m'
+              (2) made I/O of C/C++ version consistent with the Fortran version
+              (3) added outputs including full-atom and ligand structures
+              (4) added options of '-i', '-I' and '-m'
    2016/05/25: fixed a bug on PDB file reading
+   2018/06/04: Fixed a bug in PDB file with negative residue number. Added
+               options -fast, -dir1, -dir2, -suffix, -atom, -ter, -outfmt.
+               Re-write the file reading function to reduce the number of
+               times a PDB file need to be read.
 ===============================================================================
 */
 #include "basic_define.h"
