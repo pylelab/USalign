@@ -62,7 +62,7 @@ you can run the program without arguments to obtain a brief instruction
    University of Michigan 
    100 Washtenaw Avenue, Ann Arbor, MI 48109-2218 
            
-   Please report bugs and questions to jianjiew@umich.edu or zhng@umich.edu
+   Please report bugs and questions to zhng@umich.edu
 
 ===================
  Fortran version
