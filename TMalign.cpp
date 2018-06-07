@@ -4,7 +4,7 @@
    is written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang
    lab, Department of Computational Medicine and Bioinformatics, University of
    Michigan, 100 Washtenaw Avenue, Ann Arbor, MI 48109-2218. Please report bugs
-   and questions to jianjiew@umich.edu or zhng@umich.edu
+   and questions to zhng@umich.edu
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for
