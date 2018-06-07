@@ -802,12 +802,8 @@ double get_score_fast(double **x, double **y, int x_len, int y_len, int invmap[]
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial( double **x, 
-                    double **y, 
-                    int x_len,
-                    int y_len, 
-                    int *y2x
-                   )
+double get_initial(double **x, double **y, int x_len, int y_len, int *y2x,
+    const bool fast_opt)
 {
     int min_len=getmin(x_len, y_len);
     if(min_len<=5) PrintErrorAndQuit("Sequence is too short <=5!\n");
@@ -1085,12 +1081,8 @@ void get_initial_ss(  double **x,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-bool get_initial5(double **x,
-    double **y,
-    int x_len,
-    int y_len,
-    int *y2x
-    )
+bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
+    const bool fast_opt)
 {
     double GL, rmsd;
     double t[3];
@@ -1313,7 +1305,8 @@ void get_initial_ssplus( double **x,
 }
 
 
-void find_max_frag(double **x, int *resno, int len, int *start_max, int *end_max)
+void find_max_frag(double **x, int *resno, int len, int *start_max,
+    int *end_max, const bool fast_opt)
 {
     int r_min, fra_min=4;           //minimum fragment for search
     if (fast_opt) fra_min=8;
@@ -1402,7 +1395,8 @@ double get_initial_fgt( double **x,
                         int y_len, 
                         int *xresno,
                         int *yresno,
-                        int *y2x
+                        int *y2x,
+                        const bool fast_opt
                         )
 {
     int fra_min=4;           //minimum fragment for search
@@ -1411,8 +1405,8 @@ double get_initial_fgt( double **x,
 
     int xstart=0, ystart=0, xend=0, yend=0;
 
-    find_max_frag(x, xresno, x_len,  &xstart, &xend);
-    find_max_frag(y, yresno, y_len, &ystart, &yend);
+    find_max_frag(x, xresno, x_len,  &xstart, &xend, fast_opt);
+    find_max_frag(y, yresno, y_len, &ystart, &yend, fast_opt);
 
 
     int Lx = xend-xstart+1;
@@ -1636,8 +1630,8 @@ double DP_iter( double **x,
 }
 
 
-void output_superpose(const char *xname, double t[3], double u[3][3], 
-    const int ter_opt=3)
+void output_superpose(const char *xname, const char *out_reg,
+    double t[3], double u[3][3], const int ter_opt=3)
 {
     ifstream fin(xname);
     stringstream buf;
@@ -1712,14 +1706,10 @@ void output_rotation_matrix(const char* fname_matrix,
 
 //output the final results
 void output_results(
-    const char *xname,
-    const char *yname,
-    int x_len,
-    int y_len,
-    double t[3],
-    double u[3][3],
-    double TM1,
-    double TM2,
+    const char *xname, const char *yname, int x_len, int y_len,
+    double t[3], double u[3][3],
+    const double TM1, const double TM2,
+    const double TM3, const double TM4, const double TM5,
     double rmsd,
     double d0_out,
     int m1[],
@@ -1730,10 +1720,10 @@ void output_results(
     double Lnorm_0,
     double d0_0,
     const char* fname_matrix,
-    const string dir1_opt,
-    const string dir2_opt,
-    const int outfmt_opt,    
-    const int ter_opt)
+    const string dir1_opt, const string dir2_opt,
+    const int outfmt_opt, const int ter_opt, const char *out_reg,
+    const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
+    const bool u_opt, const bool d_opt)
 {
     double seq_id;          
     int i, j, k;
@@ -1873,8 +1863,8 @@ void output_results(
     }
     cout << endl;
 
-    if (m_opt) output_rotation_matrix(fname_matrix, t, u);
-    if (o_opt) output_superpose(xname, t, u, ter_opt);
+    if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
+    if (o_opt) output_superpose(xname, out_reg, t, u, ter_opt);
 
     delete [] seqM;
     delete [] seqxA;
@@ -1941,7 +1931,10 @@ double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap
 
 /* entry function for TMalign */
 int TMalign_main(const char *xname, const char *yname,
-    const char *fname_matrix, const int ter_opt,
+    const char *fname_matrix, const char *out_reg,
+    const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
+    const bool u_opt, const bool d_opt,
+    const bool fast_opt, const int ter_opt,
     const string dir1_opt, const string dir2_opt, const int outfmt_opt)
 {
     /***********************/
@@ -2023,7 +2016,7 @@ int TMalign_main(const char *xname, const char *yname,
     /******************************************************/
     if (!bAlignStick)
     {
-        get_initial(xa, ya, xlen, ylen, invmap0);
+        get_initial(xa, ya, xlen, ylen, invmap0, fast_opt);
         //find the max TMscore for this initial alignment with the simplified search_engin
         TM = detailed_search(xa, ya, xlen, ylen, invmap0, t, u, simplify_step, score_sum_method, local_d0_search);
         if (TM>TMmax)
@@ -2073,7 +2066,7 @@ int TMalign_main(const char *xname, const char *yname,
         /*    get initial alignment based on local superposition    */
         /************************************************************/
         //=initial5 in original TM-align
-        if (get_initial5(xa, ya, xlen, ylen, invmap))
+        if (get_initial5(xa, ya, xlen, ylen, invmap, fast_opt))
         {
             TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
             if (TM>TMmax)
@@ -2135,7 +2128,7 @@ int TMalign_main(const char *xname, const char *yname,
         /*    get initial alignment based on fragment gapless threading    */
         /*******************************************************************/
         //=initial4 in original TM-align
-        get_initial_fgt(xa, ya, xlen, ylen, xresno, yresno, invmap);
+        get_initial_fgt(xa, ya, xlen, ylen, xresno, yresno, invmap, fast_opt);
         TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
         if (TM>TMmax)
         {
@@ -2329,8 +2322,8 @@ int TMalign_main(const char *xname, const char *yname,
     local_d0_search = d0_search;
     TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
 
-
-    if(a_opt)
+    double TM3, TM4, TM5; // for a_opt, u_opt, and d_opt
+    if (a_opt)
     {
         //normalized by average length of structures A, B
         Lnorm_0=(xlen+ylen)*0.5;
@@ -2342,7 +2335,7 @@ int TMalign_main(const char *xname, const char *yname,
         TM3 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
         TM_0=TM3;
     }
-    if(u_opt)
+    if (u_opt)
     {
         //normalized by user assigned length
         parameter_set4final(Lnorm_ass);
@@ -2353,7 +2346,7 @@ int TMalign_main(const char *xname, const char *yname,
         TM4 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
         TM_0=TM4;
     }
-    if(d_opt)
+    if (d_opt)
     {
         //scaled by user assigned d0
         parameter_set4scale(ylen, d0_scale);
@@ -2368,9 +2361,11 @@ int TMalign_main(const char *xname, const char *yname,
 
     /* print result */
     if (outfmt_opt==0) print_version();
-    output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, rmsd0, d0_out,
+    output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, 
+        TM3, TM4, TM5, rmsd0, d0_out,
         m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix,
-        dir1_opt, dir2_opt, outfmt_opt, ter_opt);
+        dir1_opt, dir2_opt, outfmt_opt, ter_opt, 
+        out_reg, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
     /* free memory */
     delete [] invmap0;

@@ -69,6 +69,7 @@ void print_extra_help()
 "             0: (default) full output\n"
 "             1: fasta format compact output\n"
 "             2: tabular format very compact output\n"
+"            -1: full output, but without version and citation information\n"
     <<endl;
 }
 
@@ -140,17 +141,25 @@ int main(int argc, char *argv[])
     /*    get argument    */
     /**********************/
     char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
-    bool A_opt, B_opt, h_opt=false;
-    bool v_opt = false;
-    int ter_opt = 3; // TER, END, or different chainID
-    int outfmt_opt=0;  // set -outfmt to full output
-    A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = false;
-    i_opt = false;// set -i flag to be false
-    m_opt = false;// set -m flag to be false
-    char fname_lign[MAXLEN] = "";
-    char fname_matrix[MAXLEN] = "";// set names to ""
-    I_opt = false;// set -I flag to be false
-    fast_opt = false;// set -fast flag to be false
+    char out_reg[MAXLEN]     = ""; // file name for superposed structure
+    char fname_lign[MAXLEN]  = ""; // file name for user alignment
+    char fname_matrix[MAXLEN]= ""; // file name for output matrix
+
+    bool A_opt = false; // marker for whether structure A is specified
+    bool B_opt = false; // marker for whether structure B is specified
+    bool h_opt = false; // print full help message
+    bool v_opt = false; // print version
+    bool m_opt = false; // flag for -m, output rotation matrix
+    bool i_opt = false; // flag for -i, with user given initial alignment
+    bool I_opt = false; // flag for -I, stick to user given alignment
+    bool o_opt = false; // flag for -o, output superposed structure
+    bool a_opt = false; // flag for -a, normalized by average length
+    bool u_opt = false; // flag for -u, normalized by user specified length
+    bool d_opt = false; // flag for -d, user specified d0
+
+    int ter_opt = 3;    // TER, END, or different chainID
+    int outfmt_opt=0;   // set -outfmt to full output
+    bool fast_opt = false;  // flags for -fast, fTM-align algorithm
     string atom_opt=" CA "; // use C alpha atom to represent a residue
     string suffix_opt=""; // set -suffix to empty
     string dir1_opt="";   // set -dir1 to empty
@@ -429,18 +438,21 @@ int main(int argc, char *argv[])
                 PDB_lines1, PDB_lines2, ter_opt, atom_opt);
             if (stat==1) // chain 1 failed
             {
-		        cerr<<"Warning! Can not open file: "<<xname<<endl;
+		        cerr<<"Warning! Cannot parse file: "<<xname
+                    <<". Chain length 0."<<endl;
                 break;
             }
             else if (stat==2) // chain 2 failed
             {
-		        cerr<<"Warning! Can not open file: "<<yname<<endl;
+		        cerr<<"Warning! Cannot parse file: "<<yname
+                    <<". Chain length 0."<<endl;
                 continue;
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xname, yname, fname_matrix, ter_opt, 
-                dir1_opt, dir2_opt, outfmt_opt);
+            TMalign_main(xname, yname, fname_matrix, out_reg,
+                i_opt, I_opt, o_opt, a_opt, u_opt, d_opt,
+                fast_opt, ter_opt, dir1_opt, dir2_opt, outfmt_opt);
 
             /* Done! Free memory */
             free_memory();
@@ -454,6 +466,6 @@ int main(int argc, char *argv[])
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
-    printf("Total running time is %5.2f seconds\n", diff);
+    printf("Total CPU time is %5.2f seconds\n", diff);
     return 0;
 }
