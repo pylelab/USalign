@@ -262,47 +262,24 @@ int main(int argc, char *argv[])
         }
     }
 
-    if( !A_opt )
-        PrintErrorAndQuit("Please provide structure A");
-    if( !B_opt )
-        PrintErrorAndQuit("Please provide structure B");
+    if (!A_opt) PrintErrorAndQuit("Please provide structure A");
+    if (!B_opt) PrintErrorAndQuit("Please provide structure B");
 
     if (suffix_opt.size() && dir1_opt.size()==0 && dir2_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
     if ((dir1_opt.size() || dir2_opt.size()) && (m_opt || o_opt))
         PrintErrorAndQuit("-m or -o cannot be set with -dir1 or -dir2");
 
-    if( a_opt )
+    if (a_opt)
     {
-        if(!strcmp(Lnorm_ave, "T"))
-        {
-        }
-        else if(!strcmp(Lnorm_ave, "F"))
-        {
-            a_opt=false;
-        }
-        else
-        {
-            cout << "Wrong value for option -a!  It should be T or F" << endl;
-            exit(EXIT_FAILURE);
-        }
+        if(!strcmp(Lnorm_ave, "T")) a_opt=true;
+        else if(!strcmp(Lnorm_ave, "F")) a_opt=false;
+        else PrintErrorAndQuit("Wrong value for option -a! It should be T or F");
     }
-    if( u_opt )
-    {
-        if(Lnorm_ass<=0)
-        {
-            cout << "Wrong value for option -u!  It should be >0" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    if( d_opt )
-    {
-        if(d0_scale<=0)
-        {
-            cout << "Wrong value for option -d!  It should be >0" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
+    if (u_opt && Lnorm_ass<=0)
+        PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
+    if (d_opt && d0_scale<=0)
+        PrintErrorAndQuit("Wrong value for option -d!  It should be >0");
     ////// read initial alignment file from 'alignment.txt' //////
     string basename = string(argv[0]);
     int idx = basename.find_last_of("\\");
@@ -310,10 +287,7 @@ int main(int argc, char *argv[])
     if (i_opt || I_opt)// Ask TM-align to start with an alignment,specified in fasta file 'align.txt'
     {
         if (fname_lign == "")
-        {
-            cout << "Please provide a file name for option -i!" << endl;
-            exit(EXIT_FAILURE);
-        }
+            PrintErrorAndQuit("Please provide a file name for option -i!");
         // open alignment file
         int n_p = 0;// number of structures in alignment file
         string line;
@@ -332,48 +306,35 @@ int main(int argc, char *argv[])
                 {
                     strcpy(sequence[n_p], "");
                     n_p++;
-                    if (n_p > 2)
-                        bContinue = false;
+                    if (n_p > 2) bContinue = false;
                 }
                 else// Read data
                 {
                     if (n_p > 0 && line!="")
-                    {
                         strcat(sequence[n_p-1], line.c_str());
-                    }
                 }
             }
             fileIn.close();
         }
         else
-        {
-            cout << "\nAlignment file does not exist.\n";
-            exit(EXIT_FAILURE);
-        }
+            PrintErrorAndQuit("ERROR! Alignment file does not exist.");
 
         if (n_p < 2)
+            PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
+        if (strlen(sequence[0]) != strlen(sequence[1]))
+            PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal respectively to the two aligned proteins.");
+        if (I_opt)
         {
-            cout << "\nERROR: Fasta format is wrong, two proteins should be included.\n";
-            exit(EXIT_FAILURE);
-        }
-        else
-        {
-            if (strlen(sequence[0]) != strlen(sequence[1]))
-            {
-                cout << "\nWarning: FASTA format may be wrong, the length in alignment should be equal respectively to the aligned proteins.\n";
-                exit(EXIT_FAILURE);
-            }
+            int aligned_resNum=0;
+            for (int i=0;i<strlen(sequence[0]);i++) 
+                aligned_resNum+=(sequence[0][i]!='-' && sequence[1][i]!='-');
+            if (aligned_resNum<3)
+                PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");
         }
     }
 
-    if (m_opt)// Output TM - align rotation matrix: matrix.txt
-    {
-        if (fname_matrix == "")
-        {
-            cout << "Please provide a file name for option -m!" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
+    if (m_opt && fname_matrix == "") // Output rotation matrix: matrix.txt
+        PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
 
     /* parse file list */
     if (dir1_opt.size()==0)
