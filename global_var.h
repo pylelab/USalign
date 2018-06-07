@@ -1,4 +1,4 @@
-const char *TMalign_version="20160521";   //version 
+const char *TMalign_version="20180604";   //version 
  
  
 //global variables
