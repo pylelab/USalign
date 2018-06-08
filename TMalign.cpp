@@ -343,8 +343,8 @@ int main(int argc, char *argv[])
         ifstream fp(xname);
         if (! fp.is_open())
         {
-		    char message[5000];
-		    sprintf(message, "Can not open file: %s\n", xname);
+            char message[5000];
+            sprintf(message, "Can not open file: %s\n", xname);
             PrintErrorAndQuit(message);
         }
         string line;
@@ -365,8 +365,8 @@ int main(int argc, char *argv[])
         ifstream fp(yname);
         if (! fp.is_open())
         {
-		    char message[5000];
-		    sprintf(message, "Can not open file: %s\n", yname);
+            char message[5000];
+            sprintf(message, "Can not open file: %s\n", yname);
             PrintErrorAndQuit(message);
         }
         string line;
@@ -399,13 +399,13 @@ int main(int argc, char *argv[])
                 PDB_lines1, PDB_lines2, ter_opt, atom_opt);
             if (stat==1) // chain 1 failed
             {
-		        cerr<<"Warning! Cannot parse file: "<<xname
+                cerr<<"Warning! Cannot parse file: "<<xname
                     <<". Chain length 0."<<endl;
                 break;
             }
             else if (stat==2) // chain 2 failed
             {
-		        cerr<<"Warning! Cannot parse file: "<<yname
+                cerr<<"Warning! Cannot parse file: "<<yname
                     <<". Chain length 0."<<endl;
                 continue;
             }
