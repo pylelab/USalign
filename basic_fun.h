@@ -38,8 +38,8 @@ using namespace std;
 
 void PrintErrorAndQuit(string sErrorString)
 {
-	cout << sErrorString << endl;
-	exit(1);
+    cout << sErrorString << endl;
+    exit(1);
 }
 
 
@@ -99,16 +99,16 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
     sscanf(cstr, "%lf", x);
     
     strcpy(cstr, (line.substr(38, 8)).c_str());
-	sscanf(cstr, "%lf", y);
+    sscanf(cstr, "%lf", y);
     
     strcpy(cstr, (line.substr(46, 8)).c_str());
-	sscanf(cstr, "%lf", z);
+    sscanf(cstr, "%lf", z);
     
     strcpy(cstr, (line.substr(17, 3)).c_str());
-	*resname = AAmap(cstr);
+    *resname = AAmap(cstr);
 
     strcpy(cstr, (line.substr(22, 4)).c_str());
-	sscanf(cstr, "%d", no);
+    sscanf(cstr, "%d", no);
 }
 
 int get_PDB_lines(const char *filename, vector<string> &PDB_lines, 
@@ -117,24 +117,24 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
     int i=0; // resi
     string line, str, i8;    
     char chainID=0;
-	string resn="";
+    string resn="";
     
     ifstream fin (filename);
     if (fin.is_open())
     {
-		while (fin.good())
+        while (fin.good())
         {
             getline(fin, line);
-			if (i > 0)
+            if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
                 else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
-			if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
+            if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
                (line[16]==' ' || line[16]=='A'))
-			{
-				if (line.compare(12, 4, atom_opt)==0)
-				{
+            {
+                if (line.compare(12, 4, atom_opt)==0)
+                {
                     if (!chainID) chainID=line[21];
                     else if (ter_opt>=2 && chainID!=line[21]) break;
 
@@ -153,8 +153,8 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                     line=line.substr(0,22)+i8+line.substr(26);
                     PDB_lines.push_back(line);
                     i++;
-				}
-			}
+                }
+            }
         }
         fin.close();
     }
@@ -167,16 +167,16 @@ int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
 {
     int i;
     for (i=0;i<PDB_lines.size();i++)
-		get_xyz(PDB_lines[i], &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+        get_xyz(PDB_lines[i], &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
     seq[i]='\0'; 
     return i;
 }
 
 double dist(double x[3], double y[3])
 {
-	double d1=x[0]-y[0];
-	double d2=x[1]-y[1];
-	double d3=x[2]-y[2];	
+    double d1=x[0]-y[0];
+    double d2=x[1]-y[1];
+    double d3=x[2]-y[2];
  
     return (d1*d1 + d2*d2 + d3*d3);
 }
@@ -204,10 +204,10 @@ void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
 /* strip white space at the begining or end of string */
 string Trim(string inputString)
 {
-	string result = inputString;
-	int idxBegin = inputString.find_first_not_of(" \n\r\t");
-	int idxEnd = inputString.find_last_not_of(" \n\r\t");
-	if (idxBegin >= 0 && idxEnd >= 0)
-		result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
-	return result;
+    string result = inputString;
+    int idxBegin = inputString.find_first_not_of(" \n\r\t");
+    int idxEnd = inputString.find_last_not_of(" \n\r\t");
+    if (idxBegin >= 0 && idxEnd >= 0)
+        result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
+    return result;
 }
