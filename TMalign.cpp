@@ -90,7 +90,7 @@ void print_help(bool h_opt=false)
 "Usage: TMalign PDB1.pdb PDB2.pdb [Options]\n"
 "\n"
 "Options:\n"
-"    -u    TM-score normalized by user assigned length\n"
+"    -u    TM-score normalized by user assigned length (the same as -L)\n"
 "          warning: it should be >= minimum length of the two structures\n"
 "          otherwise, TM-score may be >1\n"
 "\n"
@@ -115,7 +115,7 @@ void print_help(bool h_opt=false)
 "\n"
 "    -h    print help message\n"
 "\n"
-"    (Options -u, -a, -d -o won't change the final structure alignment)\n\n"
+"    (Options -u, -a, -d, -o won't change the final structure alignment)\n\n"
 "Example usages:\n"
 "    TMalign PDB1.pdb PDB2.pdb\n"
 "    TMalign PDB1.pdb PDB2.pdb -u 100 -d 5.0\n"
@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
     char out_reg[MAXLEN]     = ""; // file name for superposed structure
     char fname_lign[MAXLEN]  = ""; // file name for user alignment
     char fname_matrix[MAXLEN]= ""; // file name for output matrix
+    vector<string> sequence;       // get value from alignment file
+    double Lnorm_ass, d0_scale;
 
     bool A_opt = false; // marker for whether structure A is specified
     bool B_opt = false; // marker for whether structure B is specified
@@ -174,7 +176,7 @@ int main(int argc, char *argv[])
         {
             strcpy(out_reg, argv[i + 1]);      o_opt = true; i++;
         }
-        else if ( !strcmp(argv[i],"-u") && i < (argc-1) )
+        else if ( (!strcmp(argv[i],"-u") || !strcmp(argv[i],"-L")) && i < (argc-1) )
         {
             Lnorm_ass = atof(argv[i + 1]); u_opt = true; i++;
         }
@@ -253,9 +255,8 @@ int main(int argc, char *argv[])
     if(!B_opt || !A_opt)
     {
 
-        if( h_opt ) print_help(h_opt);
-
-        if(v_opt)
+        if (h_opt) print_help(h_opt);
+        if (v_opt)
         {
             print_version();
             exit(EXIT_FAILURE);
@@ -280,6 +281,9 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
     if (d_opt && d0_scale<=0)
         PrintErrorAndQuit("Wrong value for option -d!  It should be >0");
+    if (outfmt_opt>=2 && (a_opt || u_opt || d_opt))
+        PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
+
     ////// read initial alignment file from 'alignment.txt' //////
     string basename = string(argv[0]);
     int idx = basename.find_last_of("\\");
@@ -298,21 +302,16 @@ int main(int argc, char *argv[])
         ifstream fileIn(path1);
         if (fileIn.is_open())
         {
-            bool bContinue = true;
-            while (fileIn.good() && bContinue)
+            while (fileIn.good())
             {
                 getline(fileIn, line);
                 if (line.compare(0, 1, ">") == 0)// Flag for a new structure
                 {
-                    strcpy(sequence[n_p], "");
+                    if (n_p >= 2) break;
+                    sequence.push_back("");
                     n_p++;
-                    if (n_p > 2) bContinue = false;
                 }
-                else// Read data
-                {
-                    if (n_p > 0 && line!="")
-                        strcat(sequence[n_p-1], line.c_str());
-                }
+                else if (n_p > 0 && line!="") sequence.back()+=line;
             }
             fileIn.close();
         }
@@ -321,12 +320,12 @@ int main(int argc, char *argv[])
 
         if (n_p < 2)
             PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
-        if (strlen(sequence[0]) != strlen(sequence[1]))
+        if (sequence[0].size() != sequence[1].size())
             PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal respectively to the two aligned proteins.");
         if (I_opt)
         {
             int aligned_resNum=0;
-            for (int i=0;i<strlen(sequence[0]);i++) 
+            for (int i=0;i<sequence[0].size();i++) 
                 aligned_resNum+=(sequence[0][i]!='-' && sequence[1][i]!='-');
             if (aligned_resNum<3)
                 PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");
@@ -383,7 +382,8 @@ int main(int argc, char *argv[])
 
     /* loop over file names */
     if (outfmt_opt==2)
-        cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\tRMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
+        cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
+            <<"RMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
 
     vector<string> PDB_lines1; // text of chain1
     vector<string> PDB_lines2; // text of chain2
@@ -411,7 +411,8 @@ int main(int argc, char *argv[])
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xname, yname, fname_matrix, out_reg,
+            TMalign_main(xname, yname, fname_matrix, out_reg, 
+                sequence, Lnorm_ass, d0_scale,
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt,
                 fast_opt, ter_opt, dir1_opt, dir2_opt, outfmt_opt);
 
@@ -424,6 +425,7 @@ int main(int argc, char *argv[])
     PDB_lines2.clear();
     chain1_list.clear();
     chain2_list.clear();
+    sequence.clear();
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;

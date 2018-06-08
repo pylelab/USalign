@@ -33,23 +33,23 @@ int load_PDB_allocate_memory(const char *xname, const char *yname,
     vector<string> &PDB_lines1, vector<string> &PDB_lines2,
     const int ter_opt=3, const string atom_opt=" CA ")
 {
-    tempxlen=PDB_lines1.size();
-    tempylen=PDB_lines2.size();
-    if (!tempxlen) tempxlen=get_PDB_lines(xname,PDB_lines1,ter_opt,atom_opt);
-    if (!tempxlen) return 1; // fail to read chain1
-    if (!tempylen) tempylen=get_PDB_lines(yname,PDB_lines2,ter_opt,atom_opt);
-    if (!tempylen) return 2; // fail to read chain2
+    xlen=PDB_lines1.size();
+    ylen=PDB_lines2.size();
+    if (!xlen) xlen=get_PDB_lines(xname,PDB_lines1,ter_opt,atom_opt);
+    if (!xlen) return 1; // fail to read chain1
+    if (!ylen) ylen=get_PDB_lines(yname,PDB_lines2,ter_opt,atom_opt);
+    if (!ylen) return 2; // fail to read chain2
 
     //------allocate memory for x and y------>
-    NewArray(&xa, tempxlen, 3);
-    seqx = new char[tempxlen + 1];
-    secx = new int[tempxlen];
-    xresno = new int[tempxlen];
+    NewArray(&xa, xlen, 3);
+    seqx = new char[xlen + 1];
+    secx = new int[xlen];
+    xresno = new int[xlen];
 
-    NewArray(&ya, tempylen, 3);
-    seqy = new char[tempylen + 1];
-    yresno = new int[tempylen];
-    secy = new int[tempylen];
+    NewArray(&ya, ylen, 3);
+    seqy = new char[ylen + 1];
+    yresno = new int[ylen];
+    secy = new int[ylen];
 
     // Get exact length
     xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
@@ -75,9 +75,9 @@ void free_memory()
     DeleteArray(&path, xlen+1);
     DeleteArray(&val, xlen+1);
     DeleteArray(&score, xlen+1);
-    DeleteArray(&xa, tempxlen);
+    DeleteArray(&xa, xlen);
     DeleteArray(&xt, xlen);
-    DeleteArray(&ya, tempylen);
+    DeleteArray(&ya, ylen);
     DeleteArray(&r1, minlen);
     DeleteArray(&r2, minlen);
     DeleteArray(&xtm, minlen);
@@ -1717,9 +1717,9 @@ void output_results(
     int n_ali8,
     int n_ali,
     double TM_0,
-    double Lnorm_0,
     double d0_0,
-    const char* fname_matrix,
+    const double Lnorm_ass, const double d0_scale, 
+    const double d0a, const double d0u, const char* fname_matrix,
     const string dir1_opt, const string dir2_opt,
     const int outfmt_opt, const int ter_opt, const char *out_reg,
     const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
@@ -1812,12 +1812,12 @@ void output_results(
         printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, x_len, d0B);
         printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, y_len, d0A);
 
-        if(a_opt)
-            printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.2f, d0= %.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
-        if(u_opt)
+        if (a_opt)
+            printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.1f, d0= %.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+        if (u_opt)
             printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
-        if(d_opt)
-            printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %.2f)\n", TM5, d0_scale, Lnorm_0);
+        if (d_opt)
+            printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %d)\n", TM5, d0_scale, y_len);
         printf("(You should use TM-score normalized by length of the reference protein)\n");
     
         //output alignment
@@ -1843,13 +1843,13 @@ void output_results(
             printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         if(a_opt)
-            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.2f\td0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.1f\td0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
 
         if(u_opt)
             printf("# TM-score=%.5f (normalized by user-specified L=%.2f\td0=%.2f)\n", TM4, Lnorm_ass, d0u);
 
         if(d_opt)
-            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%.2f)\n", TM5, d0_scale, Lnorm_0);
+            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%d)\n", TM5, d0_scale, y_len);
 
         printf("$$$$\n");
     }
@@ -1932,6 +1932,8 @@ double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap
 /* entry function for TMalign */
 int TMalign_main(const char *xname, const char *yname,
     const char *fname_matrix, const char *out_reg,
+    const vector<string> sequence, const double Lnorm_ass,
+    const double d0_scale,
     const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
     const bool u_opt, const bool d_opt,
     const bool fast_opt, const int ter_opt,
@@ -1971,8 +1973,8 @@ int TMalign_main(const char *xname, const char *yname,
 
         int i1 = -1;// in C version, index starts from zero, not from one
         int i2 = -1;
-        int L1 = strlen(sequence[0]);
-        int L2 = strlen(sequence[1]);
+        int L1 = sequence[0].size();
+        int L2 = sequence[1].size();
         int L = min(L1, L2);// Get positions for aligned residues
         for (int kk1 = 0; kk1 < L; kk1++)
         {
@@ -2162,8 +2164,8 @@ int TMalign_main(const char *xname, const char *yname,
 
             int i1 = -1;// in C version, index starts from zero, not from one
             int i2 = -1;
-            int L1 = strlen(sequence[0]);
-            int L2 = strlen(sequence[1]);
+            int L1 = sequence[0].size();
+            int L2 = sequence[1].size();
             int L = min(L1, L2);// Get positions for aligned residues
             for (int kk1 = 0; kk1 < L; kk1++)
             {
@@ -2322,6 +2324,7 @@ int TMalign_main(const char *xname, const char *yname,
     local_d0_search = d0_search;
     TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
 
+    double Lnorm_d0, d0u, d0a;
     double TM3, TM4, TM5; // for a_opt, u_opt, and d_opt
     if (a_opt)
     {
@@ -2332,7 +2335,8 @@ int TMalign_main(const char *xname, const char *yname,
         d0_0=d0a;
         local_d0_search = d0_search;
 
-        TM3 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
+        TM3 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step,
+            score_sum_method, &rmsd, local_d0_search);
         TM_0=TM3;
     }
     if (u_opt)
@@ -2343,7 +2347,8 @@ int TMalign_main(const char *xname, const char *yname,
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;
         local_d0_search = d0_search;
-        TM4 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
+        TM4 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
+            score_sum_method, &rmsd, local_d0_search);
         TM_0=TM4;
     }
     if (d_opt)
@@ -2355,7 +2360,8 @@ int TMalign_main(const char *xname, const char *yname,
         //Lnorm_0=ylen;
         Lnorm_d0=Lnorm_0;
         local_d0_search = d0_search;
-        TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
+        TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
+            score_sum_method, &rmsd, local_d0_search);
         TM_0=TM5;
     }
 
@@ -2363,7 +2369,8 @@ int TMalign_main(const char *xname, const char *yname,
     if (outfmt_opt==0) print_version();
     output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, 
         TM3, TM4, TM5, rmsd0, d0_out,
-        m1, m2, n_ali8, n_ali, TM_0, Lnorm_0, d0_0, fname_matrix,
+        m1, m2, n_ali8, n_ali, TM_0, d0_0, 
+        Lnorm_ass, d0_scale, d0a, d0u, fname_matrix,
         dir1_opt, dir2_opt, outfmt_opt, ter_opt, 
         out_reg, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
