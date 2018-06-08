@@ -8,8 +8,9 @@ double **score;            		  //Input score table for dynamic programming
 bool   **path;                    //for dynamic programming  
 double **val;                     //for dynamic programming  
 int    xlen, ylen, minlen;        //length of proteins
-double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2], ya[0...ylen-1][0..2]
-                        //in general, ya is regarded as native structure 
+double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2] and
+                        //ya[0...ylen-1][0..2], in general,
+                        //ya is regarded as native structure 
                         //--> superpose xa onto ya
 int    *xresno, *yresno;//residue numbers, used in fragment gapless threading 
 double **xtm, **ytm;    //for TMscore search engine
