@@ -554,8 +554,8 @@ double TMscore8_search_standard(double **xtm,
 // output:  the best rotaion matrix t, u that results in highest TMscore
 double detailed_search( double **x,
                         double **y, 
-                        int x_len, 
-                        int y_len, 
+                        int xlen, 
+                        int ylen, 
                         int invmap0[],
                         double t[3],
                         double u[3][3],
@@ -572,7 +572,7 @@ double detailed_search( double **x,
 
 
     k=0;
-    for(i=0; i<y_len; i++) 
+    for(i=0; i<ylen; i++) 
     {
         j=invmap0[i];
         if(j>=0) //aligned
@@ -595,8 +595,8 @@ double detailed_search( double **x,
 
 double detailed_search_standard(double **x,
                         double **y, 
-                        int x_len, 
-                        int y_len, 
+                        int xlen, 
+                        int ylen, 
                         int invmap0[],
                         double t[3],
                         double u[3][3],
@@ -614,7 +614,7 @@ double detailed_search_standard(double **x,
 
 
     k=0;
-    for(i=0; i<y_len; i++) 
+    for(i=0; i<ylen; i++) 
     {
         j=invmap0[i];
         if(j>=0) //aligned
@@ -639,13 +639,13 @@ double detailed_search_standard(double **x,
 }
 
 //compute the score quickly in three iterations
-double get_score_fast(double **x, double **y, int x_len, int y_len, int invmap[])
+double get_score_fast(double **x, double **y, int xlen, int ylen, int invmap[])
 {
     double rms, tmscore, tmscore1, tmscore2;
     int i, j, k;
 
     k=0;
-    for(j=0; j<y_len; j++)
+    for(j=0; j<ylen; j++)
     {
         i=invmap[j];
         if(i>=0)
@@ -797,22 +797,22 @@ double get_score_fast(double **x, double **y, int x_len, int y_len, int invmap[]
 
 
 //perform gapless threading to find the best initial alignment
-//input: x, y, x_len, y_len
+//input: x, y, xlen, ylen
 //output: y2x0 stores the best alignment: e.g., 
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial(double **x, double **y, int x_len, int y_len, int *y2x,
+double get_initial(double **x, double **y, int xlen, int ylen, int *y2x,
     const bool fast_opt)
 {
-    int min_len=getmin(x_len, y_len);
+    int min_len=getmin(xlen, ylen);
     if(min_len<=5) PrintErrorAndQuit("Sequence is too short <=5!\n");
     
     int min_ali= min_len/2;              //minimum size of considered fragment 
     if(min_ali<=5)  min_ali=5;    
     int n1, n2;
-    n1 = -y_len+min_ali; 
-    n2 = x_len-min_ali;
+    n1 = -ylen+min_ali; 
+    n2 = xlen-min_ali;
 
     int i, j, k, k_best;
     double tmscore, tmscore_max=-1;
@@ -821,10 +821,10 @@ double get_initial(double **x, double **y, int x_len, int y_len, int *y2x,
     for(k=n1; k<=n2; k+=(fast_opt)?5:1)
     {
         //get the map
-        for(j=0; j<y_len; j++)
+        for(j=0; j<ylen; j++)
         {
             i=j+k;
-            if(i>=0 && i<x_len)
+            if(i>=0 && i<xlen)
             {
                 y2x[j]=i;
             }
@@ -836,7 +836,7 @@ double get_initial(double **x, double **y, int x_len, int y_len, int *y2x,
         
         //evaluate the map quickly in three iterations
         //this is not real tmscore, it is used to evaluate the goodness of the initial alignment
-        tmscore=get_score_fast(x, y, x_len, y_len, y2x); 
+        tmscore=get_score_fast(x, y, xlen, ylen, y2x); 
         if(tmscore>=tmscore_max)
         {
             tmscore_max=tmscore;
@@ -846,10 +846,10 @@ double get_initial(double **x, double **y, int x_len, int y_len, int *y2x,
     
     //extract the best map
     k=k_best;
-    for(j=0; j<y_len; j++)
+    for(j=0; j<ylen; j++)
     {
         i=j+k;
-        if(i>=0 && i<x_len)
+        if(i>=0 && i<xlen)
         {
             y2x[j]=i;
         }
@@ -1053,35 +1053,35 @@ void make_sec(double **x, int len, int *sec)
 
 
 //get initial alignment from secondary structure alignment
-//input: x, y, x_len, y_len
+//input: x, y, xlen, ylen
 //output: y2x stores the best alignment: e.g., 
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ss(  double **x, 
                       double **y, 
-                      int x_len,
-                      int y_len, 
+                      int xlen,
+                      int ylen, 
                       int *y2x
                       )
 {
     //assign secondary structures
-    make_sec(x, x_len, secx);
-    make_sec(y, y_len, secy);
+    make_sec(x, xlen, secx);
+    make_sec(y, ylen, secy);
 
     double gap_open=-1.0;
-    NWDP_TM(secx, secy, x_len, y_len, gap_open, y2x);    
+    NWDP_TM(secx, secy, xlen, ylen, gap_open, y2x);    
 }
 
 
 // get_initial5 in TMalign fortran, get_intial_local in TMalign c by yangji
 //get initial alignment of local structure superposition
-//input: x, y, x_len, y_len
+//input: x, y, xlen, ylen
 //output: y2x stores the best alignment: e.g., 
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
+bool get_initial5(double **x, double **y, int xlen, int ylen, int *y2x,
     const bool fast_opt)
 {
     double GL, rmsd;
@@ -1093,34 +1093,34 @@ bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
     double d02 = d01*d01;
 
     double GLmax = 0;
-    int aL = getmin(x_len, y_len);
-    int *invmap = new int[y_len + 1];
+    int aL = getmin(xlen, ylen);
+    int *invmap = new int[ylen + 1];
 
     // jump on sequence1-------------->
     int n_jump1 = 0;
-    if (x_len > 250)
+    if (xlen > 250)
         n_jump1 = 45;
-    else if (x_len > 200)
+    else if (xlen > 200)
         n_jump1 = 35;
-    else if (x_len > 150)
+    else if (xlen > 150)
         n_jump1 = 25;
     else
         n_jump1 = 15;
-    if (n_jump1 > (x_len / 3))
-        n_jump1 = x_len / 3;
+    if (n_jump1 > (xlen / 3))
+        n_jump1 = xlen / 3;
 
     // jump on sequence2-------------->
     int n_jump2 = 0;
-    if (y_len > 250)
+    if (ylen > 250)
         n_jump2 = 45;
-    else if (y_len > 200)
+    else if (ylen > 200)
         n_jump2 = 35;
-    else if (y_len > 150)
+    else if (ylen > 150)
         n_jump2 = 25;
     else
         n_jump2 = 15;
-    if (n_jump2 > (y_len / 3))
-        n_jump2 = y_len / 3;
+    if (n_jump2 > (ylen / 3))
+        n_jump2 = ylen / 3;
 
     // fragment to superimpose-------------->
     int n_frag[2] = { 20, 100 };
@@ -1138,8 +1138,8 @@ bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
     bool flag = false;
     for (int i_frag = 0; i_frag < 2; i_frag++)
     {
-        int m1 = x_len - n_frag[i_frag] + 1;
-        int m2 = y_len - n_frag[i_frag] + 1;
+        int m1 = xlen - n_frag[i_frag] + 1;
+        int m2 = ylen - n_frag[i_frag] + 1;
 
         for (int i = 0; i<m1; i = i + n_jump1) //index starts from 0, different from FORTRAN
         {
@@ -1160,12 +1160,12 @@ bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
                 Kabsch(r1, r2, n_frag[i_frag], 1, &rmsd, t, u);
 
                 double gap_open = 0.0;
-                NWDP_TM(x, y, x_len, y_len, t, u, d02, gap_open, invmap);
-                GL = get_score_fast(x, y, x_len, y_len, invmap);
+                NWDP_TM(x, y, xlen, ylen, t, u, d02, gap_open, invmap);
+                GL = get_score_fast(x, y, xlen, ylen, invmap);
                 if (GL>GLmax)
                 {
                     GLmax = GL;
-                    for (int ii = 0; ii<y_len; ii++)
+                    for (int ii = 0; ii<ylen; ii++)
                     {
                         y2x[ii] = invmap[ii];
                     }
@@ -1182,8 +1182,8 @@ bool get_initial5(double **x, double **y, int x_len, int y_len, int *y2x,
 //with invmap(i) calculate score(i,j) using RMSD rotation
 void score_matrix_rmsd(  double **x, 
                          double **y, 
-                         int x_len,
-                         int y_len,
+                         int xlen,
+                         int ylen,
                          int *y2x
                          )
 {
@@ -1195,7 +1195,7 @@ void score_matrix_rmsd(  double **x,
 
     double xx[3];
     int i, k=0;
-    for(int j=0; j<y_len; j++)
+    for(int j=0; j<ylen; j++)
     {
         i=y2x[j];
         if(i>=0)
@@ -1212,13 +1212,13 @@ void score_matrix_rmsd(  double **x,
         }
     }
     Kabsch(r1, r2, k, 1, &rmsd, t, u);
-    //do_rotation(x, xt, x_len, t, u);
+    //do_rotation(x, xt, xlen, t, u);
     
     
-    for(int ii=0; ii<x_len; ii++)
+    for(int ii=0; ii<xlen; ii++)
     {        
         transform(t, u, &x[ii][0], xx);
-        for(int jj=0; jj<y_len; jj++)
+        for(int jj=0; jj<ylen; jj++)
         {
             //dij=dist(&xt[ii][0], &y[jj][0]);   
             dij=dist(xx, &y[jj][0]); 
@@ -1231,8 +1231,8 @@ void score_matrix_rmsd(  double **x,
 
 void score_matrix_rmsd_sec(  double **x, 
                              double **y, 
-                             int x_len,
-                             int y_len,
+                             int xlen,
+                             int ylen,
                              int *y2x
                              )
 {
@@ -1244,7 +1244,7 @@ void score_matrix_rmsd_sec(  double **x,
 
     double xx[3];
     int i, k=0;
-    for(int j=0; j<y_len; j++)
+    for(int j=0; j<ylen; j++)
     {
         i=y2x[j];
         if(i>=0)
@@ -1263,10 +1263,10 @@ void score_matrix_rmsd_sec(  double **x,
     Kabsch(r1, r2, k, 1, &rmsd, t, u);
 
     
-    for(int ii=0; ii<x_len; ii++)
+    for(int ii=0; ii<xlen; ii++)
     {        
         transform(t, u, &x[ii][0], xx);
-        for(int jj=0; jj<y_len; jj++)
+        for(int jj=0; jj<ylen; jj++)
         {
             dij=dist(xx, &y[jj][0]); 
             if(secx[ii]==secy[jj])
@@ -1283,25 +1283,25 @@ void score_matrix_rmsd_sec(  double **x,
 
 
 //get initial alignment from secondary structure and previous alignments
-//input: x, y, x_len, y_len
+//input: x, y, xlen, ylen
 //output: y2x stores the best alignment: e.g., 
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ssplus( double **x, 
                          double **y, 
-                         int x_len,
-                         int y_len,
+                         int xlen,
+                         int ylen,
                          int *y2x0,
                          int *y2x                        
                          )
 {
 
     //create score matrix for DP
-    score_matrix_rmsd_sec(x, y, x_len, y_len, y2x0);
+    score_matrix_rmsd_sec(x, y, xlen, ylen, y2x0);
     
     double gap_open=-1.0;
-    NWDP_TM(x_len, y_len, gap_open, y2x);
+    NWDP_TM(xlen, ylen, gap_open, y2x);
 }
 
 
@@ -1384,15 +1384,15 @@ void find_max_frag(double **x, int *resno, int len, int *start_max,
 }
 
 //perform fragment gapless threading to find the best initial alignment
-//input: x, y, x_len, y_len
+//input: x, y, xlen, ylen
 //output: y2x0 stores the best alignment: e.g., 
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 double get_initial_fgt( double **x, 
                         double **y, 
-                        int x_len,
-                        int y_len, 
+                        int xlen,
+                        int ylen, 
                         int *xresno,
                         int *yresno,
                         int *y2x,
@@ -1405,8 +1405,8 @@ double get_initial_fgt( double **x,
 
     int xstart=0, ystart=0, xend=0, yend=0;
 
-    find_max_frag(x, xresno, x_len,  &xstart, &xend, fast_opt);
-    find_max_frag(y, yresno, y_len, &ystart, &yend, fast_opt);
+    find_max_frag(x, xresno, xlen,  &xstart, &xend, fast_opt);
+    find_max_frag(y, yresno, ylen, &ystart, &yend, fast_opt);
 
 
     int Lx = xend-xstart+1;
@@ -1414,20 +1414,20 @@ double get_initial_fgt( double **x,
     int *ifr, *y2x_;
     int L_fr=getmin(Lx, Ly);
     ifr= new int[L_fr];
-    y2x_= new int[y_len+1];
+    y2x_= new int[ylen+1];
 
     //select what piece will be used (this may araise ansysmetry, but
     //only when L1=L2 and Lfr1=Lfr2 and L1 ne Lfr1
     //if L1=Lfr1 and L2=Lfr2 (normal proteins), it will be the same as initial1
 
-    if(Lx<Ly || (Lx==Ly && x_len<=y_len))
+    if(Lx<Ly || (Lx==Ly && xlen<=ylen))
     {        
         for(int i=0; i<L_fr; i++)
         {
             ifr[i]=xstart+i;
         }
     }
-    else if(Lx>Ly || (Lx==Ly && x_len>y_len))
+    else if(Lx>Ly || (Lx==Ly && xlen>ylen))
     {        
         for(int i=0; i<L_fr; i++)
         {
@@ -1436,7 +1436,7 @@ double get_initial_fgt( double **x,
     }
 
     
-    int L0=getmin(x_len, y_len); //non-redundant to get_initial1
+    int L0=getmin(xlen, ylen); //non-redundant to get_initial1
     if(L_fr==L0)
     {
         int n1= (int)(L0*0.1); //my index starts from 0
@@ -1455,21 +1455,21 @@ double get_initial_fgt( double **x,
     //gapless threading for the extracted fragment
     double tmscore, tmscore_max=-1;
 
-    if(Lx<Ly || (Lx==Ly && x_len<=y_len))
+    if(Lx<Ly || (Lx==Ly && xlen<=ylen))
     {
         int L1=L_fr;
-        int min_len=getmin(L1, y_len);    
+        int min_len=getmin(L1, ylen);    
         int min_ali= (int) (min_len/2.5);              //minimum size of considered fragment 
         if(min_ali<=fra_min1)  min_ali=fra_min1;    
         int n1, n2;
-        n1 = -y_len+min_ali; 
+        n1 = -ylen+min_ali; 
         n2 = L1-min_ali;
 
         int i, j, k;
         for(k=n1; k<=n2; k+=(fast_opt)?3:1)
         {
             //get the map
-            for(j=0; j<y_len; j++)
+            for(j=0; j<ylen; j++)
             {
                 i=j+k;
                 if(i>=0 && i<L1)
@@ -1483,12 +1483,12 @@ double get_initial_fgt( double **x,
             }
 
             //evaluate the map quickly in three iterations
-            tmscore=get_score_fast(x, y, x_len, y_len, y2x_);
+            tmscore=get_score_fast(x, y, xlen, ylen, y2x_);
 
             if(tmscore>=tmscore_max)
             {
                 tmscore_max=tmscore;
-                for(j=0; j<y_len; j++)
+                for(j=0; j<ylen; j++)
                 {
                     y2x[j]=y2x_[j];
                 }
@@ -1498,19 +1498,19 @@ double get_initial_fgt( double **x,
     else
     {
         int L2=L_fr;
-        int min_len=getmin(x_len, L2);    
+        int min_len=getmin(xlen, L2);    
         int min_ali= (int) (min_len/2.5);              //minimum size of considered fragment 
         if(min_ali<=fra_min1)  min_ali=fra_min1;    
         int n1, n2;
         n1 = -L2+min_ali; 
-        n2 = x_len-min_ali;
+        n2 = xlen-min_ali;
 
         int i, j, k;    
 
         for(k=n1; k<=n2; k++)
         {
             //get the map
-            for(j=0; j<y_len; j++)
+            for(j=0; j<ylen; j++)
             {
                 y2x_[j]=-1;
             }
@@ -1518,18 +1518,18 @@ double get_initial_fgt( double **x,
             for(j=0; j<L2; j++)
             {
                 i=j+k;
-                if(i>=0 && i<x_len)
+                if(i>=0 && i<xlen)
                 {
                     y2x_[ifr[j]]=i;
                 }
             }
         
             //evaluate the map quickly in three iterations
-            tmscore=get_score_fast(x, y, x_len, y_len, y2x_);
+            tmscore=get_score_fast(x, y, xlen, ylen, y2x_);
             if(tmscore>=tmscore_max)
             {
                 tmscore_max=tmscore;
-                for(j=0; j<y_len; j++)
+                for(j=0; j<ylen; j++)
                 {
                     y2x[j]=y2x_[j];
                 }
@@ -1553,8 +1553,8 @@ double get_initial_fgt( double **x,
 //output: best alignment that maximizes the TMscore, will be stored in invmap
 double DP_iter( double **x,
                 double **y, 
-                int x_len, 
-                int y_len, 
+                int xlen, 
+                int ylen, 
                 double t[3],
                 double u[3][3],
                 int invmap0[],
@@ -1566,7 +1566,7 @@ double DP_iter( double **x,
 {
     double gap_open[2]={-0.6, 0};
     double rmsd; 
-    int *invmap=new int[y_len+1];
+    int *invmap=new int[ylen+1];
     
     int iteration, i, j, k;
     double tmscore, tmscore_max, tmscore_old=0;    
@@ -1579,10 +1579,10 @@ double DP_iter( double **x,
     {
         for(iteration=0; iteration<iteration_max; iteration++)
         {           
-            NWDP_TM(x, y, x_len, y_len, t, u, d02, gap_open[g], invmap);
+            NWDP_TM(x, y, xlen, ylen, t, u, d02, gap_open[g], invmap);
             
             k=0;
-            for(j=0; j<y_len; j++) 
+            for(j=0; j<ylen; j++) 
             {
                 i=invmap[j];
 
@@ -1606,7 +1606,7 @@ double DP_iter( double **x,
             if(tmscore>tmscore_max)
             {
                 tmscore_max=tmscore;
-                for(i=0; i<y_len; i++) 
+                for(i=0; i<ylen; i++) 
                 {                
                     invmap0[i]=invmap[i];                                      
                 }                
@@ -1706,7 +1706,7 @@ void output_rotation_matrix(const char* fname_matrix,
 
 //output the final results
 void output_results(
-    const char *xname, const char *yname, const int x_len, const int y_len,
+    const char *xname, const char *yname, const int xlen, const int ylen,
     double t[3], double u[3][3],
     const double TM1, const double TM2,
     const double TM3, const double TM4, const double TM5,
@@ -1728,13 +1728,13 @@ void output_results(
     double seq_id;          
     int i, j, k;
     double d;
-    int ali_len=x_len+y_len; //maximum length of alignment
+    int ali_len=xlen+ylen; //maximum length of alignment
     char *seqM, *seqxA, *seqyA;
     seqM=new char[ali_len];
     seqxA=new char[ali_len];
     seqyA=new char[ali_len];
     
-    if (outfmt_opt<=0) do_rotation(xa, xt, x_len, t, u);
+    if (outfmt_opt<=0) do_rotation(xa, xt, xlen, t, u);
 
     seq_id=0;
     int kk=0, i_old=0, j_old=0;
@@ -1776,7 +1776,7 @@ void output_results(
     }
 
     //tail
-    for(i=i_old; i<x_len; i++)
+    for(i=i_old; i<xlen; i++)
     {
         //align x to gap
         seqxA[kk]=seqx[i];
@@ -1784,7 +1784,7 @@ void output_results(
         seqM[kk]=' ';                    
         kk++;
     }    
-    for(j=j_old; j<y_len; j++)
+    for(j=j_old; j<ylen; j++)
     {
         //align y to gap
         seqxA[kk]='-';
@@ -1802,22 +1802,22 @@ void output_results(
         printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n",
             xname+dir1_opt.size());
         printf("Name of Chain_2: %s\n", yname+dir2_opt.size());
-        printf("Length of Chain_1: %d residues\n", x_len);
-        printf("Length of Chain_2: %d residues\n\n", y_len);
+        printf("Length of Chain_1: %d residues\n", xlen);
+        printf("Length of Chain_2: %d residues\n\n", ylen);
 
         if (i_opt || I_opt)
             printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, seq_id/( n_ali8+0.00000001));
-        printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, x_len, d0B);
-        printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, y_len, d0A);
+        printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
+        printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
         if (a_opt)
-            printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.1f, d0= %.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+            printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.1f, d0= %.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
         if (u_opt)
             printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
         if (d_opt)
-            printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %d)\n", TM5, d0_scale, y_len);
+            printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %d)\n", TM5, d0_scale, ylen);
         printf("(You should use TM-score normalized by length of the reference protein)\n");
     
         //output alignment
@@ -1830,10 +1830,10 @@ void output_results(
     else if (outfmt_opt==1)
     {
         printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            xname+dir1_opt.size(), x_len, d0B, seq_id/x_len, TM2);
+            xname+dir1_opt.size(), xlen, d0B, seq_id/xlen, TM2);
         printf("%s\n", seqxA);
         printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            yname+dir2_opt.size(), y_len, d0A, seq_id/y_len, TM1);
+            yname+dir2_opt.size(), ylen, d0A, seq_id/ylen, TM1);
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
@@ -1843,13 +1843,13 @@ void output_results(
             printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         if(a_opt)
-            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.1f\td0=%.2f)\n", TM3, (x_len+y_len)*0.5, d0a);
+            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.1f\td0=%.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
 
         if(u_opt)
             printf("# TM-score=%.5f (normalized by user-specified L=%.2f\td0=%.2f)\n", TM4, Lnorm_ass, d0u);
 
         if(d_opt)
-            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%d)\n", TM5, d0_scale, y_len);
+            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%d)\n", TM5, d0_scale, ylen);
 
         printf("$$$$\n");
     }
@@ -1858,8 +1858,8 @@ void output_results(
         printf("%s\t%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
             xname+dir1_opt.size(), yname+dir2_opt.size(),
             TM2, TM1, rmsd,
-            seq_id/x_len, seq_id/y_len, seq_id/( n_ali8+0.00000001),
-            x_len, y_len, n_ali8);
+            seq_id/xlen, seq_id/ylen, seq_id/( n_ali8+0.00000001),
+            xlen, ylen, n_ali8);
     }
     cout << endl;
 
@@ -1871,10 +1871,10 @@ void output_results(
     delete [] seqyA;
 }
 
-double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap[], int& L_ali, double& RMSD )
+double standard_TMscore(double **x, double **y, int xlen, int ylen, int invmap[], int& L_ali, double& RMSD )
 {
     D0_MIN = 0.5;
-    Lnorm = y_len;
+    Lnorm = ylen;
     if (Lnorm > 21)
         d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
     else
@@ -1886,7 +1886,7 @@ double standard_TMscore(double **x, double **y, int x_len, int y_len, int invmap
     double tmscore;// collected alined residues from invmap
     int n_al = 0;
     int i;
-    for (int j = 0; j<y_len; j++)
+    for (int j = 0; j<ylen; j++)
     {
         i = invmap[j];
         if (i >= 0)
