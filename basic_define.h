@@ -19,20 +19,6 @@
 #define getmax(a,b) a>b?a:b
 #define getmin(a,b) a>b?b:a
 
-#define AtomLenMax 30
-
-#define dimmax 30000
-#define charmax 10
-
-#define NMAX 5000
-#define NMAX2 90000
-#define ASCIILimit 123
-
 #define MAXLEN 10000 //maximum length of filenames
-#include <string>// TO use string variables
-
-using namespace std;
-
-string **atom1, **atom2;// atom name, atom1(i,j): the name of jth atom for ith residue
 
 #endif
