@@ -13,8 +13,11 @@
    Please report bugs and questions to zhng@umich.edu
 =============================================================
 */
-#include "basic_define.h"
-#include <iomanip>
+
+#include "global_var.h"
+#include "param_set.h"
+#include "NW.h"
+#include "Kabsch.h"
 
 void print_version()
 {
@@ -1630,7 +1633,7 @@ double DP_iter( double **x,
 }
 
 
-void output_superpose(const char *xname, const char *out_reg,
+void output_superpose(const char *xname, const char *fname_super,
     double t[3], double u[3][3], const int ter_opt=3)
 {
     ifstream fin(xname);
@@ -1668,7 +1671,7 @@ void output_superpose(const char *xname, const char *out_reg,
         PrintErrorAndQuit(message);
     }
 
-    ofstream fp(out_reg);
+    ofstream fp(fname_super);
     fp<<buf.str();
     fp.close();
     buf.str(string()); // clear stream
@@ -1717,11 +1720,11 @@ void output_results(
     const int n_ali8,
     const int n_ali,
     const double TM_0,
-    const double d0_0,
+    const double d0_0, const double d0A, const double d0B,
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
     const string dir1_opt, const string dir2_opt,
-    const int outfmt_opt, const int ter_opt, const char *out_reg,
+    const int outfmt_opt, const int ter_opt, const char *fname_super,
     const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
     const bool u_opt, const bool d_opt)
 {
@@ -1864,7 +1867,7 @@ void output_results(
     cout << endl;
 
     if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
-    if (o_opt) output_superpose(xname, out_reg, t, u, ter_opt);
+    if (o_opt) output_superpose(xname, fname_super, t, u, ter_opt);
 
     delete [] seqM;
     delete [] seqxA;
@@ -1931,7 +1934,7 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen, int invmap[]
 
 /* entry function for TMalign */
 int TMalign_main(const char *xname, const char *yname,
-    const char *fname_matrix, const char *out_reg,
+    const char *fname_matrix, const char *fname_super,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale,
     const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
@@ -1939,6 +1942,7 @@ int TMalign_main(const char *xname, const char *yname,
     const bool fast_opt, const int ter_opt,
     const string dir1_opt, const string dir2_opt, const int outfmt_opt)
 {
+    double d0A, d0B;
     /***********************/
     /*    parameter set    */
     /***********************/
@@ -2369,10 +2373,10 @@ int TMalign_main(const char *xname, const char *yname,
     if (outfmt_opt==0) print_version();
     output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, 
         TM3, TM4, TM5, rmsd0, d0_out,
-        m1, m2, n_ali8, n_ali, TM_0, d0_0, 
+        m1, m2, n_ali8, n_ali, TM_0, d0_0, d0A, d0B,
         Lnorm_ass, d0_scale, d0a, d0u, fname_matrix,
         dir1_opt, dir2_opt, outfmt_opt, ter_opt, 
-        out_reg, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
+        fname_super, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
     /* free memory */
     delete [] invmap0;

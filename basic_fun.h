@@ -28,10 +28,8 @@
 #include <iterator>
 #include <algorithm>
 #include <string>
-
+#include <iomanip>
 #include <map>
-
-#include "basic_define.h"
 
 using namespace std;
 
@@ -42,19 +40,23 @@ void PrintErrorAndQuit(string sErrorString)
     exit(1);
 }
 
+template <typename T> inline T getmin(const T &a, const T &b)
+{
+    return b<a?b:a;
+}
 
 template <class A> void NewArray(A *** array, int Narray1, int Narray2)
 {
-  *array=new A* [Narray1];
-  for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
+    *array=new A* [Narray1];
+    for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
 };
 
 template <class A> void DeleteArray(A *** array, int Narray)
 {
-  for(int i=0; i<Narray; i++)
-    if(*(*array+i)) delete [] *(*array+i);
-  if(Narray) delete [] (*array);
-  (*array)=NULL;
+    for(int i=0; i<Narray; i++)
+        if(*(*array+i)) delete [] *(*array+i);
+    if(Narray) delete [] (*array);
+    (*array)=NULL;
 };
 
 
@@ -63,7 +65,7 @@ char AAmap(string AA)
     char A='X';
     if      (AA.compare("ALA")==0) A='A';
     else if (AA.compare("ASX")==0) A='B';
-    else if (AA.compare("CYS")==0 || AA.compare("CYX")==0) A='C';
+    else if (AA.compare("CYS")==0) A='C';
     else if (AA.compare("ASP")==0) A='D';
     else if (AA.compare("GLU")==0) A='E';
     else if (AA.compare("PHE")==0) A='F';
@@ -81,12 +83,12 @@ char AAmap(string AA)
     else if (AA.compare("SER")==0) A='S';
     else if (AA.compare("THR")==0) A='T';
     else if (AA.compare("SEC")==0) A='U';
-    else if (AA.compare("VAL")==0) A='V';     
+    else if (AA.compare("VAL")==0) A='V';
     else if (AA.compare("TRP")==0) A='W';    
     else if (AA.compare("TYR")==0) A='Y';
     else if (AA.compare("GLX")==0) A='Z';
 
-    if      (AA.compare(0,2," D")==0) A=tolower(AA[2]);
+    else if (AA.compare(0,2," D")==0) A=tolower(AA[2]);
     else if (AA.compare(0,2,"  ")==0) A=tolower(AA[2]);
     return A;
 }

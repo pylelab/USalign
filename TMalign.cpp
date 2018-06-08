@@ -27,17 +27,9 @@
                times a PDB file need to be read.
 ===============================================================================
 */
-#include "basic_define.h"
-#include "global_var.h"
-#include "param_set.h"
+#include "TMalign.h"
 
 using namespace std;
-
-
-#include "basic_fun.h"
-#include "NW.h"
-#include "Kabsch.h"
-#include "TMalign.h"
 
 void print_extra_help()
 {
@@ -140,11 +132,12 @@ int main(int argc, char *argv[])
     /**********************/
     /*    get argument    */
     /**********************/
-    char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
-    char out_reg[MAXLEN]     = ""; // file name for superposed structure
-    char fname_lign[MAXLEN]  = ""; // file name for user alignment
-    char fname_matrix[MAXLEN]= ""; // file name for output matrix
-    vector<string> sequence;       // get value from alignment file
+    string xname       = "";
+    string yname       = "";
+    string fname_super = ""; // file name for superposed structure
+    string fname_lign  = ""; // file name for user alignment
+    string fname_matrix= ""; // file name for output matrix
+    vector<string> sequence; // get value from alignment file
     double Lnorm_ass, d0_scale;
 
     bool A_opt = false; // marker for whether structure A is specified
@@ -174,15 +167,19 @@ int main(int argc, char *argv[])
     {
         if ( !strcmp(argv[i],"-o") && i < (argc-1) )
         {
-            strcpy(out_reg, argv[i + 1]);      o_opt = true; i++;
+            fname_super = argv[i + 1];     o_opt = true; i++;
         }
-        else if ( (!strcmp(argv[i],"-u") || !strcmp(argv[i],"-L")) && i < (argc-1) )
+        else if ( (!strcmp(argv[i],"-u") || 
+                   !strcmp(argv[i],"-L")) && i < (argc-1) )
         {
             Lnorm_ass = atof(argv[i + 1]); u_opt = true; i++;
         }
         else if ( !strcmp(argv[i],"-a") && i < (argc-1) )
         {
-            strcpy(Lnorm_ave, argv[i + 1]);     a_opt = true; i++;
+            if (!strcmp(argv[i + 1], "T"))      a_opt=true;
+            else if (!strcmp(argv[i + 1], "F")) a_opt=false;
+            else PrintErrorAndQuit("Wrong value for option -a! It should be T or F");
+            i++;
         }
         else if ( !strcmp(argv[i],"-d") && i < (argc-1) )
         {
@@ -198,15 +195,15 @@ int main(int argc, char *argv[])
         }
         else if ( !strcmp(argv[i],"-i") && i < (argc-1) )
         {
-            strcpy(fname_lign, argv[i + 1]);      i_opt = true; i++;
+            fname_lign = argv[i + 1];      i_opt = true; i++;
         }
         else if (!strcmp(argv[i], "-m") && i < (argc-1) )
         {
-            strcpy(fname_matrix, argv[i + 1]);      m_opt = true; i++;
+            fname_matrix = argv[i + 1];    m_opt = true; i++;
         }// get filename for rotation matrix
         else if (!strcmp(argv[i], "-I") && i < (argc-1) )
         {
-            strcpy(fname_lign, argv[i + 1]);      I_opt = true; i++;
+            fname_lign = argv[i + 1];      I_opt = true; i++;
         }
         else if (!strcmp(argv[i], "-fast"))
         {
@@ -219,8 +216,6 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-atom") && i < (argc-1) )
         {
             atom_opt=argv[i + 1]; i++;
-            if (atom_opt.size()!=4)
-                PrintErrorAndQuit("ERROR! atom name must be 4 characters, including space.");
         }
         else if ( !strcmp(argv[i],"-dir1") && i < (argc-1) )
         {
@@ -242,11 +237,11 @@ int main(int argc, char *argv[])
         {
             if (nameIdx == 0)
             {
-                strcpy(xname, argv[i]);      B_opt = true;
+                xname=argv[i]; B_opt = true;
             }
             else if (nameIdx == 1)
             {
-                strcpy(yname, argv[i]);      A_opt = true;
+                yname=argv[i]; A_opt = true;
             }
             nameIdx++;
         }
@@ -270,13 +265,11 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
     if ((dir1_opt.size() || dir2_opt.size()) && (m_opt || o_opt))
         PrintErrorAndQuit("-m or -o cannot be set with -dir1 or -dir2");
+    if (atom_opt.size()!=4)
+        PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
 
-    if (a_opt)
-    {
-        if(!strcmp(Lnorm_ave, "T")) a_opt=true;
-        else if(!strcmp(Lnorm_ave, "F")) a_opt=false;
-        else PrintErrorAndQuit("Wrong value for option -a! It should be T or F");
-    }
+    if (i_opt && I_opt)
+        PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
     if (u_opt && Lnorm_ass<=0)
         PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
     if (d_opt && d0_scale<=0)
@@ -284,7 +277,7 @@ int main(int argc, char *argv[])
     if (outfmt_opt>=2 && (a_opt || u_opt || d_opt))
         PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
 
-    ////// read initial alignment file from 'alignment.txt' //////
+    /* read initial alignment file from 'align.txt' */
     string basename = string(argv[0]);
     int idx = basename.find_last_of("\\");
     basename = basename.substr(0, idx + 1);
@@ -297,9 +290,7 @@ int main(int argc, char *argv[])
         string line;
 
         string fullpath = basename + fname_lign;
-        char path1[1000];
-        strcpy(path1, fullpath.c_str());
-        ifstream fileIn(path1);
+        ifstream fileIn(fullpath.c_str());
         if (fileIn.is_open())
         {
             while (fileIn.good())
@@ -340,11 +331,11 @@ int main(int argc, char *argv[])
         chain1_list.push_back(xname);
     else
     {
-        ifstream fp(xname);
+        ifstream fp(xname.c_str());
         if (! fp.is_open())
         {
             char message[5000];
-            sprintf(message, "Can not open file: %s\n", xname);
+            sprintf(message, "Can not open file: %s\n", xname.c_str());
             PrintErrorAndQuit(message);
         }
         string line;
@@ -362,11 +353,11 @@ int main(int argc, char *argv[])
         chain2_list.push_back(yname);
     else
     {
-        ifstream fp(yname);
+        ifstream fp(yname.c_str());
         if (! fp.is_open())
         {
             char message[5000];
-            sprintf(message, "Can not open file: %s\n", yname);
+            sprintf(message, "Can not open file: %s\n", yname.c_str());
             PrintErrorAndQuit(message);
         }
         string line;
@@ -389,13 +380,13 @@ int main(int argc, char *argv[])
     vector<string> PDB_lines2; // text of chain2
     for (int i=0;i<chain1_list.size();i++)
     {
-        strcpy(xname,chain1_list[i].c_str());
+        xname=chain1_list[i];
         for (int j=0;j<chain2_list.size();j++)
         {
-            strcpy(yname,chain2_list[j].c_str());
+            yname=chain2_list[j];
 
             /* load data */
-            int stat=load_PDB_allocate_memory(xname, yname,
+            int stat=load_PDB_allocate_memory(xname.c_str(), yname.c_str(),
                 PDB_lines1, PDB_lines2, ter_opt, atom_opt);
             if (stat==1) // chain 1 failed
             {
@@ -411,7 +402,8 @@ int main(int argc, char *argv[])
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xname, yname, fname_matrix, out_reg, 
+            TMalign_main(xname.c_str(), yname.c_str(), 
+                fname_matrix.c_str(), fname_super.c_str(),
                 sequence, Lnorm_ass, d0_scale,
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt,
                 fast_opt, ter_opt, dir1_opt, dir2_opt, outfmt_opt);
@@ -419,8 +411,10 @@ int main(int argc, char *argv[])
             /* Done! Free memory */
             free_memory();
             if (chain2_list.size()>1) PDB_lines2.clear();
+            yname.clear();
         }
         PDB_lines1.clear();
+        xname.clear();
     }
     PDB_lines2.clear();
     chain1_list.clear();

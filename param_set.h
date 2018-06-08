@@ -1,4 +1,5 @@
 #include <math.h>
+#include "basic_fun.h"
 
 void parameter_set4search(int xlen, int ylen)
 {
