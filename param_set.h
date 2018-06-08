@@ -2,7 +2,8 @@
 #include "basic_fun.h"
 
 void parameter_set4search(const int xlen, const int ylen,
-    double &D0_MIN, double &Lnorm)
+    double &D0_MIN, double &Lnorm,
+    double &score_d8, double &d0, double &d0_search, double &dcu0)
 {
     //parameter initilization for searching: D0_MIN, Lnorm, d0, d0_search, score_d8
     D0_MIN=0.5; 
@@ -22,7 +23,8 @@ void parameter_set4search(const int xlen, const int ylen,
     score_d8=1.5*pow(Lnorm*1.0, 0.3)+3.5; //remove pairs with dis>d8 during search & final
 }
 
-void parameter_set4final(const double len, double &D0_MIN, double &Lnorm)
+void parameter_set4final(const double len, double &D0_MIN, double &Lnorm,
+    double &score_d8, double &d0, double &d0_search, double &dcu0)
 {
     D0_MIN=0.5; 
  
@@ -32,10 +34,11 @@ void parameter_set4final(const double len, double &D0_MIN, double &Lnorm)
     if (d0<D0_MIN) d0=D0_MIN;   
     d0_search=d0;
     if (d0_search>8)   d0_search=8;
-    if (d0_search<4.5) d0_search=4.5;  
+    if (d0_search<4.5) d0_search=4.5;
 }
 
-void parameter_set4scale(const int len, const double d_s, double &Lnorm)
+void parameter_set4scale(const int len, const double d_s, double &Lnorm,
+    double &score_d8, double &d0, double &d0_search, double &dcu0)
 {
     d0=d_s;          
     Lnorm=len;            //normaliz TMscore by this in searching

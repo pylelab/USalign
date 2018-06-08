@@ -1,9 +1,7 @@
 //global variables
-double score_d8,d0,d0_search,dcu0;//for TMscore search
-double **score;                   //Input score table for dynamic programming
-bool   **path;                    //for dynamic programming  
-double **val;                     //for dynamic programming  
-int    xlen, ylen, minlen;        //length of proteins
+double **score;         //Input score table for dynamic programming
+bool   **path;          //for dynamic programming  
+double **val;           //for dynamic programming  
 double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2] and
                         //ya[0...ylen-1][0..2], in general,
                         //ya is regarded as native structure 

@@ -377,8 +377,10 @@ int main(int argc, char *argv[])
             yname=chain2_list[j];
 
             /* load data */
+            int xlen, ylen, minlen;
             int stat=load_PDB_allocate_memory(xname.c_str(), yname.c_str(),
-                PDB_lines1, PDB_lines2, ter_opt, atom_opt);
+                PDB_lines1, PDB_lines2, xlen, ylen, minlen,
+                ter_opt, atom_opt);
             if (stat==1) // chain 1 failed
             {
                 cerr<<"Warning! Cannot parse file: "<<xname
@@ -393,14 +395,14 @@ int main(int argc, char *argv[])
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xname.c_str(), yname.c_str(), 
+            TMalign_main(xname.c_str(), yname.c_str(), xlen, ylen,
                 fname_matrix.c_str(), fname_super.c_str(),
                 sequence, Lnorm_ass, d0_scale,
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt,
                 fast_opt, ter_opt, dir1_opt, dir2_opt, outfmt_opt);
 
             /* Done! Free memory */
-            free_memory();
+            free_memory(xlen, ylen, minlen);
             if (chain2_list.size()>1) PDB_lines2.clear();
             yname.clear();
         }
