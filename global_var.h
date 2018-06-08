@@ -1,8 +1,4 @@
-const char *TMalign_version="20180604";   //version 
- 
 //global variables
-double D0_MIN;                    //for d0
-double Lnorm;                     //normalization length
 double score_d8,d0,d0_search,dcu0;//for TMscore search
 double **score;                   //Input score table for dynamic programming
 bool   **path;                    //for dynamic programming  
@@ -19,6 +15,3 @@ char   *seqx, *seqy;    //for the protein sequence
 int    *secx, *secy;    //for the secondary structure 
 double **r1, **r2;      //for Kabsch rotation 
 double t[3], u[3][3];   //Kabsch translation vector and rotation matrix
-
-double TM_ali, rmsd_ali; // TMscore and rmsd from standard_TMscore func, 
-int L_ali;               // Aligned length from standard_TMscore func, 

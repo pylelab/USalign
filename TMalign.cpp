@@ -67,17 +67,8 @@ void print_extra_help()
 
 void print_help(bool h_opt=false)
 {
+    print_version();
     cout <<
-"\n"
-"*****************************************************************************\n"
-"* TM-align (Version "<< TMalign_version
-                      <<    "): An algorithm for protein structure alignment *\n"
-"* Based on statistics:                                                      *\n"
-"*          0.0 < TM-score < 0.30, random structural similarity              *\n"
-"*          0.5 < TM-score < 1.00, in about the same fold                    *\n"
-"* Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
-"* Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
-"*****************************************************************************\n"
 "\n"
 "Usage: TMalign PDB1.pdb PDB2.pdb [Options]\n"
 "\n"

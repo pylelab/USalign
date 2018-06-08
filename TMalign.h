@@ -24,8 +24,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version "<< TMalign_version <<
-"): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180604): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -97,14 +96,8 @@ void free_memory()
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
-int score_fun8( double **xa, 
-                double **ya, 
-                int n_ali,
-                double d,
-                int i_ali[], 
-                double *score1,
-                int score_sum_method
-              )
+int score_fun8( double **xa, double **ya, int n_ali, double d, int i_ali[],
+    double *score1, int score_sum_method, const double Lnorm)
 {
     double score_sum=0, di;
     double d_tmp=d*d;
@@ -213,17 +206,10 @@ int score_fun8_standard(double **xa,
     return n_cut;
 }
 
-double TMscore8_search( double **xtm, 
-                        double **ytm,
-                        int Lali, 
-                        double t0[3],
-                        double u0[3][3],
-                        int simplify_step,
-                        int score_sum_method,
-                        double *Rcomm,
-                        double local_d0_search
-                       )
-{ 
+double TMscore8_search( double **xtm, double **ytm, int Lali,
+    double t0[3], double u0[3][3], int simplify_step, int score_sum_method,
+    double *Rcomm, double local_d0_search, double Lnorm)
+{
     int i, m;
     double score_max, score, rmsd;    
     const int kmax=Lali;    
@@ -296,7 +282,8 @@ double TMscore8_search( double **xtm,
             
             //get subsegment of this fragment
             d = local_d0_search - 1;
-            n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score, score_sum_method);
+            n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score, 
+                score_sum_method, Lnorm);
             if(score>score_max)
             {
                 score_max=score;
@@ -333,7 +320,8 @@ double TMscore8_search( double **xtm,
                 //extract rotation matrix based on the fragment                
                 Kabsch(r1, r2, n_cut, 1, &rmsd, t, u);
                 do_rotation(xtm, xt, Lali, t, u);
-                n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score, score_sum_method);
+                n_cut=score_fun8(xt, ytm, Lali, d, i_ali, &score, 
+                    score_sum_method, Lnorm);
                 if(score>score_max)
                 {
                     score_max=score;
@@ -555,17 +543,9 @@ double TMscore8_search_standard(double **xtm,
 //          score_sum_method: 0 for score over all pairs
 //                            8 for socre over the pairs with dist<score_d8          
 // output:  the best rotaion matrix t, u that results in highest TMscore
-double detailed_search( double **x,
-                        double **y, 
-                        int xlen, 
-                        int ylen, 
-                        int invmap0[],
-                        double t[3],
-                        double u[3][3],
-                        int simplify_step,
-                        int score_sum_method,
-                        double local_d0_search
-                       )
+double detailed_search( double **x, double **y, int xlen, int ylen, 
+    int invmap0[], double t[3], double u[3][3], int simplify_step,
+    int score_sum_method, double local_d0_search, double Lnorm)
 {
     //x is model, y is template, try to superpose onto y
     int i, j, k;     
@@ -592,22 +572,15 @@ double detailed_search( double **x,
     }
 
     //detailed search 40-->1
-    tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
+    tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm);
     return tmscore;
 }
 
-double detailed_search_standard(double **x,
-                        double **y, 
-                        int xlen, 
-                        int ylen, 
-                        int invmap0[],
-                        double t[3],
-                        double u[3][3],
-                        int simplify_step,
-                        int score_sum_method,
-                        double local_d0_search,
-                        const bool& bNormalize
-                       )
+double detailed_search_standard(double **x, double **y, int xlen, int ylen,
+    int invmap0[], double t[3], double u[3][3], int simplify_step,
+    int score_sum_method, double local_d0_search, const bool& bNormalize,
+    double Lnorm )
 {
     //x is model, y is template, try to superpose onto y
     int i, j, k;     
@@ -1085,7 +1058,7 @@ void get_initial_ss(  double **x,
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 bool get_initial5(double **x, double **y, int xlen, int ylen, int *y2x,
-    const bool fast_opt)
+    const bool fast_opt, const double D0_MIN)
 {
     double GL, rmsd;
     double t[3];
@@ -1182,62 +1155,8 @@ bool get_initial5(double **x, double **y, int xlen, int ylen, int *y2x,
     return flag;
 }
 
-//with invmap(i) calculate score(i,j) using RMSD rotation
-void score_matrix_rmsd(  double **x, 
-                         double **y, 
-                         int xlen,
-                         int ylen,
-                         int *y2x
-                         )
-{
-    double t[3], u[3][3];
-    double rmsd, dij;
-    double d01=d0+1.5;
-    if(d01 < D0_MIN) d01=D0_MIN;
-    double d02=d01*d01;
-
-    double xx[3];
-    int i, k=0;
-    for(int j=0; j<ylen; j++)
-    {
-        i=y2x[j];
-        if(i>=0)
-        {
-            r1[k][0]=x[i][0];  
-            r1[k][1]=x[i][1]; 
-            r1[k][2]=x[i][2];   
-            
-            r2[k][0]=y[j][0];  
-            r2[k][1]=y[j][1]; 
-            r2[k][2]=y[j][2];
-            
-            k++;
-        }
-    }
-    Kabsch(r1, r2, k, 1, &rmsd, t, u);
-    //do_rotation(x, xt, xlen, t, u);
-    
-    
-    for(int ii=0; ii<xlen; ii++)
-    {        
-        transform(t, u, &x[ii][0], xx);
-        for(int jj=0; jj<ylen; jj++)
-        {
-            //dij=dist(&xt[ii][0], &y[jj][0]);   
-            dij=dist(xx, &y[jj][0]); 
-            score[ii+1][jj+1] = 1.0/(1+dij/d02);
-            //    cout << ii+1 << " " << jj+1 << " " << score[ii+1][jj+1]<< endl;
-        }
-    }        
-}
-
-
-void score_matrix_rmsd_sec(  double **x, 
-                             double **y, 
-                             int xlen,
-                             int ylen,
-                             int *y2x
-                             )
+void score_matrix_rmsd_sec( double **x, double **y, int xlen, int ylen,
+    int *y2x, const double D0_MIN)
 {
     double t[3], u[3][3];
     double rmsd, dij;
@@ -1291,17 +1210,11 @@ void score_matrix_rmsd_sec(  double **x,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus( double **x, 
-                         double **y, 
-                         int xlen,
-                         int ylen,
-                         int *y2x0,
-                         int *y2x                        
-                         )
+void get_initial_ssplus( double **x, double **y, int xlen, int ylen,
+    int *y2x0, int *y2x, const double D0_MIN)
 {
-
     //create score matrix for DP
-    score_matrix_rmsd_sec(x, y, xlen, ylen, y2x0);
+    score_matrix_rmsd_sec(x, y, xlen, ylen, y2x0, D0_MIN);
     
     double gap_open=-1.0;
     NWDP_TM(xlen, ylen, gap_open, y2x);
@@ -1546,26 +1459,13 @@ double get_initial_fgt( double **x,
     return tmscore_max;
 }
 
-
-
-
-
 //heuristic run of dynamic programing iteratively to find the best alignment
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter( double **x,
-                double **y, 
-                int xlen, 
-                int ylen, 
-                double t[3],
-                double u[3][3],
-                int invmap0[],
-                int g1,
-                int g2,
-                int iteration_max,
-                double local_d0_search
-                )
+double DP_iter( double **x, double **y, int xlen, int ylen,
+    double t[3], double u[3][3], int invmap0[], int g1, int g2,
+    int iteration_max, double local_d0_search, double D0_MIN, double Lnorm)
 {
     double gap_open[2]={-0.6, 0};
     double rmsd; 
@@ -1602,8 +1502,8 @@ double DP_iter( double **x,
                 }
             }
 
-            //tmscore=TMscore8_search(xtm, ytm, k, t, u, simplify_step, score_sum_method, &rmsd);
-            tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
+            tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step, 
+                score_sum_method, &rmsd, local_d0_search, Lnorm);
 
            
             if(tmscore>tmscore_max)
@@ -1718,7 +1618,8 @@ void output_results(
     const int m1[],
     const int m2[],
     const int n_ali8,
-    const int n_ali,
+    const int n_ali, const int L_ali,
+    const double TM_ali, const double rmsd_ali,
     const double TM_0,
     const double d0_0, const double d0A, const double d0B,
     const double Lnorm_ass, const double d0_scale, 
@@ -1874,7 +1775,8 @@ void output_results(
     delete [] seqyA;
 }
 
-double standard_TMscore(double **x, double **y, int xlen, int ylen, int invmap[], int& L_ali, double& RMSD )
+double standard_TMscore(double **x, double **y, int xlen, int ylen,
+    int invmap[], int& L_ali, double& RMSD, double D0_MIN, double Lnorm)
 {
     D0_MIN = 0.5;
     Lnorm = ylen;
@@ -1942,17 +1844,22 @@ int TMalign_main(const char *xname, const char *yname,
     const bool fast_opt, const int ter_opt,
     const string dir1_opt, const string dir2_opt, const int outfmt_opt)
 {
+    double D0_MIN;           //for d0
+    double Lnorm;            //normalization length
     double d0A, d0B;
+    int L_ali;               // Aligned length from standard_TMscore func
+    double TM_ali, rmsd_ali; // TMscore and rmsd from standard_TMscore func
+
     /***********************/
     /*    parameter set    */
     /***********************/
-    parameter_set4search(xlen, ylen);          //please set parameters in the function
-    int simplify_step     = 40;               //for similified search engine
-    int score_sum_method  = 8;                //for scoring method, whether only sum over pairs with dis<score_d8
+    parameter_set4search(xlen, ylen, D0_MIN, Lnorm); // set D0_MIN and Lnorm
+    int simplify_step    = 40; //for similified search engine
+    int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
 
     int i;
-    int *invmap0          = new int[ylen+1];
-    int *invmap           = new int[ylen+1];
+    int *invmap0         = new int[ylen+1];
+    int *invmap          = new int[ylen+1];
     double TM, TMmax=-1;
     for(i=0; i<ylen; i++)
     {
@@ -1961,7 +1868,7 @@ int TMalign_main(const char *xname, const char *yname,
 
 
     double ddcc=0.4;
-    if(Lnorm <= 40) ddcc=0.1;   //Lnorm was setted in parameter_set4search
+    if (Lnorm <= 40) ddcc=0.1;   //Lnorm was setted in parameter_set4search
     double local_d0_search = d0_search;
 
     //************************************************//
@@ -2003,11 +1910,13 @@ int TMalign_main(const char *xname, const char *yname,
         double prevD0_MIN = D0_MIN;// stored for later use
         int prevLnorm = Lnorm;
         double prevd0 = d0;
-        TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali, rmsd_ali);
+        TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali, rmsd_ali,
+            D0_MIN, Lnorm);
         D0_MIN = prevD0_MIN;
         Lnorm = prevLnorm;
         d0 = prevd0;
-        TM = detailed_search_standard(xa, ya, xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true);
+        TM = detailed_search_standard(xa, ya, xlen, ylen, invmap, t, u, 40, 8,
+            local_d0_search, true, Lnorm);
         if (TM > TMmax)
         {
             TMmax = TM;
@@ -2023,14 +1932,15 @@ int TMalign_main(const char *xname, const char *yname,
     if (!bAlignStick)
     {
         get_initial(xa, ya, xlen, ylen, invmap0, fast_opt);
-        //find the max TMscore for this initial alignment with the simplified search_engin
-        TM = detailed_search(xa, ya, xlen, ylen, invmap0, t, u, simplify_step, score_sum_method, local_d0_search);
+        TM = detailed_search(xa, ya, xlen, ylen, invmap0, t, u, simplify_step,
+            score_sum_method, local_d0_search, Lnorm);
         if (TM>TMmax)
         {
             TMmax = TM;
         }
         //run dynamic programing iteratively to find the best alignment
-        TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
+        TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
+                local_d0_search, D0_MIN, Lnorm);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -2045,7 +1955,8 @@ int TMalign_main(const char *xname, const char *yname,
         /*    get initial alignment based on secondary structure    */
         /************************************************************/
         get_initial_ss(xa, ya, xlen, ylen, invmap);
-        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
+        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step,
+            score_sum_method, local_d0_search, Lnorm);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -2056,7 +1967,8 @@ int TMalign_main(const char *xname, const char *yname,
         }
         if (TM > TMmax*0.2)
         {
-            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
+            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2,
+                (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -2072,9 +1984,10 @@ int TMalign_main(const char *xname, const char *yname,
         /*    get initial alignment based on local superposition    */
         /************************************************************/
         //=initial5 in original TM-align
-        if (get_initial5(xa, ya, xlen, ylen, invmap, fast_opt))
+        if (get_initial5(xa, ya, xlen, ylen, invmap, fast_opt, D0_MIN))
         {
-            TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
+            TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u,
+                simplify_step, score_sum_method, local_d0_search, Lnorm);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -2085,7 +1998,8 @@ int TMalign_main(const char *xname, const char *yname,
             }
             if (TM > TMmax*ddcc)
             {
-                TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 2, local_d0_search);
+                TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, 2,
+                    local_d0_search, D0_MIN, Lnorm);
                 if (TM>TMmax)
                 {
                     TMmax = TM;
@@ -2106,8 +2020,9 @@ int TMalign_main(const char *xname, const char *yname,
         /*    get initial alignment based on previous alignment+secondary structure    */
         /*******************************************************************************/
         //=initial3 in original TM-align
-        get_initial_ssplus(xa, ya, xlen, ylen, invmap0, invmap);
-        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
+        get_initial_ssplus(xa, ya, xlen, ylen, invmap0, invmap, D0_MIN);
+        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step,
+             score_sum_method, local_d0_search, Lnorm);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -2118,7 +2033,8 @@ int TMalign_main(const char *xname, const char *yname,
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);
+            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2,
+                (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -2135,7 +2051,8 @@ int TMalign_main(const char *xname, const char *yname,
         /*******************************************************************/
         //=initial4 in original TM-align
         get_initial_fgt(xa, ya, xlen, ylen, xresno, yresno, invmap, fast_opt);
-        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step, score_sum_method, local_d0_search);
+        TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step,
+            score_sum_method, local_d0_search, Lnorm);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -2146,7 +2063,8 @@ int TMalign_main(const char *xname, const char *yname,
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 1, 2, 2, local_d0_search);
+            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 1, 2, 2,
+                local_d0_search, D0_MIN, Lnorm);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -2194,19 +2112,23 @@ int TMalign_main(const char *xname, const char *yname,
             double prevD0_MIN = D0_MIN;// stored for later use
             int prevLnorm = Lnorm;
             double prevd0 = d0;
-            TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali, rmsd_ali);
+            TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali,
+                rmsd_ali, D0_MIN, Lnorm);
             D0_MIN = prevD0_MIN;
             Lnorm = prevLnorm;
             d0 = prevd0;
 
-            TM = detailed_search_standard(xa, ya, xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true);
+            TM = detailed_search_standard(xa, ya, xlen, ylen, invmap, t, u, 40,
+                8, local_d0_search, true, Lnorm);
             if (TM > TMmax)
             {
                 TMmax = TM;
                 for (i = 0; i<ylen; i++)
                     invmap0[i] = invmap[i];
             }
-            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search);// Different from get_initial, get_initial_ss and get_initial_ssplus
+            TM = DP_iter(xa, ya, xlen, ylen, t, u, invmap, 0, 2,
+                (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm
+                );// Different from get_initial, get_initial_ss and get_initial_ssplus
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -2249,7 +2171,8 @@ int TMalign_main(const char *xname, const char *yname,
     simplify_step=1;
     if (fast_opt) simplify_step=40;
     score_sum_method=8;
-    TM = detailed_search_standard(xa, ya, xlen, ylen, invmap0, t, u, simplify_step, score_sum_method, local_d0_search, false);
+    TM = detailed_search_standard(xa, ya, xlen, ylen, invmap0, t, u,
+        simplify_step, score_sum_method, local_d0_search, false, Lnorm);
 
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
@@ -2315,18 +2238,20 @@ int TMalign_main(const char *xname, const char *yname,
 
 
     //normalized by length of structure A
-    parameter_set4final(Lnorm_0);
+    parameter_set4final(Lnorm_0, D0_MIN, Lnorm);
     d0A=d0;
     d0_0=d0A;
     local_d0_search = d0_search;
-    TM1 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, score_sum_method, &rmsd, local_d0_search);
+    TM1 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm);
     TM_0 = TM1;
 
     //normalized by length of structure B
-    parameter_set4final(xlen+0.0);
+    parameter_set4final(xlen+0.0, D0_MIN, Lnorm);
     d0B=d0;
     local_d0_search = d0_search;
-    TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step, score_sum_method, &rmsd, local_d0_search);
+    TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm);
 
     double Lnorm_d0, d0u, d0a;
     double TM3, TM4, TM5; // for a_opt, u_opt, and d_opt
@@ -2334,38 +2259,38 @@ int TMalign_main(const char *xname, const char *yname,
     {
         //normalized by average length of structures A, B
         Lnorm_0=(xlen+ylen)*0.5;
-        parameter_set4final(Lnorm_0);
+        parameter_set4final(Lnorm_0, D0_MIN, Lnorm);
         d0a=d0;
         d0_0=d0a;
         local_d0_search = d0_search;
 
         TM3 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step,
-            score_sum_method, &rmsd, local_d0_search);
+            score_sum_method, &rmsd, local_d0_search, Lnorm);
         TM_0=TM3;
     }
     if (u_opt)
     {
         //normalized by user assigned length
-        parameter_set4final(Lnorm_ass);
+        parameter_set4final(Lnorm_ass, D0_MIN, Lnorm);
         d0u=d0;
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;
         local_d0_search = d0_search;
         TM4 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
-            score_sum_method, &rmsd, local_d0_search);
+            score_sum_method, &rmsd, local_d0_search, Lnorm);
         TM_0=TM4;
     }
     if (d_opt)
     {
         //scaled by user assigned d0
-        parameter_set4scale(ylen, d0_scale);
+        parameter_set4scale(ylen, d0_scale, Lnorm);
         d0_out=d0_scale;
         d0_0=d0_scale;
         //Lnorm_0=ylen;
         Lnorm_d0=Lnorm_0;
         local_d0_search = d0_search;
         TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
-            score_sum_method, &rmsd, local_d0_search);
+            score_sum_method, &rmsd, local_d0_search, Lnorm);
         TM_0=TM5;
     }
 
@@ -2373,7 +2298,8 @@ int TMalign_main(const char *xname, const char *yname,
     if (outfmt_opt==0) print_version();
     output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, 
         TM3, TM4, TM5, rmsd0, d0_out,
-        m1, m2, n_ali8, n_ali, TM_0, d0_0, d0A, d0B,
+        m1, m2, n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+        TM_0, d0_0, d0A, d0B,
         Lnorm_ass, d0_scale, d0a, d0u, fname_matrix,
         dir1_opt, dir2_opt, outfmt_opt, ter_opt, 
         fname_super, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
