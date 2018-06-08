@@ -17,4 +17,7 @@ K-RDENEDVSGREAQVKNIKQQLDALKLRFDRR--I----
 3, Each alignment should start from the first amino acid of the target
    sequences. The ending unaligned residure can be ignored.
 
-4, More explanation on FASTA format can be seen at http://zhanglab.ccmb.med.umich.edu/FASTA
+4, There should be at least three pairs of aligned residues, because
+   superposition for <3 pairs of atoms is not mathematically defined.
+
+5, More explanation on FASTA format can be seen at http://zhanglab.ccmb.med.umich.edu/FASTA
