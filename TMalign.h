@@ -1731,21 +1731,23 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
 }
 
 /* entry function for TMalign */
-int TMalign_main(const char *xname, const char *yname,
+int TMalign_main(
+    double t0[3], double u0[3][3],
+    double &TM1, double &TM2,
+    double &TM3, double &TM4, double &TM5,
+    double &d0_0, double &TM_0,
+    double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
+    string &seqM, string &seqxA, string &seqyA,
+    double &rmsd0, int &L_ali, double &Liden,
+    double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
-    const char *fname_matrix, const char *fname_super,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale,
-    const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
-    const bool u_opt, const bool d_opt,
-    const bool fast_opt, const int ter_opt,
-    const string dir1_opt, const string dir2_opt, const int outfmt_opt)
+    const bool i_opt, const bool I_opt, const bool a_opt,
+    const bool u_opt, const bool d_opt, const bool fast_opt)
 {
     double D0_MIN;           //for d0
     double Lnorm;            //normalization length
-    double d0A, d0B;
-    int L_ali;               // Aligned length from standard_TMscore func
-    double TM_ali, rmsd_ali; // TMscore and rmsd from standard_TMscore func
     double score_d8,d0,d0_search,dcu0;//for TMscore search
 
     /***********************/
@@ -2022,8 +2024,7 @@ int TMalign_main(const char *xname, const char *yname,
         score_d8, d0);
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
-    int n_ali8, k=0;
-    int n_ali=0;
+    int k=0;
     int *m1, *m2;
     double d;
     m1=new int[xlen]; //alignd index in x
@@ -2063,7 +2064,6 @@ int TMalign_main(const char *xname, const char *yname,
     }
     n_ali8=k;
 
-    double rmsd0 = 0.0;
     Kabsch(r1, r2, n_ali8, 0, &rmsd0, t, u);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
     rmsd0 = sqrt(rmsd0 / n_ali8);
 
@@ -2073,13 +2073,8 @@ int TMalign_main(const char *xname, const char *yname,
     //    Please set parameters for output    //
     //****************************************//
     double rmsd;
-    double t0[3], u0[3][3];
-    double TM1, TM2;
-    double d0_out=5.0;
     simplify_step=1;
     score_sum_method=0;
-
-    double d0_0, TM_0;
     double Lnorm_0=ylen;
 
 
@@ -2101,8 +2096,7 @@ int TMalign_main(const char *xname, const char *yname,
     TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
-    double Lnorm_d0, d0u, d0a;
-    double TM3, TM4, TM5; // for a_opt, u_opt, and d_opt
+    double Lnorm_d0;
     if (a_opt)
     {
         //normalized by average length of structures A, B
@@ -2146,12 +2140,10 @@ int TMalign_main(const char *xname, const char *yname,
     }
 
     /* derive alignment from superposition */
-    double Liden=0;
     int ali_len=xlen+ylen; //maximum length of alignment
-    char *seqM, *seqxA, *seqyA;
-    seqM=new char[ali_len];
-    seqxA=new char[ali_len];
-    seqyA=new char[ali_len];
+    seqxA.assign(ali_len,'-');
+    seqM.assign( ali_len,' ');
+    seqyA.assign(ali_len,'-');
     
     do_rotation(xa, xt, xlen, t, u);
 
@@ -2205,31 +2197,14 @@ int TMalign_main(const char *xname, const char *yname,
         seqM[kk]=' ';
         kk++;
     }
- 
     seqxA[kk]='\0';
     seqyA[kk]='\0';
     seqM[kk]='\0';
-
-    /* print result */
-    if (outfmt_opt==0) print_version();
-    output_results(xname+dir1_opt.size(), yname+dir2_opt.size(), 
-        xlen, ylen, t0, u0, TM1, TM2, 
-        TM3, TM4, TM5, rmsd0, d0_out,
-        seqM, seqxA, seqyA, Liden,
-        n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
-        TM_0, d0_0, d0A, d0B,
-        Lnorm_ass, d0_scale, d0a, d0u, fname_matrix,
-        outfmt_opt, ter_opt, 
-        fname_super, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
     /* free memory */
     delete [] invmap0;
     delete [] invmap;
     delete [] m1;
     delete [] m2;
-
-    delete [] seqM;
-    delete [] seqxA;
-    delete [] seqyA;
     return 0; // zero for no exception
 }

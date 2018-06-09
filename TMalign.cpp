@@ -374,7 +374,21 @@ int main(int argc, char *argv[])
         xname=chain1_list[i];
         for (int j=0;j<chain2_list.size();j++)
         {
+            /* declare variable */
             yname=chain2_list[j];
+            double t0[3], u0[3][3];
+            double TM1, TM2;
+            double TM3, TM4, TM5;   // for a_opt, u_opt, d_opt
+            double d0_0, TM_0;
+            double d0A, d0B, d0u, d0a;
+            double d0_out=5.0;
+            string seqM, seqxA, seqyA;
+            double rmsd0 = 0.0;
+            int L_ali;              // Aligned length from standard_TMscore
+            double Liden=0;
+            double TM_ali, rmsd_ali;// TMscore and rmsd from standard_TMscore
+            int n_ali=0;
+            int n_ali8=0;
 
             /* load data */
             int xlen, ylen, minlen;
@@ -385,24 +399,44 @@ int main(int argc, char *argv[])
             {
                 cerr<<"Warning! Cannot parse file: "<<xname
                     <<". Chain length 0."<<endl;
+                PDB_lines2.clear();
                 break;
             }
             else if (stat==2) // chain 2 failed
             {
                 cerr<<"Warning! Cannot parse file: "<<yname
                     <<". Chain length 0."<<endl;
+                PDB_lines2.clear();
                 continue;
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xname.c_str(), yname.c_str(), xlen, ylen,
-                fname_matrix.c_str(), fname_super.c_str(),
-                sequence, Lnorm_ass, d0_scale,
-                i_opt, I_opt, o_opt, a_opt, u_opt, d_opt,
-                fast_opt, ter_opt, dir1_opt, dir2_opt, outfmt_opt);
+            TMalign_main(t0, u0, TM1, TM2, TM3, TM4, TM5,
+                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                seqM, seqxA, seqyA,
+                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
+
+            /* print result */
+            if (outfmt_opt==0) print_version();
+            output_results(
+                xname.substr(dir1_opt.size()).c_str(),
+                yname.substr(dir2_opt.size()).c_str(),
+                xlen, ylen, t0, u0, TM1, TM2, 
+                TM3, TM4, TM5, rmsd0, d0_out,
+                seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
+                n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+                TM_0, d0_0, d0A, d0B,
+                Lnorm_ass, d0_scale, d0a, d0u, fname_matrix.c_str(),
+                outfmt_opt, ter_opt, fname_super.c_str(),
+                i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
             /* Done! Free memory */
             free_memory(xlen, ylen, minlen);
+            seqM.clear();
+            seqxA.clear();
+            seqyA.clear();
             if (chain2_list.size()>1) PDB_lines2.clear();
             yname.clear();
         }
