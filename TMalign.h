@@ -1019,12 +1019,8 @@ void make_sec(double **x, int len, int *sec)
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ss(  double **x, 
-                      double **y, 
-                      int xlen,
-                      int ylen, 
-                      int *y2x
-                      )
+void get_initial_ss( double **x, double **y, int xlen, int ylen, 
+    int *y2x)
 {
     //assign secondary structures
     make_sec(x, xlen, secx);
@@ -1593,106 +1589,29 @@ void output_results(
     double t[3], double u[3][3],
     const double TM1, const double TM2,
     const double TM3, const double TM4, const double TM5,
-    const double rmsd,
-    const double d0_out,
-    const int m1[],
-    const int m2[],
-    const int n_ali8,
-    const int n_ali, const int L_ali,
-    const double TM_ali, const double rmsd_ali,
-    const double TM_0,
+    const double rmsd, const double d0_out,
+    const char *seqM, const char *seqxA, const char *seqyA, const double Liden,
+    const int n_ali8, const int n_ali, const int L_ali,
+    const double TM_ali, const double rmsd_ali, const double TM_0,
     const double d0_0, const double d0A, const double d0B,
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
-    const string dir1_opt, const string dir2_opt,
     const int outfmt_opt, const int ter_opt, const char *fname_super,
     const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
     const bool u_opt, const bool d_opt)
 {
-    double seq_id;          
-    int i, j, k;
-    double d;
-    int ali_len=xlen+ylen; //maximum length of alignment
-    char *seqM, *seqxA, *seqyA;
-    seqM=new char[ali_len];
-    seqxA=new char[ali_len];
-    seqyA=new char[ali_len];
-    
-    if (outfmt_opt<=0) do_rotation(xa, xt, xlen, t, u);
-
-    seq_id=0;
-    int kk=0, i_old=0, j_old=0;
-    for(k=0; k<n_ali8; k++)
-    {
-        for(i=i_old; i<m1[k]; i++)
-        {
-            //align x to gap
-            seqxA[kk]=seqx[i];
-            seqyA[kk]='-';
-            seqM[kk]=' ';                    
-            kk++;
-        }
-
-        for(j=j_old; j<m2[k]; j++)
-        {
-            //align y to gap
-            seqxA[kk]='-';
-            seqyA[kk]=seqy[j];
-            seqM[kk]=' ';
-            kk++;
-        }
-
-        seqxA[kk]=seqx[m1[k]];
-        seqyA[kk]=seqy[m2[k]];
-        if(seqxA[kk]==seqyA[kk])
-        {
-            seq_id++;
-        }
-        if (outfmt_opt<=0)
-        {
-            d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
-            if(d<d0_out) seqM[kk]=':';
-            else         seqM[kk]='.';
-        } 
-        kk++;  
-        i_old=m1[k]+1;
-        j_old=m2[k]+1;
-    }
-
-    //tail
-    for(i=i_old; i<xlen; i++)
-    {
-        //align x to gap
-        seqxA[kk]=seqx[i];
-        seqyA[kk]='-';
-        seqM[kk]=' ';                    
-        kk++;
-    }    
-    for(j=j_old; j<ylen; j++)
-    {
-        //align y to gap
-        seqxA[kk]='-';
-        seqyA[kk]=seqy[j];
-        seqM[kk]=' ';
-        kk++;
-    }
- 
-    seqxA[kk]='\0';
-    seqyA[kk]='\0';
-    seqM[kk]='\0';
-    
     if (outfmt_opt<=0)
     {
         printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n",
-            xname+dir1_opt.size());
-        printf("Name of Chain_2: %s\n", yname+dir2_opt.size());
+            xname);
+        printf("Name of Chain_2: %s\n", yname);
         printf("Length of Chain_1: %d residues\n", xlen);
         printf("Length of Chain_2: %d residues\n\n", ylen);
 
         if (i_opt || I_opt)
             printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
 
-        printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, seq_id/( n_ali8+0.00000001));
+        printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, Liden/(n_ali8+0.00000001));
         printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
         printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
@@ -1714,14 +1633,14 @@ void output_results(
     else if (outfmt_opt==1)
     {
         printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            xname+dir1_opt.size(), xlen, d0B, seq_id/xlen, TM2);
+            xname, xlen, d0B, Liden/xlen, TM2);
         printf("%s\n", seqxA);
         printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            yname+dir2_opt.size(), ylen, d0A, seq_id/ylen, TM1);
+            yname, ylen, d0A, Liden/ylen, TM1);
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
-            n_ali8, rmsd, seq_id/(n_ali8+0.00000001));
+            n_ali8, rmsd, Liden/(n_ali8+0.00000001));
 
         if (i_opt || I_opt)
             printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
@@ -1740,19 +1659,13 @@ void output_results(
     else if (outfmt_opt==2)
     {
         printf("%s\t%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
-            xname+dir1_opt.size(), yname+dir2_opt.size(),
-            TM2, TM1, rmsd,
-            seq_id/xlen, seq_id/ylen, seq_id/( n_ali8+0.00000001),
-            xlen, ylen, n_ali8);
+            xname, yname, TM2, TM1, rmsd, Liden/xlen, Liden/ylen,
+            Liden/(n_ali8+0.00000001), xlen, ylen, n_ali8);
     }
     cout << endl;
 
     if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
     if (o_opt) output_superpose(xname, fname_super, t, u, ter_opt);
-
-    delete [] seqM;
-    delete [] seqxA;
-    delete [] seqyA;
 }
 
 double standard_TMscore(double **x, double **y, int xlen, int ylen,
@@ -2232,14 +2145,81 @@ int TMalign_main(const char *xname, const char *yname,
         TM_0=TM5;
     }
 
+    /* derive alignment from superposition */
+    double Liden=0;
+    int ali_len=xlen+ylen; //maximum length of alignment
+    char *seqM, *seqxA, *seqyA;
+    seqM=new char[ali_len];
+    seqxA=new char[ali_len];
+    seqyA=new char[ali_len];
+    
+    do_rotation(xa, xt, xlen, t, u);
+
+    int kk=0, i_old=0, j_old=0;
+    d=0;
+    for(int k=0; k<n_ali8; k++)
+    {
+        for(int i=i_old; i<m1[k]; i++)
+        {
+            //align x to gap
+            seqxA[kk]=seqx[i];
+            seqyA[kk]='-';
+            seqM[kk]=' ';                    
+            kk++;
+        }
+
+        for(int j=j_old; j<m2[k]; j++)
+        {
+            //align y to gap
+            seqxA[kk]='-';
+            seqyA[kk]=seqy[j];
+            seqM[kk]=' ';
+            kk++;
+        }
+
+        seqxA[kk]=seqx[m1[k]];
+        seqyA[kk]=seqy[m2[k]];
+        Liden+=(seqxA[kk]==seqyA[kk]);
+        d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
+        if(d<d0_out) seqM[kk]=':';
+        else         seqM[kk]='.';
+        kk++;  
+        i_old=m1[k]+1;
+        j_old=m2[k]+1;
+    }
+
+    //tail
+    for(int i=i_old; i<xlen; i++)
+    {
+        //align x to gap
+        seqxA[kk]=seqx[i];
+        seqyA[kk]='-';
+        seqM[kk]=' ';
+        kk++;
+    }    
+    for(int j=j_old; j<ylen; j++)
+    {
+        //align y to gap
+        seqxA[kk]='-';
+        seqyA[kk]=seqy[j];
+        seqM[kk]=' ';
+        kk++;
+    }
+ 
+    seqxA[kk]='\0';
+    seqyA[kk]='\0';
+    seqM[kk]='\0';
+
     /* print result */
     if (outfmt_opt==0) print_version();
-    output_results(xname, yname, xlen, ylen, t0, u0, TM1, TM2, 
+    output_results(xname+dir1_opt.size(), yname+dir2_opt.size(), 
+        xlen, ylen, t0, u0, TM1, TM2, 
         TM3, TM4, TM5, rmsd0, d0_out,
-        m1, m2, n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+        seqM, seqxA, seqyA, Liden,
+        n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
         TM_0, d0_0, d0A, d0B,
         Lnorm_ass, d0_scale, d0a, d0u, fname_matrix,
-        dir1_opt, dir2_opt, outfmt_opt, ter_opt, 
+        outfmt_opt, ter_opt, 
         fname_super, i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
     /* free memory */
@@ -2247,5 +2227,9 @@ int TMalign_main(const char *xname, const char *yname,
     delete [] invmap;
     delete [] m1;
     delete [] m2;
+
+    delete [] seqM;
+    delete [] seqxA;
+    delete [] seqyA;
     return 0; // zero for no exception
 }
