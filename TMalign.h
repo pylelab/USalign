@@ -33,8 +33,7 @@ void print_version()
 
 int load_PDB_allocate_memory(const char *xname, const char *yname,
     vector<string> &PDB_lines1, vector<string> &PDB_lines2,
-    int &xlen, int &ylen, int &minlen,
-    const int ter_opt=3, const string atom_opt=" CA ")
+    int &xlen, int &ylen, const int ter_opt=3, const string atom_opt=" CA ")
 {
     xlen=PDB_lines1.size();
     ylen=PDB_lines2.size();
@@ -57,7 +56,7 @@ int load_PDB_allocate_memory(const char *xname, const char *yname,
     // Get exact length
     xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
     ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
-    minlen = min(xlen, ylen);
+    int minlen = min(xlen, ylen);
     
     //------allocate memory for other temporary varialbes------>
     NewArray(&r1, minlen, 3);
@@ -73,8 +72,9 @@ int load_PDB_allocate_memory(const char *xname, const char *yname,
 }
 
 
-void free_memory(const int xlen, const int ylen, const int minlen)
+void free_memory(const int xlen, const int ylen)
 {
+    int minlen = min(xlen, ylen);
     DeleteArray(&path, xlen+1);
     DeleteArray(&val, xlen+1);
     DeleteArray(&score, xlen+1);

@@ -391,10 +391,9 @@ int main(int argc, char *argv[])
             int n_ali8=0;
 
             /* load data */
-            int xlen, ylen, minlen;
+            int xlen, ylen;
             int stat=load_PDB_allocate_memory(xname.c_str(), yname.c_str(),
-                PDB_lines1, PDB_lines2, xlen, ylen, minlen,
-                ter_opt, atom_opt);
+                PDB_lines1, PDB_lines2, xlen, ylen, ter_opt, atom_opt);
             if (stat==1) // chain 1 failed
             {
                 cerr<<"Warning! Cannot parse file: "<<xname
@@ -433,7 +432,7 @@ int main(int argc, char *argv[])
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
             /* Done! Free memory */
-            free_memory(xlen, ylen, minlen);
+            free_memory(xlen, ylen);
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
