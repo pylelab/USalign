@@ -2197,9 +2197,9 @@ int TMalign_main(
         seqM[kk]=' ';
         kk++;
     }
-    seqxA[kk]='\0';
-    seqyA[kk]='\0';
-    seqM[kk]='\0';
+    seqxA=seqxA.substr(0,kk);
+    seqyA=seqyA.substr(0,kk);
+    seqM =seqM.substr(0,kk);
 
     /* free memory */
     delete [] invmap0;
