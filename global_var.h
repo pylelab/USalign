@@ -12,4 +12,3 @@ double **xt;            //for saving the superposed version of r_1 or xtm
 char   *seqx, *seqy;    //for the protein sequence 
 int    *secx, *secy;    //for the secondary structure 
 double **r1, **r2;      //for Kabsch rotation 
-double t[3], u[3][3];   //Kabsch translation vector and rotation matrix
