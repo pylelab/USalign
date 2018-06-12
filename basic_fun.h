@@ -145,14 +145,12 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                     resi=line.substr(22,5);
 
                     /* change residue index in line */
-                    //stringstream i8_stream;
-                    //i8_stream << i;
-                    //i8=i8_stream.str();
-                    //if (i8.size()<4)
-                    //{
-                        //i8=string(4-i8.size(), ' ')+i8;
-                    //}
-                    //line=line.substr(0,22)+i8+line.substr(26);
+                    stringstream i8_stream;
+                    i8_stream << i;
+                    i8=i8_stream.str();
+                    if (i8.size()<4) i8=string(4-i8.size(), ' ')+i8;
+                    line=line.substr(0,22)+i8+line.substr(26);
+
                     PDB_lines.push_back(line);
                     i++;
                 }
