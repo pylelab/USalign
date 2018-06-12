@@ -19,18 +19,6 @@
 #include "NW.h"
 #include "Kabsch.h"
 
-void print_version()
-{
-    cout << 
-"\n"
-" *****************************************************************************\n"
-" * TM-align (Version 20180604): A protein structural alignment algorithm     *\n"
-" * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
-" * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
-" *****************************************************************************"
-    << endl;
-}
-
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
 int score_fun8( double **xa, double **ya, int n_ali, double d, int i_ali[],
