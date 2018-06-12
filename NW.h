@@ -202,7 +202,8 @@ void NWDP_TM(double **x, double **y, int len1, int len2, double t[3], double u[3
 }
 
 //+ss
-void NWDP_TM(int *secx, int *secy, int len1, int len2, double gap_open, int j2i[])
+void NWDP_TM(const int *secx, const int *secy, const int len1, const int len2,
+    const double gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm

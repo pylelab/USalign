@@ -944,13 +944,9 @@ void make_sec(double **x, int len, int *sec)
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ss( double **x, double **y, int xlen, int ylen, 
-    int *y2x)
+void get_initial_ss( const int *secx, const int *secy,
+    int xlen, int ylen, int *y2x)
 {
-    //assign secondary structures
-    //make_sec(x, xlen, secx);
-    //make_sec(y, ylen, secy);
-
     double gap_open=-1.0;
     NWDP_TM(secx, secy, xlen, ylen, gap_open, y2x);    
 }
@@ -1062,7 +1058,8 @@ bool get_initial5(double **x, double **y, int xlen, int ylen, int *y2x,
     return flag;
 }
 
-void score_matrix_rmsd_sec( double **x, double **y, int xlen, int ylen,
+void score_matrix_rmsd_sec( const int *secx, const int *secy,
+    double **x, double **y, int xlen, int ylen,
     int *y2x, const double D0_MIN, double d0)
 {
     double t[3], u[3][3];
@@ -1117,11 +1114,12 @@ void score_matrix_rmsd_sec( double **x, double **y, int xlen, int ylen,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus( double **x, double **y, int xlen, int ylen,
+void get_initial_ssplus( const int *secx, const int *secy,
+    double **x, double **y, int xlen, int ylen,
     int *y2x0, int *y2x, const double D0_MIN, double d0)
 {
     //create score matrix for DP
-    score_matrix_rmsd_sec(x, y, xlen, ylen, y2x0, D0_MIN, d0);
+    score_matrix_rmsd_sec(secx, secy, x, y, xlen, ylen, y2x0, D0_MIN, d0);
     
     double gap_open=-1.0;
     NWDP_TM(xlen, ylen, gap_open, y2x);
@@ -1659,6 +1657,7 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
 
 /* entry function for TMalign */
 int TMalign_main(
+    const char *seqx, const char *seqy, const int *secx, const int *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2,
     double &TM3, double &TM4, double &TM5,
@@ -1765,7 +1764,7 @@ int TMalign_main(
         /************************************************************/
         /*    get initial alignment based on secondary structure    */
         /************************************************************/
-        get_initial_ss(xa, ya, xlen, ylen, invmap);
+        get_initial_ss(secx, secy, xlen, ylen, invmap);
         TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step,
             score_sum_method, local_d0_search, Lnorm, score_d8, d0);
         if (TM>TMmax)
@@ -1815,11 +1814,12 @@ int TMalign_main(
             cerr << "\n\nWarning: initial alignment from local superposition fail!\n\n" << endl;
 
 
-        /**************************************************************************/
-        /* get initial alignment based on local superposition+secondary structure */
-        /**************************************************************************/
+        /********************************************************************/
+        /* get initial alignment by local superposition+secondary structure */
+        /********************************************************************/
         //=initial3 in original TM-align
-        get_initial_ssplus(xa, ya, xlen, ylen, invmap0, invmap, D0_MIN, d0);
+        get_initial_ssplus( secx, secy, xa, ya, xlen, ylen,
+            invmap0, invmap, D0_MIN, d0);
         TM = detailed_search(xa, ya, xlen, ylen, invmap, t, u, simplify_step,
              score_sum_method, local_d0_search, Lnorm, score_d8, d0);
         if (TM>TMmax)

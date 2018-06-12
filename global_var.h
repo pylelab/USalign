@@ -9,6 +9,4 @@ double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2] and
 int    *xresno, *yresno;//residue numbers, used in fragment gapless threading 
 double **xtm, **ytm;    //for TMscore search engine
 double **xt;            //for saving the superposed version of r_1 or xtm
-char   *seqx, *seqy;    //for the protein sequence 
-int    *secx, *secy;    //for the secondary structure 
 double **r1, **r2;      //for Kabsch rotation 
