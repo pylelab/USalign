@@ -362,52 +362,82 @@ int main(int argc, char *argv[])
         line.clear();
     }
 
-    /* loop over file names */
     if (outfmt_opt==2)
         cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
             <<"RMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
 
+    /* declare previously global variables */
     vector<string> PDB_lines1; // text of chain1
     vector<string> PDB_lines2; // text of chain2
+    int xlen, ylen; // chain length
+
+    /* loop over file names */
     for (int i=0;i<chain1_list.size();i++)
     {
+        /* parse chain 1 */
         xname=chain1_list[i];
+        xlen=get_PDB_lines(xname.c_str(),PDB_lines1,ter_opt,atom_opt);
+        if (!xlen)
+        {
+            cerr<<"Warning! Cannot parse file: "<<xname
+                <<". Chain length 0."<<endl;
+            PDB_lines1.clear();
+            continue;
+        }
+        NewArray(&xa, xlen, 3);
+        seqx = new char[xlen + 1];
+        secx = new int[xlen];
+        xresno = new int[xlen];
+        xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
+        make_sec(xa, xlen, secx); // secondary structure assignment
+
         for (int j=0;j<chain2_list.size();j++)
         {
-            /* declare variable */
-            yname=chain2_list[j];
+            /* parse chain 2 */
+            if (PDB_lines2.size()==0)
+            {
+                yname=chain2_list[j];
+                ylen=get_PDB_lines(yname.c_str(),PDB_lines2,ter_opt,atom_opt);
+                if (!ylen)
+                {
+                    cerr<<"Warning! Cannot parse file: "<<yname
+                        <<". Chain length 0."<<endl;
+                    PDB_lines2.clear();
+                    continue;
+                }
+                NewArray(&ya, ylen, 3);
+                seqy = new char[ylen + 1];
+                yresno = new int[ylen];
+                secy = new int[ylen];
+                ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
+                make_sec(ya, ylen, secy);
+            }
+
+            /* allocate memory specific to this pair of TMalign */
+            int minlen = min(xlen, ylen);
+            NewArray(&r1, minlen, 3);
+            NewArray(&r2, minlen, 3);
+            NewArray(&xtm, minlen, 3);
+            NewArray(&ytm, minlen, 3);
+            NewArray(&xt, xlen, 3);
+            NewArray(&score, xlen+1, ylen+1);
+            NewArray(&path, xlen+1, ylen+1);
+            NewArray(&val, xlen+1, ylen+1);
+
+            /* declare variable specific to this pair of TMalign */
             double t0[3], u0[3][3];
             double TM1, TM2;
-            double TM3, TM4, TM5;   // for a_opt, u_opt, d_opt
+            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
             double d0_0, TM_0;
             double d0A, d0B, d0u, d0a;
             double d0_out=5.0;
-            string seqM, seqxA, seqyA;
+            string seqM, seqxA, seqyA;// for output alignment
             double rmsd0 = 0.0;
-            int L_ali;              // Aligned length from standard_TMscore
+            int L_ali;                // Aligned length in standard_TMscore
             double Liden=0;
-            double TM_ali, rmsd_ali;// TMscore and rmsd from standard_TMscore
+            double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
-
-            /* load data */
-            int xlen, ylen;
-            int stat=load_PDB_allocate_memory(xname.c_str(), yname.c_str(),
-                PDB_lines1, PDB_lines2, xlen, ylen, ter_opt, atom_opt);
-            if (stat==1) // chain 1 failed
-            {
-                cerr<<"Warning! Cannot parse file: "<<xname
-                    <<". Chain length 0."<<endl;
-                PDB_lines2.clear();
-                break;
-            }
-            else if (stat==2) // chain 2 failed
-            {
-                cerr<<"Warning! Cannot parse file: "<<yname
-                    <<". Chain length 0."<<endl;
-                PDB_lines2.clear();
-                continue;
-            }
 
             /* entry function for structure alignment */
             TMalign_main(t0, u0, TM1, TM2, TM3, TM4, TM5,
@@ -432,17 +462,44 @@ int main(int argc, char *argv[])
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
             /* Done! Free memory */
-            free_memory(xlen, ylen);
+            DeleteArray(&r1, minlen);
+            DeleteArray(&r2, minlen);
+            DeleteArray(&xtm, minlen);
+            DeleteArray(&ytm, minlen);
+            DeleteArray(&xt, xlen);
+            DeleteArray(&score, xlen+1);
+            DeleteArray(&path, xlen+1);
+            DeleteArray(&val, xlen+1);
+   
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
-            if (chain2_list.size()>1) PDB_lines2.clear();
-            yname.clear();
+            if (chain2_list.size()>1)
+            {
+                yname.clear();
+                PDB_lines2.clear();
+                DeleteArray(&ya, ylen);
+                delete [] seqy;
+                delete [] secy;
+                delete [] yresno;
+            }
         }
-        PDB_lines1.clear();
         xname.clear();
+        PDB_lines1.clear();
+        DeleteArray(&xa, xlen);
+        delete [] seqx;
+        delete [] secx;
+        delete [] xresno;
     }
-    PDB_lines2.clear();
+    if (chain2_list.size()==1)
+    {
+        yname.clear();
+        PDB_lines2.clear();
+        DeleteArray(&ya, ylen);
+        delete [] seqy;
+        delete [] secy;
+        delete [] yresno;
+    }
     chain1_list.clear();
     chain2_list.clear();
     sequence.clear();

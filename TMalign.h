@@ -31,70 +31,6 @@ void print_version()
     << endl;
 }
 
-int load_PDB_allocate_memory(const char *xname, const char *yname,
-    vector<string> &PDB_lines1, vector<string> &PDB_lines2,
-    int &xlen, int &ylen, const int ter_opt=3, const string atom_opt=" CA ")
-{
-    xlen=PDB_lines1.size();
-    ylen=PDB_lines2.size();
-    if (!xlen) xlen=get_PDB_lines(xname,PDB_lines1,ter_opt,atom_opt);
-    if (!xlen) return 1; // fail to read chain1
-    if (!ylen) ylen=get_PDB_lines(yname,PDB_lines2,ter_opt,atom_opt);
-    if (!ylen) return 2; // fail to read chain2
-
-    //------allocate memory for x and y------>
-    NewArray(&xa, xlen, 3);
-    seqx = new char[xlen + 1];
-    secx = new int[xlen];
-    xresno = new int[xlen];
-
-    NewArray(&ya, ylen, 3);
-    seqy = new char[ylen + 1];
-    yresno = new int[ylen];
-    secy = new int[ylen];
-
-    // Get exact length
-    xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
-    ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
-    int minlen = min(xlen, ylen);
-    
-    //------allocate memory for other temporary varialbes------>
-    NewArray(&r1, minlen, 3);
-    NewArray(&r2, minlen, 3);
-    NewArray(&xtm, minlen, 3);
-    NewArray(&ytm, minlen, 3);
-    NewArray(&xt, xlen, 3);
-
-    NewArray(&score, xlen+1, ylen+1);
-    NewArray(&path, xlen+1, ylen+1);
-    NewArray(&val, xlen+1, ylen+1);  
-    return 0; // 0 for no error
-}
-
-
-void free_memory(const int xlen, const int ylen)
-{
-    int minlen = min(xlen, ylen);
-    DeleteArray(&path, xlen+1);
-    DeleteArray(&val, xlen+1);
-    DeleteArray(&score, xlen+1);
-    DeleteArray(&xa, xlen);
-    DeleteArray(&xt, xlen);
-    DeleteArray(&ya, ylen);
-    DeleteArray(&r1, minlen);
-    DeleteArray(&r2, minlen);
-    DeleteArray(&xtm, minlen);
-    DeleteArray(&ytm, minlen);
-   
-    delete [] seqx;
-    delete [] seqy;
-    delete [] secx;
-    delete [] secy;
-    delete [] xresno;
-    delete [] yresno;
-}
-
-
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore
 int score_fun8( double **xa, double **ya, int n_ali, double d, int i_ali[],
@@ -1024,8 +960,8 @@ void get_initial_ss( double **x, double **y, int xlen, int ylen,
     int *y2x)
 {
     //assign secondary structures
-    make_sec(x, xlen, secx);
-    make_sec(y, ylen, secy);
+    //make_sec(x, xlen, secx);
+    //make_sec(y, ylen, secy);
 
     double gap_open=-1.0;
     NWDP_TM(secx, secy, xlen, ylen, gap_open, y2x);    
