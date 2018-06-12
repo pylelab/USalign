@@ -381,9 +381,10 @@ int main(int argc, char *argv[])
     /* declare previously global variables */
     vector<string> PDB_lines1; // text of chain1
     vector<string> PDB_lines2; // text of chain2
-    int xlen, ylen;            // chain length
+    int    xlen, ylen;         // chain length
     char   *seqx, *seqy;       // for the protein sequence 
     int    *secx, *secy;       // for the secondary structure 
+    int    *xresno, *yresno;   // residue number for fragment gapless threading
 
     /* loop over file names */
     for (int i=0;i<chain1_list.size();i++)
@@ -455,7 +456,7 @@ int main(int argc, char *argv[])
 
             /* entry function for structure alignment */
             TMalign_main(
-                seqx, seqy, secx, secy,
+                xresno, yresno, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                 seqM, seqxA, seqyA,

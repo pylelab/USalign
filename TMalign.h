@@ -1126,7 +1126,7 @@ void get_initial_ssplus( const int *secx, const int *secy,
 }
 
 
-void find_max_frag(double **x, int *resno, int len, int *start_max,
+void find_max_frag(double **x, const int *resno, int len, int *start_max,
     int *end_max, double dcu0, const bool fast_opt)
 {
     int r_min, fra_min=4;           //minimum fragment for search
@@ -1211,7 +1211,7 @@ void find_max_frag(double **x, int *resno, int len, int *start_max,
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 double get_initial_fgt( double **x, double **y, int xlen, int ylen, 
-    int *xresno, int *yresno, int *y2x, double d0, double d0_search,
+    const int *xresno, const int *yresno, int *y2x, double d0, double d0_search,
     double dcu0, const bool fast_opt, double t[3], double u[3][3])
 {
     int fra_min=4;           //minimum fragment for search
@@ -1657,10 +1657,10 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
 
 /* entry function for TMalign */
 int TMalign_main(
+    const int  *xresno, const int *yresno,
     const char *seqx, const char *seqy, const int *secx, const int *secy,
     double t0[3], double u0[3][3],
-    double &TM1, double &TM2,
-    double &TM3, double &TM4, double &TM5,
+    double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
     string &seqM, string &seqxA, string &seqyA,

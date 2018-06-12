@@ -119,7 +119,7 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
     int i=0; // resi
     string line, str, i8;    
     char chainID=0;
-    string resn="";
+    string resi="";
     
     ifstream fin (filename);
     if (fin.is_open())
@@ -140,19 +140,19 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                     if (!chainID) chainID=line[21];
                     else if (ter_opt>=2 && chainID!=line[21]) break;
 
-                    if (resn==line.substr(22,5))
-                        cerr<<"Warning! Duplicated residue "<<resn<<endl;
-                    resn=line.substr(22,5);
+                    if (resi==line.substr(22,5))
+                        cerr<<"Warning! Duplicated residue "<<resi<<endl;
+                    resi=line.substr(22,5);
 
-                    // change residue index in line
-                    stringstream i8_stream;
-                    i8_stream << i;
-                    i8=i8_stream.str();
-                    if (i8.size()<4)
-                    {
-                        i8=string(4-i8.size(), ' ')+i8;
-                    }
-                    line=line.substr(0,22)+i8+line.substr(26);
+                    /* change residue index in line */
+                    //stringstream i8_stream;
+                    //i8_stream << i;
+                    //i8=i8_stream.str();
+                    //if (i8.size()<4)
+                    //{
+                        //i8=string(4-i8.size(), ' ')+i8;
+                    //}
+                    //line=line.substr(0,22)+i8+line.substr(26);
                     PDB_lines.push_back(line);
                     i++;
                 }
