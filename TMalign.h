@@ -1629,10 +1629,7 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
 
             n_al++;
         }
-        else if (i != -1)
-        {
-            PrintErrorAndQuit("Wrong map!\n");
-        }
+        else if (i != -1) PrintErrorAndQuit("Wrong map!\n");
     }
     L_ali = n_al;
 
@@ -1653,7 +1650,7 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
 
 /* entry function for TMalign */
 int TMalign_main(
-    const int  *xresno, const int *yresno,
+    double **xa, double **ya, const int  *xresno, const int *yresno,
     const char *seqx, const char *seqy, const int *secx, const int *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -1668,13 +1665,13 @@ int TMalign_main(
     const bool i_opt, const bool I_opt, const bool a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt)
 {
-    double D0_MIN;           //for d0
-    double Lnorm;            //normalization length
+    double D0_MIN;        //for d0
+    double Lnorm;         //normalization length
     double score_d8,d0,d0_search,dcu0;//for TMscore search
-    double t[3], u[3][3];   //Kabsch translation vector and rotation matrix
-    double **score;            // Input score table for dynamic programming
-    bool   **path;             // for dynamic programming  
-    double **val;              // for dynamic programming  
+    double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
+    double **score;       // Input score table for dynamic programming
+    bool   **path;        // for dynamic programming  
+    double **val;         // for dynamic programming  
 
     /***********************/
     /* allocate memory     */

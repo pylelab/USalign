@@ -385,6 +385,10 @@ int main(int argc, char *argv[])
     char   *seqx, *seqy;       // for the protein sequence 
     int    *secx, *secy;       // for the secondary structure 
     int    *xresno, *yresno;   // residue number for fragment gapless threading
+    double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
+                               // ya[0...ylen-1][0..2], in general,
+                               // ya is regarded as native structure 
+                               // --> superpose xa onto ya
 
     /* loop over file names */
     for (int i=0;i<chain1_list.size();i++)
@@ -453,7 +457,7 @@ int main(int argc, char *argv[])
 
             /* entry function for structure alignment */
             TMalign_main(
-                xresno, yresno, seqx, seqy, secx, secy,
+                xa, ya, xresno, yresno, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                 seqM, seqxA, seqyA,
