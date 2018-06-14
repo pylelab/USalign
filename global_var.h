@@ -1,7 +1,4 @@
 //global variables
-double **score;         //Input score table for dynamic programming
-bool   **path;          //for dynamic programming  
-double **val;           //for dynamic programming  
 double **xa, **ya;      //for input vectors xa[0...xlen-1][0..2] and
                         //ya[0...ylen-1][0..2], in general,
                         //ya is regarded as native structure 

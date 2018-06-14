@@ -435,9 +435,6 @@ int main(int argc, char *argv[])
             NewArray(&xtm, minlen, 3);
             NewArray(&ytm, minlen, 3);
             NewArray(&xt, xlen, 3);
-            NewArray(&score, xlen+1, ylen+1);
-            NewArray(&path, xlen+1, ylen+1);
-            NewArray(&val, xlen+1, ylen+1);
 
             /* declare variable specific to this pair of TMalign */
             double t0[3], u0[3][3];
@@ -484,9 +481,6 @@ int main(int argc, char *argv[])
             DeleteArray(&xtm, minlen);
             DeleteArray(&ytm, minlen);
             DeleteArray(&xt, xlen);
-            DeleteArray(&score, xlen+1);
-            DeleteArray(&path, xlen+1);
-            DeleteArray(&val, xlen+1);
    
             seqM.clear();
             seqxA.clear();

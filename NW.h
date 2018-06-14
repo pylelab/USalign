@@ -21,7 +21,8 @@
 *     because it is about 1.5 times faster than a complete N-W code
 *     and does not influence much the final structure alignment result.
 */
-void NWDP_TM(int len1, int len2, double gap_open, int j2i[])
+void NWDP_TM( double **score, bool **path, double **val,
+    int len1, int len2, double gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm
@@ -109,7 +110,9 @@ void NWDP_TM(int len1, int len2, double gap_open, int j2i[])
     }
 }
 
-void NWDP_TM(double **x, double **y, int len1, int len2, double t[3], double u[3][3], double d02, double gap_open, int j2i[])
+void NWDP_TM( double **score, bool **path, double **val,
+    double **x, double **y, int len1, int len2, double t[3], double u[3][3],
+    double d02, double gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
     //not a standard implementation of NW algorithm
@@ -202,7 +205,8 @@ void NWDP_TM(double **x, double **y, int len1, int len2, double t[3], double u[3
 }
 
 //+ss
-void NWDP_TM(const int *secx, const int *secy, const int len1, const int len2,
+void NWDP_TM(double **score, bool **path, double **val,
+    const int *secx, const int *secy, const int len1, const int len2,
     const double gap_open, int j2i[])
 {
     //NW dynamic programming for alignment
