@@ -436,8 +436,6 @@ int main(int argc, char *argv[])
             int minlen = min(xlen, ylen);
             NewArray(&r1, minlen, 3);
             NewArray(&r2, minlen, 3);
-            NewArray(&xtm, minlen, 3);
-            NewArray(&ytm, minlen, 3);
             NewArray(&xt, xlen, 3);
 
             /* declare variable specific to this pair of TMalign */
@@ -482,8 +480,6 @@ int main(int argc, char *argv[])
             /* Done! Free memory */
             DeleteArray(&r1, minlen);
             DeleteArray(&r2, minlen);
-            DeleteArray(&xtm, minlen);
-            DeleteArray(&ytm, minlen);
             DeleteArray(&xt, xlen);
    
             seqM.clear();
