@@ -112,9 +112,9 @@ int score_fun8_standard(double **xa, double **ya, int n_ali, double d,
     return n_cut;
 }
 
-double TMscore8_search( double **xtm, double **ytm, int Lali,
-    double t0[3], double u0[3][3], int simplify_step, int score_sum_method,
-    double *Rcomm, double local_d0_search, double Lnorm,
+double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
+    int Lali, double t0[3], double u0[3][3], int simplify_step,
+    int score_sum_method, double *Rcomm, double local_d0_search, double Lnorm,
     double score_d8, double d0)
 {
     int i, m;
@@ -276,7 +276,8 @@ double TMscore8_search( double **xtm, double **ytm, int Lali,
 }
 
 
-double TMscore8_search_standard(double **xtm, double **ytm, int Lali,
+double TMscore8_search_standard(
+    double **r1, double **r2, double **xtm, double **ytm, int Lali,
     double t0[3], double u0[3][3], int simplify_step, int score_sum_method,
     double *Rcomm, double local_d0_search, double score_d8, double d0)
 {
@@ -443,9 +444,9 @@ double TMscore8_search_standard(double **xtm, double **ytm, int Lali,
 //          an alignment invmap0[] between x and y
 //          simplify_step: 1 or 40 or other integers
 //          score_sum_method: 0 for score over all pairs
-//                            8 for socre over the pairs with dist<score_d8          
+//                            8 for socre over the pairs with dist<score_d8
 // output:  the best rotaion matrix t, u that results in highest TMscore
-double detailed_search( double **xtm, double **ytm, 
+double detailed_search(double **r1, double **r2, double **xtm, double **ytm,
     double **x, double **y, int xlen, int ylen, 
     int invmap0[], double t[3], double u[3][3], int simplify_step,
     int score_sum_method, double local_d0_search, double Lnorm,
@@ -455,8 +456,6 @@ double detailed_search( double **xtm, double **ytm,
     int i, j, k;     
     double tmscore;
     double rmsd;
-
-
 
     k=0;
     for(i=0; i<ylen; i++) 
@@ -476,13 +475,13 @@ double detailed_search( double **xtm, double **ytm,
     }
 
     //detailed search 40-->1
-    tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step,
+    tmscore = TMscore8_search(r1, r2, xtm, ytm, k, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
     return tmscore;
 }
 
-double detailed_search_standard( double **xtm, double **ytm,
-    double **x, double **y, int xlen, int ylen,
+double detailed_search_standard( double **r1, double **r2,
+    double **xtm, double **ytm, double **x, double **y, int xlen, int ylen,
     int invmap0[], double t[3], double u[3][3], int simplify_step,
     int score_sum_method, double local_d0_search, const bool& bNormalize,
     double Lnorm, double score_d8, double d0)
@@ -510,8 +509,8 @@ double detailed_search_standard( double **xtm, double **ytm,
     }
 
     //detailed search 40-->1
-    tmscore = TMscore8_search_standard(xtm, ytm, k, t, u, simplify_step,
-        score_sum_method, &rmsd, local_d0_search, score_d8, d0);
+    tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, k, t, u,
+        simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0);
     if (bNormalize)// "-i", to use standard_TMscore, then bNormalize=true, else bNormalize=false; 
         tmscore = tmscore * k / Lnorm;
 
@@ -519,9 +518,9 @@ double detailed_search_standard( double **xtm, double **ytm,
 }
 
 //compute the score quickly in three iterations
-double get_score_fast( double **xtm, double **ytm, double **x, double **y,
-    int xlen, int ylen, int invmap[], double d0, double d0_search,
-    double t[3], double u[3][3])
+double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
+    double **x, double **y, int xlen, int ylen, int invmap[],
+    double d0, double d0_search, double t[3], double u[3][3])
 {
     double rms, tmscore, tmscore1, tmscore2;
     int i, j, k;
@@ -684,7 +683,7 @@ double get_score_fast( double **xtm, double **ytm, double **x, double **y,
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial( double **xtm, double **ytm,
+double get_initial(double **r1, double **r2, double **xtm, double **ytm,
     double **x, double **y, int xlen, int ylen, int *y2x,
     double d0, double d0_search, const bool fast_opt,
     double t[3], double u[3][3])
@@ -714,7 +713,7 @@ double get_initial( double **xtm, double **ytm,
         
         //evaluate the map quickly in three iterations
         //this is not real tmscore, it is used to evaluate the goodness of the initial alignment
-        tmscore=get_score_fast(xtm, ytm,
+        tmscore=get_score_fast(r1, r2, xtm, ytm,
             x, y, xlen, ylen, y2x, d0,d0_search, t, u);
         if(tmscore>=tmscore_max)
         {
@@ -946,7 +945,7 @@ void get_initial_ss( double **score, bool **path, double **val,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-bool get_initial5( double **xtm, double **ytm,
+bool get_initial5( double **r1, double **r2, double **xtm, double **ytm,
     double **score, bool **path, double **val,
     double **x, double **y, int xlen, int ylen, int *y2x,
     double d0, double d0_search, const bool fast_opt, const double D0_MIN)
@@ -1029,8 +1028,8 @@ bool get_initial5( double **xtm, double **ytm,
                 double gap_open = 0.0;
                 NWDP_TM(score, path, val,
                     x, y, xlen, ylen, t, u, d02, gap_open, invmap);
-                GL = get_score_fast(xtm, ytm, x, y, xlen, ylen, invmap, d0,
-                    d0_search, t, u);
+                GL = get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen,
+                    invmap, d0, d0_search, t, u);
                 if (GL>GLmax)
                 {
                     GLmax = GL;
@@ -1048,7 +1047,8 @@ bool get_initial5( double **xtm, double **ytm,
     return flag;
 }
 
-void score_matrix_rmsd_sec(double **score, const int *secx, const int *secy,
+void score_matrix_rmsd_sec( double **r1, double **r2,
+    double **score, const int *secx, const int *secy,
     double **x, double **y, int xlen, int ylen,
     int *y2x, const double D0_MIN, double d0)
 {
@@ -1100,12 +1100,13 @@ void score_matrix_rmsd_sec(double **score, const int *secx, const int *secy,
 //y2x[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-void get_initial_ssplus( double **score, bool **path, double **val,
-    const int *secx, const int *secy, double **x, double **y,
+void get_initial_ssplus(double **r1, double **r2, double **score, bool **path,
+    double **val, const int *secx, const int *secy, double **x, double **y,
     int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0)
 {
     //create score matrix for DP
-    score_matrix_rmsd_sec(score, secx,secy, x,y, xlen,ylen, y2x0, D0_MIN,d0);
+    score_matrix_rmsd_sec(r1, r2, score, secx, secy, x, y, xlen, ylen,
+        y2x0, D0_MIN,d0);
     
     double gap_open=-1.0;
     NWDP_TM(score, path, val, xlen, ylen, gap_open, y2x);
@@ -1139,17 +1140,11 @@ void find_max_frag(double **x, const int *resno, int len, int *start_max,
             flag=0;
             if(dcu_cut>dcu0_cut)
             {
-                if(d<dcu_cut)
-                {
-                    flag=1;
-                }
+                if(d<dcu_cut) flag=1;
             }
             else if(resno[i] == (resno[i-1]+1)) //necessary??
             {
-                if(d<dcu_cut)
-                {
-                    flag=1;
-                }
+                if(d<dcu_cut) flag=1;
             }
 
             if(flag==1)
@@ -1196,7 +1191,7 @@ void find_max_frag(double **x, const int *resno, int len, int *start_max,
 //y2x0[j]=i means:
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
-double get_initial_fgt(double **xtm, double **ytm,
+double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
     double **x, double **y, int xlen, int ylen, 
     const int *xresno, const int *yresno, int *y2x, double d0, double d0_search,
     double dcu0, const bool fast_opt, double t[3], double u[3][3])
@@ -1224,17 +1219,11 @@ double get_initial_fgt(double **xtm, double **ytm,
 
     if(Lx<Ly || (Lx==Ly && xlen<=ylen))
     {        
-        for(int i=0; i<L_fr; i++)
-        {
-            ifr[i]=xstart+i;
-        }
+        for(int i=0; i<L_fr; i++) ifr[i]=xstart+i;
     }
     else if(Lx>Ly || (Lx==Ly && xlen>ylen))
     {        
-        for(int i=0; i<L_fr; i++)
-        {
-            ifr[i]=ystart+i;
-        }    
+        for(int i=0; i<L_fr; i++) ifr[i]=ystart+i;
     }
 
     
@@ -1274,27 +1263,18 @@ double get_initial_fgt(double **xtm, double **ytm,
             for(j=0; j<ylen; j++)
             {
                 i=j+k;
-                if(i>=0 && i<L1)
-                {                
-                    y2x_[j]=ifr[i];
-                }
-                else
-                {
-                    y2x_[j]=-1;
-                }
+                if(i>=0 && i<L1) y2x_[j]=ifr[i];
+                else             y2x_[j]=-1;
             }
 
             //evaluate the map quickly in three iterations
-            tmscore=get_score_fast(xtm, ytm, x, y, xlen, ylen, y2x_,
+            tmscore=get_score_fast(r1, r2, xtm, ytm, x, y, xlen, ylen, y2x_,
                 d0, d0_search, t, u);
 
             if(tmscore>=tmscore_max)
             {
                 tmscore_max=tmscore;
-                for(j=0; j<ylen; j++)
-                {
-                    y2x[j]=y2x_[j];
-                }
+                for(j=0; j<ylen; j++) y2x[j]=y2x_[j];
             }
         }
     }
@@ -1313,22 +1293,16 @@ double get_initial_fgt(double **xtm, double **ytm,
         for(k=n1; k<=n2; k++)
         {
             //get the map
-            for(j=0; j<ylen; j++)
-            {
-                y2x_[j]=-1;
-            }
+            for(j=0; j<ylen; j++) y2x_[j]=-1;
 
             for(j=0; j<L2; j++)
             {
                 i=j+k;
-                if(i>=0 && i<xlen)
-                {
-                    y2x_[ifr[j]]=i;
-                }
+                if(i>=0 && i<xlen) y2x_[ifr[j]]=i;
             }
         
             //evaluate the map quickly in three iterations
-            tmscore=get_score_fast(xtm, ytm,
+            tmscore=get_score_fast(r1, r2, xtm, ytm,
                 x, y, xlen, ylen, y2x_, d0,d0_search, t, u);
             if(tmscore>=tmscore_max)
             {
@@ -1348,11 +1322,11 @@ double get_initial_fgt(double **xtm, double **ytm,
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter( double **xtm, double **ytm, double **score, bool **path,
-    double **val, double **x, double **y, int xlen, int ylen,
-    double t[3], double u[3][3], int invmap0[], int g1, int g2,
-    int iteration_max, double local_d0_search, double D0_MIN, double Lnorm,
-    double d0, double score_d8)
+double DP_iter(double **r1, double **r2, double **xtm, double **ytm, 
+    double **score, bool **path, double **val, double **x, double **y,
+    int xlen, int ylen, double t[3], double u[3][3], int invmap0[],
+    int g1, int g2, int iteration_max, double local_d0_search,
+    double D0_MIN, double Lnorm, double d0, double score_d8)
 {
     double gap_open[2]={-0.6, 0};
     double rmsd; 
@@ -1390,25 +1364,19 @@ double DP_iter( double **xtm, double **ytm, double **score, bool **path,
                 }
             }
 
-            tmscore = TMscore8_search(xtm, ytm, k, t, u, simplify_step, 
+            tmscore = TMscore8_search(r1, r2, xtm, ytm, k, t, u, simplify_step,
                 score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
            
             if(tmscore>tmscore_max)
             {
                 tmscore_max=tmscore;
-                for(i=0; i<ylen; i++) 
-                {                
-                    invmap0[i]=invmap[i];                                      
-                }                
+                for(i=0; i<ylen; i++) invmap0[i]=invmap[i];
             }
     
             if(iteration>0)
             {
-                if(fabs(tmscore_old-tmscore)<0.000001)
-                {     
-                    break;       
-                }
+                if(fabs(tmscore_old-tmscore)<0.000001) break;       
             }
             tmscore_old=tmscore;
         }// for iteration           
@@ -1580,9 +1548,10 @@ void output_results(
     if (o_opt) output_superpose(xname, fname_super, t, u, ter_opt);
 }
 
-double standard_TMscore(double **x, double **y, int xlen, int ylen,
-    int invmap[], int& L_ali, double& RMSD, double D0_MIN, double Lnorm,
-    double d0, double d0_search, double score_d8, double t[3], double u[3][3])
+double standard_TMscore( double **r1, double **r2, double **xtm, double **ytm,
+    double **x, double **y, int xlen, int ylen, int invmap[],
+    int& L_ali, double& RMSD, double D0_MIN, double Lnorm, double d0,
+    double d0_search, double score_d8, double t[3], double u[3][3])
 {
     D0_MIN = 0.5;
     Lnorm = ylen;
@@ -1631,7 +1600,7 @@ double standard_TMscore(double **x, double **y, int xlen, int ylen,
     int temp_score_sum_method = 0;
     d0_search = d0_input;
     double rms = 0.0;
-    tmscore = TMscore8_search_standard(xtm, ytm, n_al, t, u,
+    tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, n_al, t, u,
         temp_simplify_step, temp_score_sum_method, &rms, d0_input,
         score_d8, d0);
     tmscore = tmscore * n_al / (1.0*Lnorm);
@@ -1663,7 +1632,8 @@ int TMalign_main(
     double **score;       // Input score table for dynamic programming
     bool   **path;        // for dynamic programming  
     double **val;         // for dynamic programming  
-    double **xtm, **ytm; //for TMscore search engine
+    double **xtm, **ytm;  // for TMscore search engine
+    double **r1, **r2;    // for Kabsch rotation
 
     /***********************/
     /* allocate memory     */
@@ -1674,6 +1644,8 @@ int TMalign_main(
     NewArray(&val, xlen+1, ylen+1);
     NewArray(&xtm, minlen, 3);
     NewArray(&ytm, minlen, 3);
+    NewArray(&r1, minlen, 3);
+    NewArray(&r2, minlen, 3);
 
     /***********************/
     /*    parameter set    */
@@ -1724,13 +1696,14 @@ int TMalign_main(
         double prevD0_MIN = D0_MIN;// stored for later use
         int prevLnorm = Lnorm;
         double prevd0 = d0;
-        TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali, rmsd_ali,
-            D0_MIN, Lnorm, d0, d0_search, score_d8, t, u);
+        TM_ali = standard_TMscore(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+            invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0, d0_search, score_d8,
+            t, u);
         D0_MIN = prevD0_MIN;
         Lnorm = prevLnorm;
         d0 = prevd0;
-        TM = detailed_search_standard( xtm, ytm, xa, ya, xlen, ylen, invmap,
-            t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0);
+        TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+            invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0);
         if (TM > TMmax)
         {
             TMmax = TM;
@@ -1744,16 +1717,16 @@ int TMalign_main(
     /******************************************************/
     if (!bAlignStick)
     {
-        get_initial(xtm, ytm, xa, ya, xlen, ylen, invmap0, d0, d0_search,
-            fast_opt, t, u);
-        TM = detailed_search( xtm, ytm, xa, ya, xlen, ylen, invmap0, t, u,
-            simplify_step, score_sum_method, local_d0_search, Lnorm,
+        get_initial(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0, d0,
+            d0_search, fast_opt, t, u);
+        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0,
+            t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax) TMmax = TM;
         //run dynamic programing iteratively to find the best alignment
-        TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen, t, u,
-             invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm,
-             d0, score_d8);
+        TM = DP_iter( r1, r2, xtm, ytm, score, path, val, xa, ya, xlen, ylen,
+             t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN,
+             Lnorm, d0, score_d8);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1765,8 +1738,8 @@ int TMalign_main(
         /*    get initial alignment based on secondary structure    */
         /************************************************************/
         get_initial_ss(score, path, val, secx, secy, xlen, ylen, invmap);
-        TM = detailed_search( xtm, ytm, xa, ya, xlen, ylen, invmap, t, u,
-            simplify_step, score_sum_method, local_d0_search, Lnorm,
+        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+            t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax)
         {
@@ -1775,9 +1748,9 @@ int TMalign_main(
         }
         if (TM > TMmax*0.2)
         {
-            TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen,
-                t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN,
-                Lnorm, d0, score_d8);
+            TM = DP_iter( r1, r2, xtm, ytm, score, path, val, xa, ya,
+                xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
+                local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1790,11 +1763,11 @@ int TMalign_main(
         /*    get initial alignment based on local superposition    */
         /************************************************************/
         //=initial5 in original TM-align
-        if (get_initial5(xtm, ytm, score, path, val, xa, ya, xlen, ylen,
-            invmap, d0, d0_search, fast_opt, D0_MIN))
+        if (get_initial5( r1, r2, xtm, ytm, score, path, val, xa, ya,
+            xlen, ylen, invmap, d0, d0_search, fast_opt, D0_MIN))
         {
-            TM = detailed_search(xtm, ytm, xa, ya, xlen, ylen, invmap, t, u,
-                simplify_step, score_sum_method, local_d0_search, Lnorm,
+            TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap, 
+                t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
                 score_d8, d0);
             if (TM>TMmax)
             {
@@ -1803,9 +1776,9 @@ int TMalign_main(
             }
             if (TM > TMmax*ddcc)
             {
-                TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen,
-                    t, u, invmap, 0, 2, 2, local_d0_search, D0_MIN, Lnorm, d0,
-                    score_d8);
+                TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+                    xlen, ylen, t, u, invmap, 0, 2, 2, local_d0_search,
+                    D0_MIN, Lnorm, d0, score_d8);
                 if (TM>TMmax)
                 {
                     TMmax = TM;
@@ -1821,10 +1794,10 @@ int TMalign_main(
         /* get initial alignment by local superposition+secondary structure */
         /********************************************************************/
         //=initial3 in original TM-align
-        get_initial_ssplus( score, path, val, secx, secy, xa, ya, xlen, ylen,
-            invmap0, invmap, D0_MIN, d0);
-        TM = detailed_search( xtm, ytm, xa, ya, xlen, ylen, invmap, t, u,
-             simplify_step, score_sum_method, local_d0_search, Lnorm,
+        get_initial_ssplus(r1, r2, score, path, val, secx, secy, xa, ya,
+            xlen, ylen, invmap0, invmap, D0_MIN, d0);
+        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
              score_d8, d0);
         if (TM>TMmax)
         {
@@ -1833,9 +1806,9 @@ int TMalign_main(
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen, t, u,
-                invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm,
-                d0, score_d8);
+            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+                xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
+                local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1848,10 +1821,10 @@ int TMalign_main(
         /*    get initial alignment based on fragment gapless threading    */
         /*******************************************************************/
         //=initial4 in original TM-align
-        get_initial_fgt(xtm, ytm, xa, ya, xlen, ylen, xresno, yresno, invmap,
-            d0, d0_search, dcu0, fast_opt, t, u);
-        TM = detailed_search( xtm, ytm, xa, ya, xlen, ylen, invmap, t, u, 
-            simplify_step, score_sum_method, local_d0_search, Lnorm,
+        get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen, xresno, yresno,
+            invmap, d0, d0_search, dcu0, fast_opt, t, u);
+        TM = detailed_search(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+            t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax)
         {
@@ -1860,9 +1833,9 @@ int TMalign_main(
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen,
-                t, u, invmap, 1, 2, 2, local_d0_search, D0_MIN, Lnorm, d0,
-                score_d8);
+            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+                xlen, ylen, t, u, invmap, 1, 2, 2, local_d0_search, D0_MIN,
+                Lnorm, d0, score_d8);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1900,22 +1873,25 @@ int TMalign_main(
             double prevD0_MIN = D0_MIN;// stored for later use
             int prevLnorm = Lnorm;
             double prevd0 = d0;
-            TM_ali = standard_TMscore(xa, ya, xlen, ylen, invmap, L_ali,
-                rmsd_ali, D0_MIN, Lnorm, d0, d0_search, score_d8, t, u);
+            TM_ali = standard_TMscore(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+                invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0, d0_search,
+                score_d8, t, u);
             D0_MIN = prevD0_MIN;
             Lnorm = prevLnorm;
             d0 = prevd0;
 
-            TM = detailed_search_standard(xtm, ytm, xa, ya, xlen, ylen, invmap,
-                t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0);
+            TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya,
+                xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true, Lnorm,
+                score_d8, d0);
             if (TM > TMmax)
             {
                 TMmax = TM;
                 for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
             }
-            TM = DP_iter(xtm, ytm, score, path, val, xa, ya, xlen, ylen, t, u, 
-                invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN, Lnorm,
-                d0, score_d8);// Different from get_initial, get_initial_ss and get_initial_ssplus
+            // Different from get_initial, get_initial_ss and get_initial_ssplus
+            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+                xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
+                local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1955,9 +1931,9 @@ int TMalign_main(
     simplify_step=1;
     if (fast_opt) simplify_step=40;
     score_sum_method=8;
-    TM = detailed_search_standard(xtm, ytm, xa, ya, xlen, ylen, invmap0, t, u,
-        simplify_step, score_sum_method, local_d0_search, false, Lnorm,
-        score_d8, d0);
+    TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+        invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
+        false, Lnorm, score_d8, d0);
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
     int k=0;
@@ -2020,7 +1996,7 @@ int TMalign_main(
     d0A=d0;
     d0_0=d0A;
     local_d0_search = d0_search;
-    TM1 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step,
+    TM1 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
     TM_0 = TM1;
 
@@ -2029,7 +2005,7 @@ int TMalign_main(
         score_d8, d0, d0_search, dcu0);
     d0B=d0;
     local_d0_search = d0_search;
-    TM2 = TMscore8_search(xtm, ytm, n_ali8, t, u, simplify_step,
+    TM2 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
     double Lnorm_d0;
@@ -2043,7 +2019,7 @@ int TMalign_main(
         d0_0=d0a;
         local_d0_search = d0_search;
 
-        TM3 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step,
+        TM3 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
             score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
         TM_0=TM3;
     }
@@ -2056,7 +2032,7 @@ int TMalign_main(
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;
         local_d0_search = d0_search;
-        TM4 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
+        TM4 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
             score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
         TM_0=TM4;
     }
@@ -2070,7 +2046,7 @@ int TMalign_main(
         //Lnorm_0=ylen;
         Lnorm_d0=Lnorm_0;
         local_d0_search = d0_search;
-        TM5 = TMscore8_search(xtm, ytm, n_ali8, t0, u0, simplify_step, 
+        TM5 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
             score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
         TM_0=TM5;
     }
@@ -2147,5 +2123,7 @@ int TMalign_main(
     DeleteArray(&val, xlen+1);
     DeleteArray(&xtm, minlen);
     DeleteArray(&ytm, minlen);
+    DeleteArray(&r1, minlen);
+    DeleteArray(&r2, minlen);
     return 0; // zero for no exception
 }
