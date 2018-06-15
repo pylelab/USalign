@@ -14,7 +14,6 @@
 =============================================================
 */
 
-#include "global_var.h"
 #include "param_set.h"
 #include "NW.h"
 #include "Kabsch.h"
@@ -88,10 +87,7 @@ int score_fun8_standard(double **xa, double **ya, int n_ali, double d,
             }
             if (score_sum_method == 8)
             {
-                if (di <= score_d8_cut)
-                {
-                    score_sum += 1 / (1 + di / d02);
-                }
+                if (di <= score_d8_cut) score_sum += 1 / (1 + di / d02);
             }
             else
             {
@@ -113,7 +109,7 @@ int score_fun8_standard(double **xa, double **ya, int n_ali, double d,
 }
 
 double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
-    int Lali, double t0[3], double u0[3][3], int simplify_step,
+    double **xt, int Lali, double t0[3], double u0[3][3], int simplify_step,
     int score_sum_method, double *Rcomm, double local_d0_search, double Lnorm,
     double score_d8, double d0)
 {
@@ -248,15 +244,9 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
                 {                
                     for(k=0; k<n_cut; k++)
                     {
-                        if(i_ali[k]!=k_ali[k])
-                        {
-                            break;
-                        }
+                        if(i_ali[k]!=k_ali[k]) break;
                     }
-                    if(k==n_cut)
-                    {                        
-                        break; //stop iteration
-                    }
+                    if(k==n_cut) break;
                 }                                                               
             } //for iteration            
 
@@ -265,10 +255,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
                 i=i+simplify_step; //shift the fragment        
                 if(i>iL_max) i=iL_max;  //do this to use the last missed fragment
             }
-            else if(i>=iL_max)
-            {
-                break;
-            }
+            else if(i>=iL_max) break;
         }//while(1)
         //end of one fragment
     }//for(i_init
@@ -276,8 +263,8 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
 }
 
 
-double TMscore8_search_standard(
-    double **r1, double **r2, double **xtm, double **ytm, int Lali,
+double TMscore8_search_standard( double **r1, double **r2,
+    double **xtm, double **ytm, double **xt, int Lali,
     double t0[3], double u0[3][3], int simplify_step, int score_sum_method,
     double *Rcomm, double local_d0_search, double score_d8, double d0)
 {
@@ -288,7 +275,6 @@ double TMscore8_search_standard(
     double t[3];
     double u[3][3];
     double d;
-
 
     //iterative parameters
     int n_it = 20;            //maximum number of iterations
@@ -412,15 +398,9 @@ double TMscore8_search_standard(
                 {
                     for (k = 0; k<n_cut; k++)
                     {
-                        if (i_ali[k] != k_ali[k])
-                        {
-                            break;
-                        }
+                        if (i_ali[k] != k_ali[k]) break;
                     }
-                    if (k == n_cut)
-                    {
-                        break; //stop iteration
-                    }
+                    if (k == n_cut) break;
                 }
             } //for iteration            
 
@@ -429,10 +409,7 @@ double TMscore8_search_standard(
                 i = i + simplify_step; //shift the fragment        
                 if (i>iL_max) i = iL_max;  //do this to use the last missed fragment
             }
-            else if (i >= iL_max)
-            {
-                break;
-            }
+            else if (i >= iL_max) break;
         }//while(1)
         //end of one fragment
     }//for(i_init
@@ -447,7 +424,7 @@ double TMscore8_search_standard(
 //                            8 for socre over the pairs with dist<score_d8
 // output:  the best rotaion matrix t, u that results in highest TMscore
 double detailed_search(double **r1, double **r2, double **xtm, double **ytm,
-    double **x, double **y, int xlen, int ylen, 
+    double **xt, double **x, double **y, int xlen, int ylen, 
     int invmap0[], double t[3], double u[3][3], int simplify_step,
     int score_sum_method, double local_d0_search, double Lnorm,
     double score_d8, double d0)
@@ -475,16 +452,16 @@ double detailed_search(double **r1, double **r2, double **xtm, double **ytm,
     }
 
     //detailed search 40-->1
-    tmscore = TMscore8_search(r1, r2, xtm, ytm, k, t, u, simplify_step,
+    tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
     return tmscore;
 }
 
 double detailed_search_standard( double **r1, double **r2,
-    double **xtm, double **ytm, double **x, double **y, int xlen, int ylen,
-    int invmap0[], double t[3], double u[3][3], int simplify_step,
-    int score_sum_method, double local_d0_search, const bool& bNormalize,
-    double Lnorm, double score_d8, double d0)
+    double **xtm, double **ytm, double **xt, double **x, double **y,
+    int xlen, int ylen, int invmap0[], double t[3], double u[3][3],
+    int simplify_step, int score_sum_method, double local_d0_search,
+    const bool& bNormalize, double Lnorm, double score_d8, double d0)
 {
     //x is model, y is template, try to superpose onto y
     int i, j, k;     
@@ -509,7 +486,7 @@ double detailed_search_standard( double **r1, double **r2,
     }
 
     //detailed search 40-->1
-    tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, k, t, u,
+    tmscore = TMscore8_search_standard( r1, r2, xtm, ytm, xt, k, t, u,
         simplify_step, score_sum_method, &rmsd, local_d0_search, score_d8, d0);
     if (bNormalize)// "-i", to use standard_TMscore, then bNormalize=true, else bNormalize=false; 
         tmscore = tmscore * k / Lnorm;
@@ -549,10 +526,7 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
             
             k++;
         }
-        else if(i!=-1)
-        {
-            PrintErrorAndQuit("Wrong map!\n");
-        }       
+        else if(i!=-1) PrintErrorAndQuit("Wrong map!\n");
     }
     Kabsch(r1, r2, k, 1, &rms, t, u);
     
@@ -598,14 +572,8 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
             }
         }
         //there are not enough feasible pairs, relieve the threshold 
-        if(j<3 && n_ali>3)
-        {
-            d002t += 0.5;
-        }
-        else
-        {
-            break;
-        }
+        if(j<3 && n_ali>3) d002t += 0.5;
+        else break;
     }
     
     if(n_ali!=j)
@@ -642,14 +610,8 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
                 }
             }
             //there are not enough feasible pairs, relieve the threshold 
-            if(j<3 && n_ali>3)
-            {
-                d002t += 0.5;
-            }
-            else
-            {
-                break;
-            }
+            if(j<3 && n_ali>3) d002t += 0.5;
+            else break;
         }
 
         //evaluate the score
@@ -668,11 +630,8 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
         tmscore2=tmscore;
     }
     
-      
     if(tmscore1>=tmscore) tmscore=tmscore1;
     if(tmscore2>=tmscore) tmscore=tmscore2;
-
-    
     return tmscore; // no need to normalize this score because it will not be used for latter scoring
 }
 
@@ -738,158 +697,70 @@ void smooth(int *sec, int len)
 {
     int i, j;
     //smooth single  --x-- => -----
-    for(i=2; i<len-2; i++)
+    for (i=2; i<len-2; i++)
     {
         if(sec[i]==2 || sec[i]==4)
         {
             j=sec[i];
-            if(sec[i-2] != j)
-            {
-                if(sec[i-1] != j)
-                {
-                    if(sec[i+1] != j)
-                    {
-                        if(sec[i+2] != j) 
-                        {
-                            sec[i]=1;
-                        }
-                    }
-                }
-            }
+            if (sec[i-2]!=j && sec[i-1]!=j && sec[i+1]!=j && sec[i+2]!=j)
+                sec[i]=1;
         }
     }
 
     //   smooth double 
     //   --xx-- => ------
-
-    for(i=0; i<len-5; i++)
+    for (i=0; i<len-5; i++)
     {
         //helix
-        if(sec[i] != 2)
+        if (sec[i]!=2   && sec[i+1]!=2 && sec[i+2]==2 && sec[i+3]==2 &&
+            sec[i+4]!=2 && sec[i+5]!= 2)
         {
-            if(sec[i+1] != 2)
-            {
-                if(sec[i+2] == 2)
-                {
-                    if(sec[i+3] == 2)
-                    {
-                        if(sec[i+4] != 2)
-                        {
-                            if(sec[i+5] != 2)
-                            {
-                                sec[i+2]=1;
-                                sec[i+3]=1;
-                            }
-                        }
-                    }
-                }
-            }
+            sec[i+2]=1;
+            sec[i+3]=1;
         }
 
         //beta
-        if(sec[i] != 4)
+        if (sec[i]!=4   && sec[i+1]!=4 && sec[i+2]==4 && sec[i+3]==4 &&
+            sec[i+4]!=4 && sec[i+5]!= 4)
         {
-            if(sec[i+1] != 4)
-            {
-                if(sec[i+2] ==4)
-                {
-                    if(sec[i+3] == 4)
-                    {
-                        if(sec[i+4] != 4)
-                        {
-                            if(sec[i+5] != 4)
-                            {
-                                sec[i+2]=1;
-                                sec[i+3]=1;
-                            }
-                        }
-                    }
-                }
-            }
+            sec[i+2]=1;
+            sec[i+3]=1;
         }
     }
 
     //smooth connect
-    for(i=0; i<len-2; i++)
+    for (i=0; i<len-2; i++)
     {        
-        if(sec[i] == 2)
-        {
-            if(sec[i+1] != 2)
-            {
-                if(sec[i+2] == 2)
-                {
-                    sec[i+1]=2;
-                }
-            }
-        }
-        else if(sec[i] == 4)
-        {
-            if(sec[i+1] != 4)
-            {
-                if(sec[i+2] == 4)
-                {
-                    sec[i+1]=4;
-                }
-            }
-        }
+        if (sec[i]==2 && sec[i+1]!=2 && sec[i+2]==2) sec[i+1]=2;
+        else if(sec[i]==4 && sec[i+1]!=4 && sec[i+2]==4) sec[i+1]=4;
     }
 
 }
 
-int sec_str(double dis13, double dis14, double dis15, double dis24, double dis25, double dis35)
+int sec_str(double dis13, double dis14, double dis15,
+            double dis24, double dis25, double dis35)
 {
     int s=1;
     
     double delta=2.1;
-    if(fabs(dis15-6.37)<delta)
+    if (fabs(dis15-6.37)<delta && fabs(dis14-5.18)<delta && 
+        fabs(dis25-5.18)<delta && fabs(dis13-5.45)<delta &&
+        fabs(dis24-5.45)<delta && fabs(dis35-5.45)<delta)
     {
-        if(fabs(dis14-5.18)<delta)
-        {
-            if(fabs(dis25-5.18)<delta)
-            {
-                if(fabs(dis13-5.45)<delta)
-                {
-                    if(fabs(dis24-5.45)<delta)
-                    {
-                        if(fabs(dis35-5.45)<delta)
-                        {
-                            s=2; //helix                        
-                            return s;
-                        }
-                    }
-                }
-            }
-        }
+        s=2; //helix                        
+        return s;
     }
 
     delta=1.42;
-    if(fabs(dis15-13)<delta)
+    if (fabs(dis15-13  )<delta && fabs(dis14-10.4)<delta &&
+        fabs(dis25-10.4)<delta && fabs(dis13-6.1 )<delta &&
+        fabs(dis24-6.1 )<delta && fabs(dis35-6.1 )<delta)
     {
-        if(fabs(dis14-10.4)<delta)
-        {
-            if(fabs(dis25-10.4)<delta)
-            {
-                if(fabs(dis13-6.1)<delta)
-                {
-                    if(fabs(dis24-6.1)<delta)
-                    {
-                        if(fabs(dis35-6.1)<delta)
-                        {
-                            s=4; //strand
-                            return s;
-                        }
-                    }
-                }
-            }
-        }
+        s=4; //strand
+        return s;
     }
 
-    if(dis15 < 8)
-    {
-        s=3; //turn
-    }      
-
-
+    if (dis15 < 8) s=3; //turn
     return s;
 }
 
@@ -920,8 +791,6 @@ void make_sec(double **x, int len, int *sec)
         }    
     } 
 }
-
-
 
 
 //get initial alignment from secondary structure alignment
@@ -1033,10 +902,7 @@ bool get_initial5( double **r1, double **r2, double **xtm, double **ytm,
                 if (GL>GLmax)
                 {
                     GLmax = GL;
-                    for (int ii = 0; ii<ylen; ii++)
-                    {
-                        y2x[ii] = invmap[ii];
-                    }
+                    for (int ii = 0; ii<ylen; ii++) y2x[ii] = invmap[ii];
                     flag = true;
                 }
             }
@@ -1322,10 +1188,10 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
 //input: initial rotation matrix t, u
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
-double DP_iter(double **r1, double **r2, double **xtm, double **ytm, 
-    double **score, bool **path, double **val, double **x, double **y,
-    int xlen, int ylen, double t[3], double u[3][3], int invmap0[],
-    int g1, int g2, int iteration_max, double local_d0_search,
+double DP_iter(double **r1, double **r2, double **xtm, double **ytm,
+    double **xt, double **score, bool **path, double **val,
+    double **x, double **y, int xlen, int ylen, double t[3], double u[3][3],
+    int invmap0[], int g1, int g2, int iteration_max, double local_d0_search,
     double D0_MIN, double Lnorm, double d0, double score_d8)
 {
     double gap_open[2]={-0.6, 0};
@@ -1364,8 +1230,9 @@ double DP_iter(double **r1, double **r2, double **xtm, double **ytm,
                 }
             }
 
-            tmscore = TMscore8_search(r1, r2, xtm, ytm, k, t, u, simplify_step,
-                score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+            tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u,
+                simplify_step, score_sum_method, &rmsd, local_d0_search,
+                Lnorm, score_d8, d0);
 
            
             if(tmscore>tmscore_max)
@@ -1548,8 +1415,8 @@ void output_results(
     if (o_opt) output_superpose(xname, fname_super, t, u, ter_opt);
 }
 
-double standard_TMscore( double **r1, double **r2, double **xtm, double **ytm,
-    double **x, double **y, int xlen, int ylen, int invmap[],
+double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
+    double **xt, double **x, double **y, int xlen, int ylen, int invmap[],
     int& L_ali, double& RMSD, double D0_MIN, double Lnorm, double d0,
     double d0_search, double score_d8, double t[3], double u[3][3])
 {
@@ -1600,7 +1467,7 @@ double standard_TMscore( double **r1, double **r2, double **xtm, double **ytm,
     int temp_score_sum_method = 0;
     d0_search = d0_input;
     double rms = 0.0;
-    tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, n_al, t, u,
+    tmscore = TMscore8_search_standard(r1, r2, xtm, ytm, xt, n_al, t, u,
         temp_simplify_step, temp_score_sum_method, &rms, d0_input,
         score_d8, d0);
     tmscore = tmscore * n_al / (1.0*Lnorm);
@@ -1633,6 +1500,7 @@ int TMalign_main(
     bool   **path;        // for dynamic programming  
     double **val;         // for dynamic programming  
     double **xtm, **ytm;  // for TMscore search engine
+    double **xt;          //for saving the superposed version of r_1 or xtm
     double **r1, **r2;    // for Kabsch rotation
 
     /***********************/
@@ -1644,6 +1512,7 @@ int TMalign_main(
     NewArray(&val, xlen+1, ylen+1);
     NewArray(&xtm, minlen, 3);
     NewArray(&ytm, minlen, 3);
+    NewArray(&xt, xlen, 3);
     NewArray(&r1, minlen, 3);
     NewArray(&r2, minlen, 3);
 
@@ -1696,13 +1565,13 @@ int TMalign_main(
         double prevD0_MIN = D0_MIN;// stored for later use
         int prevLnorm = Lnorm;
         double prevd0 = d0;
-        TM_ali = standard_TMscore(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+        TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
             invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0, d0_search, score_d8,
             t, u);
         D0_MIN = prevD0_MIN;
         Lnorm = prevLnorm;
         d0 = prevd0;
-        TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+        TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
             invmap, t, u, 40, 8, local_d0_search, true, Lnorm, score_d8, d0);
         if (TM > TMmax)
         {
@@ -1719,14 +1588,14 @@ int TMalign_main(
     {
         get_initial(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0, d0,
             d0_search, fast_opt, t, u);
-        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0,
+        TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap0,
             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax) TMmax = TM;
         //run dynamic programing iteratively to find the best alignment
-        TM = DP_iter( r1, r2, xtm, ytm, score, path, val, xa, ya, xlen, ylen,
-             t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search, D0_MIN,
-             Lnorm, d0, score_d8);
+        TM = DP_iter( r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+             xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search,
+             D0_MIN, Lnorm, d0, score_d8);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -1738,7 +1607,7 @@ int TMalign_main(
         /*    get initial alignment based on secondary structure    */
         /************************************************************/
         get_initial_ss(score, path, val, secx, secy, xlen, ylen, invmap);
-        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+        TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax)
@@ -1748,7 +1617,7 @@ int TMalign_main(
         }
         if (TM > TMmax*0.2)
         {
-            TM = DP_iter( r1, r2, xtm, ytm, score, path, val, xa, ya,
+            TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                 xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
                 local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
@@ -1766,9 +1635,9 @@ int TMalign_main(
         if (get_initial5( r1, r2, xtm, ytm, score, path, val, xa, ya,
             xlen, ylen, invmap, d0, d0_search, fast_opt, D0_MIN))
         {
-            TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap, 
-                t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
-                score_d8, d0);
+            TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
+                invmap, t, u, simplify_step, score_sum_method,
+                local_d0_search, Lnorm, score_d8, d0);
             if (TM>TMmax)
             {
                 TMmax = TM;
@@ -1776,7 +1645,7 @@ int TMalign_main(
             }
             if (TM > TMmax*ddcc)
             {
-                TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+                TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                     xlen, ylen, t, u, invmap, 0, 2, 2, local_d0_search,
                     D0_MIN, Lnorm, d0, score_d8);
                 if (TM>TMmax)
@@ -1796,7 +1665,7 @@ int TMalign_main(
         //=initial3 in original TM-align
         get_initial_ssplus(r1, r2, score, path, val, secx, secy, xa, ya,
             xlen, ylen, invmap0, invmap, D0_MIN, d0);
-        TM = detailed_search( r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+        TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
              t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
              score_d8, d0);
         if (TM>TMmax)
@@ -1806,7 +1675,7 @@ int TMalign_main(
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+            TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                 xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
                 local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
@@ -1823,7 +1692,7 @@ int TMalign_main(
         //=initial4 in original TM-align
         get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen, xresno, yresno,
             invmap, d0, d0_search, dcu0, fast_opt, t, u);
-        TM = detailed_search(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap,
+        TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax)
@@ -1833,7 +1702,7 @@ int TMalign_main(
         }
         if (TM > TMmax*ddcc)
         {
-            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+            TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                 xlen, ylen, t, u, invmap, 1, 2, 2, local_d0_search, D0_MIN,
                 Lnorm, d0, score_d8);
             if (TM>TMmax)
@@ -1873,14 +1742,14 @@ int TMalign_main(
             double prevD0_MIN = D0_MIN;// stored for later use
             int prevLnorm = Lnorm;
             double prevd0 = d0;
-            TM_ali = standard_TMscore(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
-                invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0, d0_search,
-                score_d8, t, u);
+            TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya,
+                xlen, ylen, invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0,
+                d0_search, score_d8, t, u);
             D0_MIN = prevD0_MIN;
             Lnorm = prevLnorm;
             d0 = prevd0;
 
-            TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya,
+            TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya,
                 xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true, Lnorm,
                 score_d8, d0);
             if (TM > TMmax)
@@ -1889,7 +1758,7 @@ int TMalign_main(
                 for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
             }
             // Different from get_initial, get_initial_ss and get_initial_ssplus
-            TM = DP_iter(r1, r2, xtm, ytm, score, path, val, xa, ya,
+            TM = DP_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
                 xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
                 local_d0_search, D0_MIN, Lnorm, d0, score_d8);
             if (TM>TMmax)
@@ -1931,7 +1800,7 @@ int TMalign_main(
     simplify_step=1;
     if (fast_opt) simplify_step=40;
     score_sum_method=8;
-    TM = detailed_search_standard(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
+    TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
         invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
         false, Lnorm, score_d8, d0);
 
@@ -1996,7 +1865,7 @@ int TMalign_main(
     d0A=d0;
     d0_0=d0A;
     local_d0_search = d0_search;
-    TM1 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
+    TM1 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
     TM_0 = TM1;
 
@@ -2005,7 +1874,7 @@ int TMalign_main(
         score_d8, d0, d0_search, dcu0);
     d0B=d0;
     local_d0_search = d0_search;
-    TM2 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t, u, simplify_step,
+    TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
     double Lnorm_d0;
@@ -2019,8 +1888,9 @@ int TMalign_main(
         d0_0=d0a;
         local_d0_search = d0_search;
 
-        TM3 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
-            score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+        TM3 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
         TM_0=TM3;
     }
     if (u_opt)
@@ -2032,8 +1902,9 @@ int TMalign_main(
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;
         local_d0_search = d0_search;
-        TM4 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
-            score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+        TM4 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
         TM_0=TM4;
     }
     if (d_opt)
@@ -2046,8 +1917,9 @@ int TMalign_main(
         //Lnorm_0=ylen;
         Lnorm_d0=Lnorm_0;
         local_d0_search = d0_search;
-        TM5 = TMscore8_search(r1, r2, xtm, ytm, n_ali8, t0, u0, simplify_step,
-            score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+        TM5 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
         TM_0=TM5;
     }
 
@@ -2123,6 +1995,7 @@ int TMalign_main(
     DeleteArray(&val, xlen+1);
     DeleteArray(&xtm, minlen);
     DeleteArray(&ytm, minlen);
+    DeleteArray(&xt, xlen);
     DeleteArray(&r1, minlen);
     DeleteArray(&r2, minlen);
     return 0; // zero for no exception

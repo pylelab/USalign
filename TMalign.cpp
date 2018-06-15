@@ -432,10 +432,6 @@ int main(int argc, char *argv[])
                 make_sec(ya, ylen, secy);
             }
 
-            /* allocate memory specific to this pair of TMalign */
-            int minlen = min(xlen, ylen);
-            NewArray(&xt, xlen, 3);
-
             /* declare variable specific to this pair of TMalign */
             double t0[3], u0[3][3];
             double TM1, TM2;
@@ -476,8 +472,6 @@ int main(int argc, char *argv[])
                 i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
 
             /* Done! Free memory */
-            DeleteArray(&xt, xlen);
-   
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
