@@ -1542,7 +1542,7 @@ int TMalign_main(
     bool bAlignStick = false;
     if (I_opt)// if input has set parameter for "-I"
     {
-        // In Jianyi's original code, this loop starts from 1, which is
+        // In the original code, this loop starts from 1, which is
         // incorrect. Fortran starts from 1 but C++ should starts from 0.
         for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
             invmap[j] = -1;
