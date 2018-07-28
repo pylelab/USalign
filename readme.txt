@@ -31,7 +31,7 @@
               (3) Included option to perform TM-align against a whole 
                   folder of PDB files. A full list of options not available
                   in the Fortran version can be explored by TMalign -h
-   2018/07/27: Added the -byresi option for TM-score comparison without
+   2018/07/27: Added the -byresi option for TM-score superposition without
                re-alignment as in TMscore and TMscore -c
 ===============================================================================
 
