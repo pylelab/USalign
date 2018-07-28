@@ -25,12 +25,14 @@
               (1) Fixed bug in reading PDB files with negative residue index,
                   at the expense of the '-o' option now only being able to
                   output superposed structure instead of full rasmol script.
-              (2) Implemented by the '-fast' option the fTM-align algorithm
+              (2) Implemented the fTM-align algorithm (by the '-fast' option)
                   as described in Dong R, Pan S, Peng Z, Zhang Y, & Yang J
                   (2018) Nucleic acids research. gky430.
               (3) Included option to perform TM-align against a whole 
                   folder of PDB files. A full list of options not available
                   in the Fortran version can be explored by TMalign -h
+   2018/07/27: Added the -byresi option for TM-score comparison without
+               re-alignment as in TMscore and TMscore -c
 ===============================================================================
 
 =========================
@@ -70,4 +72,8 @@ you can run the program without arguments to obtain a brief instruction
 You can download the fortran version of TM-align from
 http://zhanglab.ccmb.med.umich.edu/TM-align/
 
-05/21/2016
+Note that this C++ version of TM-align implemented several features not
+available in the fortran version. A full list of these features can be
+explored by TMalign -h.
+
+07/27/2018

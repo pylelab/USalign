@@ -114,6 +114,7 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
 }
 
 int get_PDB_lines(const char *filename, vector<string> &PDB_lines, 
+    vector<string> &resi_vec, const int byresi_opt, 
     const int ter_opt=3, const string atom_opt=" CA ")
 {
     int i=0; // resi
@@ -142,7 +143,9 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
 
                     if (resi==line.substr(22,5))
                         cerr<<"Warning! Duplicated residue "<<resi<<endl;
-                    resi=line.substr(22,5);
+                    resi=line.substr(22,5); // including insertion code
+                    if (byresi_opt==1) resi_vec.push_back(resi);
+                    if (byresi_opt==2) resi_vec.push_back(resi+line[21]);
 
                     /* change residue index in line */
                     stringstream i8_stream;
@@ -161,6 +164,38 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
     else return 0;
     line.clear();
     return i;
+}
+
+/* extract pairwise sequence alignment from residue index vectors,
+ * assuming that "sequence" contains two empty strings.
+ * return length of alignment, including gap. */
+int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
+    const vector<string> resi_vec1, const vector<string> resi_vec2)
+{
+    int i1=0; // positions in resi_vec1
+    int i2=0; // positions in resi_vec2
+    int xlen=resi_vec1.size();
+    int ylen=resi_vec2.size();
+    while(i1<xlen && i2<ylen)
+    {
+        if (resi_vec1[i1]==resi_vec2[i2])
+        {
+            sequence[0]+=seqx[i1++];
+            sequence[1]+=seqy[i2++];
+        }
+        else if (atoi(resi_vec1[i1].substr(0,4).c_str())<=
+                 atoi(resi_vec2[i2].substr(0,4).c_str()))
+        {
+            sequence[0]+=seqx[i1++];
+            sequence[1]+='-';
+        }
+        else
+        {
+            sequence[0]+='-';
+            sequence[1]+=seqy[i2++];
+        }
+    }
+    return sequence[0].size();
 }
 
 int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)

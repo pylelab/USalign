@@ -36,7 +36,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180604): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180727): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -60,12 +60,13 @@ void print_extra_help()
 "    -suffix  (Only when -dir1 and/or -dir2 are set, default is empty)\n"
 "             add file name suffix to files listed by chain1_list or chain2_list\n"
 "\n"
-"    -atom    4-character atom name used to represent a residue\n"
-"             default is \" CA \" (note the space before and after CA)\n"
+"    -atom    4-character atom name used to represent a residue.\n"
+"             Default is \" CA \" (note the space before and after CA).\n"
+"             This option should be changed to \" C3'\" for RNA alignment.\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (current default) 'TER', 'END', or different chain ID\n"
-"             2: 'END', or different chain ID\n"
+"             2: (default in pymol's tmalign) 'END', or different chain ID\n"
 "             1: 'END'\n"
 "             0: (default in the first C++ version of TMalign) end of file\n"
 "\n"
@@ -74,6 +75,12 @@ void print_extra_help()
 "             1: fasta format compact output\n"
 "             2: tabular format very compact output\n"
 "            -1: full output, but without version and citation information\n"
+"\n"
+"    -byresi  Whether to align two structures by residue index\n"
+"             0: (default) do not align by residue index\n"
+"             1: (same as TMscore program) align by residue index\n"
+"             2: (same as TMscore -c, should be used with -ter 1)\n"
+"                align by residue index and chain ID\n"
     <<endl;
 }
 
@@ -108,7 +115,8 @@ void print_help(bool h_opt=false)
 "\n"
 "    -v    print the version of TM-align\n"
 "\n"
-"    -h    print help message\n"
+"    -h    print the full help message, including options not available\n"
+"          in standard TM-align program\n"
 "\n"
 "    (Options -u, -a, -d, -o won't change the final structure alignment)\n\n"
 "Example usages:\n"
@@ -155,13 +163,14 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int ter_opt = 3;    // TER, END, or different chainID
-    int outfmt_opt=0;   // set -outfmt to full output
-    bool fast_opt = false;  // flags for -fast, fTM-align algorithm
+    int    ter_opt = 3;     // TER, END, or different chainID
+    int    outfmt_opt=0;    // set -outfmt to full output
+    bool   fast_opt = false;// flags for -fast, fTM-align algorithm
     string atom_opt=" CA "; // use C alpha atom to represent a residue
-    string suffix_opt=""; // set -suffix to empty
-    string dir1_opt="";   // set -dir1 to empty
-    string dir2_opt="";   // set -dir2 to empty
+    string suffix_opt="";   // set -suffix to empty
+    string dir1_opt="";     // set -dir1 to empty
+    string dir2_opt="";     // set -dir2 to empty
+    int    byresi_opt=0;    // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
 
@@ -236,6 +245,10 @@ int main(int argc, char *argv[])
         {
             outfmt_opt=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-byresi") && i < (argc-1) )
+        {
+            byresi_opt=atoi(argv[i + 1]); i++;
+        }
         else
         {
             if (nameIdx == 0)
@@ -279,6 +292,13 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("Wrong value for option -d!  It should be >0");
     if (outfmt_opt>=2 && (a_opt || u_opt || d_opt))
         PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
+    if (byresi_opt)
+    {
+        if (i_opt || I_opt)
+            PrintErrorAndQuit("-byresi 1 or 2 cannot be used with -i or -I");
+        if (byresi_opt!=1 && byresi_opt!=2)
+            PrintErrorAndQuit("-byresi can only be 0, 1 or 2");
+    }
 
     /* read initial alignment file from 'align.txt' */
     string basename = string(argv[0]);
@@ -325,6 +345,8 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");
         }
     }
+
+    if (byresi_opt) I_opt=true;
 
     if (m_opt && fname_matrix == "") // Output rotation matrix: matrix.txt
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
@@ -389,13 +411,16 @@ int main(int argc, char *argv[])
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
                                // --> superpose xa onto ya
+    vector<string> resi_vec1;  // residue index for chain1
+    vector<string> resi_vec2;  // residue index for chain2
 
     /* loop over file names */
     for (int i=0;i<chain1_list.size();i++)
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xlen=get_PDB_lines(xname.c_str(),PDB_lines1,ter_opt,atom_opt);
+        xlen=get_PDB_lines(xname.c_str(), PDB_lines1, resi_vec1, 
+            byresi_opt, ter_opt, atom_opt);
         if (!xlen)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -416,7 +441,8 @@ int main(int argc, char *argv[])
             if (PDB_lines2.size()==0)
             {
                 yname=chain2_list[j];
-                ylen=get_PDB_lines(yname.c_str(),PDB_lines2,ter_opt,atom_opt);
+                ylen=get_PDB_lines(yname.c_str(), PDB_lines2, resi_vec2,
+                    byresi_opt, ter_opt, atom_opt);
                 if (!ylen)
                 {
                     cerr<<"Warning! Cannot parse file: "<<yname
@@ -430,6 +456,14 @@ int main(int argc, char *argv[])
                 secy = new int[ylen];
                 ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
                 make_sec(ya, ylen, secy);
+            }
+
+            if (byresi_opt)
+            {
+                sequence.clear();
+                sequence.push_back("");
+                sequence.push_back("");
+                extract_aln_from_resi(sequence,seqx,seqy,resi_vec1,resi_vec2);
             }
 
             /* declare variable specific to this pair of TMalign */
@@ -479,6 +513,7 @@ int main(int argc, char *argv[])
             {
                 yname.clear();
                 PDB_lines2.clear();
+                resi_vec2.clear();
                 DeleteArray(&ya, ylen);
                 delete [] seqy;
                 delete [] secy;
@@ -487,6 +522,7 @@ int main(int argc, char *argv[])
         }
         xname.clear();
         PDB_lines1.clear();
+        resi_vec1.clear();
         DeleteArray(&xa, xlen);
         delete [] seqx;
         delete [] secx;
@@ -496,6 +532,7 @@ int main(int argc, char *argv[])
     {
         yname.clear();
         PDB_lines2.clear();
+        resi_vec2.clear();
         DeleteArray(&ya, ylen);
         delete [] seqy;
         delete [] secy;
