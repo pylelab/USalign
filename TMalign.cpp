@@ -65,9 +65,9 @@ void print_extra_help()
 "             This option should be changed to \" C3'\" for RNA alignment.\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
-"             3: (current default) 'TER', 'END', or different chain ID\n"
-"             2: (default in pymol's tmalign) 'END', or different chain ID\n"
-"             1: 'END'\n"
+"             3: (current default) TER, ENDMDL, END or different chain ID\n"
+"             2: (default in pymol tmalign) ENDMDL, END, or different chain ID\n"
+"             1: ENDMDL or END\n"
 "             0: (default in the first C++ version of TMalign) end of file\n"
 "\n"
 "    -outfmt  Output format\n"
@@ -81,6 +81,8 @@ void print_extra_help()
 "             1: (same as TMscore program) align by residue index\n"
 "             2: (same as TMscore -c, should be used with -ter 1)\n"
 "                align by residue index and chain ID\n"
+"             3: (similar to TMscore -c, should be used with -ter 1)\n"
+"                align by residue index and order of chain\n"
     <<endl;
 }
 
@@ -296,8 +298,8 @@ int main(int argc, char *argv[])
     {
         if (i_opt || I_opt)
             PrintErrorAndQuit("-byresi 1 or 2 cannot be used with -i or -I");
-        if (byresi_opt!=1 && byresi_opt!=2)
-            PrintErrorAndQuit("-byresi can only be 0, 1 or 2");
+        if (byresi_opt<0 || byresi_opt>3)
+            PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
     }
 
     /* read initial alignment file from 'align.txt' */
@@ -463,7 +465,8 @@ int main(int argc, char *argv[])
                 sequence.clear();
                 sequence.push_back("");
                 sequence.push_back("");
-                extract_aln_from_resi(sequence,seqx,seqy,resi_vec1,resi_vec2);
+                extract_aln_from_resi(sequence,seqx,seqy,
+                    resi_vec1,resi_vec2,byresi_opt);
             }
 
             /* declare variable specific to this pair of TMalign */

@@ -145,7 +145,7 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                         cerr<<"Warning! Duplicated residue "<<resi<<endl;
                     resi=line.substr(22,5); // including insertion code
                     if (byresi_opt==1) resi_vec.push_back(resi);
-                    if (byresi_opt==2) resi_vec.push_back(resi+line[21]);
+                    if (byresi_opt>=2) resi_vec.push_back(resi+line[21]);
 
                     /* change residue index in line */
                     stringstream i8_stream;
@@ -170,15 +170,46 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
  * assuming that "sequence" contains two empty strings.
  * return length of alignment, including gap. */
 int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
-    const vector<string> resi_vec1, const vector<string> resi_vec2)
+    const vector<string> resi_vec1, const vector<string> resi_vec2,
+    const int byresi_opt)
 {
     int i1=0; // positions in resi_vec1
     int i2=0; // positions in resi_vec2
     int xlen=resi_vec1.size();
     int ylen=resi_vec2.size();
+    map<char,int> chainID_map1;
+    map<char,int> chainID_map2;
+    if (byresi_opt==3)
+    {
+        vector<char> chainID_vec;
+        char chainID;
+        int i;
+        for (i=0;i<xlen;i++)
+        {
+            chainID=resi_vec1[i][5];
+            if (!chainID_vec.size()|| chainID_vec.back()!=chainID)
+            {
+                chainID_vec.push_back(chainID);
+                chainID_map1[chainID]=chainID_vec.size();
+            }
+        }
+        chainID_vec.clear();
+        for (i=0;i<ylen;i++)
+        {
+            chainID=resi_vec2[i][5];
+            if (!chainID_vec.size()|| chainID_vec.back()!=chainID)
+            {
+                chainID_vec.push_back(chainID);
+                chainID_map2[chainID]=chainID_vec.size();
+            }
+        }
+        chainID_vec.clear();
+    }
     while(i1<xlen && i2<ylen)
     {
-        if (resi_vec1[i1]==resi_vec2[i2])
+        if ((byresi_opt<=2 && resi_vec1[i1]==resi_vec2[i2]) || (byresi_opt==3
+             && resi_vec1[i1].substr(0,5)==resi_vec2[i2].substr(0,5)
+             && chainID_map1[resi_vec1[i1][5]]==chainID_map2[resi_vec2[i2][5]]))
         {
             sequence[0]+=seqx[i1++];
             sequence[1]+=seqy[i2++];
@@ -195,6 +226,8 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
             sequence[1]+=seqy[i2++];
         }
     }
+    chainID_map1.clear();
+    chainID_map2.clear();
     return sequence[0].size();
 }
 
