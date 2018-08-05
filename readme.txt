@@ -1,6 +1,6 @@
 ===============================================================================
    This is a re-implementation of TM-align algorithm in C/C++. The code was 
-   is written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang 
+   written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang 
    lab, Department of Computational Medicine and Bioinformatics, University of 
    Michigan, 100 Washtenaw Avenue, Ann Arbor, MI 48109-2218. Please report bugs 
    and questions to zhng@umich.edu
@@ -76,4 +76,4 @@ Note that this C++ version of TM-align implemented several features not
 available in the fortran version. A full list of these features can be
 explored by TMalign -h.
 
-07/27/2018
+08/05/2018

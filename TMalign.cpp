@@ -20,11 +20,13 @@
               (2) made I/O of C/C++ version consistent with the Fortran version
               (3) added outputs including full-atom and ligand structures
               (4) added options of '-i', '-I' and '-m'
-   2016/05/25: fixed a bug on PDB file reading
+   2016/05/25: Fixed a bug on PDB file reading
    2018/06/04: Fixed a bug in PDB file with negative residue number. Added
                options -fast, -dir1, -dir2, -suffix, -atom, -ter, -outfmt.
                Re-write the file reading function to reduce the number of
                times a PDB file need to be read.
+   2018/07/27: Added the -byresi option for TM-score superposition without
+               re-alignment as in TMscore and TMscore -c
 ===============================================================================
 */
 #include "TMalign.h"
@@ -36,7 +38,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180727): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180805): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
