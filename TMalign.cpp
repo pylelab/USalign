@@ -61,8 +61,8 @@ void print_extra_help()
 "             add file name suffix to files listed by chain1_list or chain2_list\n"
 "\n"
 "    -atom    4-character atom name used to represent a residue.\n"
-"             Default is \" CA \" (note the space before and after CA).\n"
-"             This option should be changed to \" C3'\" for RNA alignment.\n"
+"             Default is \" C3'\" for RNA/DNA and \" CA \" for proteins\n"
+"             (note the spaces before and after CA).\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (current default) TER, ENDMDL, END or different chain ID\n"
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
     int    ter_opt = 3;     // TER, END, or different chainID
     int    outfmt_opt=0;    // set -outfmt to full output
     bool   fast_opt = false;// flags for -fast, fTM-align algorithm
-    string atom_opt=" CA "; // use C alpha atom to represent a residue
+    string atom_opt="auto"; // use C alpha atom for protein and C3' for RNA
     string suffix_opt="";   // set -suffix to empty
     string dir1_opt="";     // set -dir1 to empty
     string dir2_opt="";     // set -dir2 to empty

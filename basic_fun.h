@@ -115,12 +115,13 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
 
 int get_PDB_lines(const char *filename, vector<string> &PDB_lines, 
     vector<string> &resi_vec, const int byresi_opt, 
-    const int ter_opt=3, const string atom_opt=" CA ")
+    const int ter_opt=3, const string atom_opt="auto")
 {
     int i=0; // resi
     string line, str, i8;    
     char chainID=0;
     string resi="";
+    bool select_atom=false;
     
     ifstream fin (filename);
     if (fin.is_open())
@@ -136,7 +137,15 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
             if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
                (line[16]==' ' || line[16]=='A'))
             {
-                if (line.compare(12, 4, atom_opt)==0)
+                if (atom_opt=="auto")
+                {
+                    if (line[17]==' ' && (line[18]=='D'||line[18]==' '))
+                        select_atom=(line.compare(12,4," C3'")==0);
+                    else
+                        select_atom=(line.compare(12,4," CA ")==0);
+                }
+                else    select_atom=(line.compare(12,4,atom_opt)==0);
+                if (select_atom)
                 {
                     if (!chainID) chainID=line[21];
                     else if (ter_opt>=2 && chainID!=line[21]) break;
