@@ -27,6 +27,7 @@
                times a PDB file need to be read.
    2018/07/27: Added the -byresi option for TM-score superposition without
                re-alignment as in TMscore and TMscore -c
+   2018/08/07: Added the -dir option
 ===============================================================================
 */
 #include "TMalign.h"
@@ -38,7 +39,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180805): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180807): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -50,6 +51,11 @@ void print_extra_help()
     cout <<
 "Additional options: \n"
 "    -fast    Fast but slightly inaccurate alignment\n"
+"\n"
+"    -dir     Perform all-against-all alignment among the list of PDB\n"
+"             chains listed by 'chain_list' under 'chain_folder'. Note\n"
+"             that the slash is necessary.\n"
+"             $ TMalign -dir chain1_folder/ chain_list\n"
 "\n"
 "    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
 "             under 'chain1_folder'. Note that the slash is necessary.\n"
@@ -67,10 +73,10 @@ void print_extra_help()
 "             (note the spaces before and after CA).\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
-"             3: (current default) TER, ENDMDL, END or different chain ID\n"
-"             2: (default in pymol tmalign) ENDMDL, END, or different chain ID\n"
+"             3: (default) TER, ENDMDL, END or different chain ID\n"
+"             2: ENDMDL, END, or different chain ID\n"
 "             1: ENDMDL or END\n"
-"             0: (default in the first C++ version of TMalign) end of file\n"
+"             0: (default in the first C++ TMalign) end of file\n"
 "\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
@@ -172,6 +178,7 @@ int main(int argc, char *argv[])
     bool   fast_opt = false;// flags for -fast, fTM-align algorithm
     string atom_opt="auto"; // use C alpha atom for protein and C3' for RNA
     string suffix_opt="";   // set -suffix to empty
+    string dir_opt="";      // set -dir to empty
     string dir1_opt="";     // set -dir1 to empty
     string dir2_opt="";     // set -dir2 to empty
     int    byresi_opt=0;    // set -byresi to 0
@@ -233,6 +240,10 @@ int main(int argc, char *argv[])
         {
             atom_opt=argv[i + 1]; i++;
         }
+        else if ( !strcmp(argv[i],"-dir") && i < (argc-1) )
+        {
+            dir_opt=argv[i + 1]; i++;
+        }
         else if ( !strcmp(argv[i],"-dir1") && i < (argc-1) )
         {
             dir1_opt=argv[i + 1]; i++;
@@ -267,7 +278,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if(!B_opt || !A_opt)
+    if(!B_opt || (!A_opt && dir_opt.size()==0) || (A_opt && dir_opt.size()))
     {
 
         if (h_opt) print_help(h_opt);
@@ -278,13 +289,20 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (!A_opt) PrintErrorAndQuit("Please provide structure A");
-    if (!B_opt) PrintErrorAndQuit("Please provide structure B");
+    if (!A_opt && dir_opt.size()==0) 
+        PrintErrorAndQuit("Please provide structure A");
+    if (!B_opt) 
+        PrintErrorAndQuit("Please provide structure B");
 
     if (suffix_opt.size() && dir1_opt.size()==0 && dir2_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
-    if ((dir1_opt.size() || dir2_opt.size()) && (m_opt || o_opt))
-        PrintErrorAndQuit("-m or -o cannot be set with -dir1 or -dir2");
+    if ((dir_opt.size() || dir1_opt.size() || dir2_opt.size()))
+    {
+        if (m_opt || o_opt)
+            PrintErrorAndQuit("-m or -o cannot be set with -dir, -dir1 or -dir2");
+        else if (dir_opt.size() && (dir1_opt.size() || dir2_opt.size()))
+            PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
+    }
     if (atom_opt.size()!=4)
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
 
@@ -356,7 +374,7 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
 
     /* parse file list */
-    if (dir1_opt.size()==0)
+    if (dir1_opt.size()==0 && dir_opt.size()==0)
         chain1_list.push_back(xname);
     else
     {
@@ -372,13 +390,18 @@ int main(int argc, char *argv[])
         {
             getline(fp, line);
             if (! line.size()) continue;
-            chain1_list.push_back(dir1_opt+Trim(line)+suffix_opt);
+            chain1_list.push_back(dir_opt+dir1_opt+Trim(line)+suffix_opt);
         }
         fp.close();
         line.clear();
     }
 
-    if (dir2_opt.size()==0)
+    if (dir_opt.size())
+    {
+        for (int i=0;i<chain1_list.size();i++)
+            chain2_list.push_back(chain1_list[i]);
+    }
+    else if (dir2_opt.size()==0)
         chain2_list.push_back(yname);
     else
     {
@@ -439,7 +462,7 @@ int main(int argc, char *argv[])
         xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
         make_sec(xa, xlen, secx); // secondary structure assignment
 
-        for (int j=0;j<chain2_list.size();j++)
+        for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
         {
             /* parse chain 2 */
             if (PDB_lines2.size()==0)

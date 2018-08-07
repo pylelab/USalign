@@ -33,6 +33,7 @@
                   in the Fortran version can be explored by TMalign -h
    2018/07/27: Added the -byresi option for TM-score superposition without
                re-alignment as in TMscore and TMscore -c
+   2018/08/07: Added the -dir option
 ===============================================================================
 
 =========================
