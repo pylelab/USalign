@@ -28,6 +28,7 @@
    2018/07/27: Added the -byresi option for TM-score superposition without
                re-alignment as in TMscore and TMscore -c
    2018/08/07: Added the -dir option
+   2018/08/14: Added the -split option
 ===============================================================================
 */
 #include "TMalign.h"
@@ -39,7 +40,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180807): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180814): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
