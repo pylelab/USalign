@@ -78,13 +78,18 @@ void print_extra_help()
 "             1: ENDMDL or END\n"
 "             0: (default in the first C++ TMalign) end of file\n"
 "\n"
+"    -split   Whether to split structure into multiple chains\n"
+"             0: (default) treat the whole structure as one single chain\n"
+"             1: treat each MODEL as a separate chain (-ter should be 0)\n"
+"             2: treat each chain as a seperate chain (-ter should be <=1)\n"
+"\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
 "             1: fasta format compact output\n"
 "             2: tabular format very compact output\n"
-"            -1: full output, but without version and citation information\n"
+"            -1: full output, but without version or citation information\n"
 "\n"
-"    -byresi  Whether to align two structures by residue index\n"
+"    -byresi  Whether to align two structures by residue index.\n"
 "             0: (default) do not align by residue index\n"
 "             1: (same as TMscore program) align by residue index\n"
 "             2: (same as TMscore -c, should be used with -ter 1)\n"
@@ -173,15 +178,16 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int    ter_opt = 3;     // TER, END, or different chainID
-    int    outfmt_opt=0;    // set -outfmt to full output
-    bool   fast_opt = false;// flags for -fast, fTM-align algorithm
-    string atom_opt="auto"; // use C alpha atom for protein and C3' for RNA
-    string suffix_opt="";   // set -suffix to empty
-    string dir_opt="";      // set -dir to empty
-    string dir1_opt="";     // set -dir1 to empty
-    string dir2_opt="";     // set -dir2 to empty
-    int    byresi_opt=0;    // set -byresi to 0
+    int    ter_opt   = 3;    // TER, END, or different chainID
+    int    split_opt = 0;    // do not split chain
+    int    outfmt_opt=0;     // set -outfmt to full output
+    bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
+    string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
+    string suffix_opt="";    // set -suffix to empty
+    string dir_opt   ="";    // set -dir to empty
+    string dir1_opt  ="";    // set -dir1 to empty
+    string dir2_opt  ="";    // set -dir2 to empty
+    int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
 
@@ -235,6 +241,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-ter") && i < (argc-1) )
         {
             ter_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-split") && i < (argc-1) )
+        {
+            split_opt=atoi(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-atom") && i < (argc-1) )
         {
@@ -320,7 +330,14 @@ int main(int argc, char *argv[])
             PrintErrorAndQuit("-byresi 1 or 2 cannot be used with -i or -I");
         if (byresi_opt<0 || byresi_opt>3)
             PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
+        if (split_opt)
+            PrintErrorAndQuit("-byresi >0 cannot be used with -split >0");
     }
+    if (split_opt==1 && ter_opt!=0)
+        PrintErrorAndQuit("-split 1 should be used with -ter 0");
+    else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)
+        PrintErrorAndQuit("-split 2 should be used with -ter 0 or 1");
+    
 
     /* read initial alignment file from 'align.txt' */
     string basename = string(argv[0]);
@@ -428,9 +445,14 @@ int main(int argc, char *argv[])
             <<"RMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
 
     /* declare previously global variables */
-    vector<string> PDB_lines1; // text of chain1
-    vector<string> PDB_lines2; // text of chain2
+    vector<vector<string> >PDB_lines1; // text of chain1
+    vector<vector<string> >PDB_lines2; // text of chain2
+    vector<string> chainID_list1;      // list of chainID1
+    vector<string> chainID_list2;      // list of chainID2
+    int    i,j;                // file index
+    int    chain_i,chain_j;    // chain index
     int    xlen, ylen;         // chain length
+    int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
     int    *secx, *secy;       // for the secondary structure 
     int    *xresno, *yresno;   // residue number for fragment gapless threading
@@ -446,125 +468,151 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xlen=get_PDB_lines(xname.c_str(), PDB_lines1, resi_vec1, 
-            byresi_opt, ter_opt, atom_opt);
-        if (!xlen)
+        xchainnum=get_PDB_lines(xname.c_str(), PDB_lines1, chainID_list1,
+            resi_vec1, byresi_opt, ter_opt, atom_opt, split_opt);
+        if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
-                <<". Chain length 0."<<endl;
-            PDB_lines1.clear();
+                <<". Chain number 0."<<endl;
             continue;
         }
-        NewArray(&xa, xlen, 3);
-        seqx = new char[xlen + 1];
-        secx = new int[xlen];
-        xresno = new int[xlen];
-        xlen = read_PDB(PDB_lines1, xa, seqx, xresno);
-        make_sec(xa, xlen, secx); // secondary structure assignment
-
-        for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
+        for (int chain_i=0;chain_i<xchainnum;chain_i++)
         {
-            /* parse chain 2 */
-            if (PDB_lines2.size()==0)
+            xlen=PDB_lines1[chain_i].size();
+            if (!xlen)
             {
-                yname=chain2_list[j];
-                ylen=get_PDB_lines(yname.c_str(), PDB_lines2, resi_vec2,
-                    byresi_opt, ter_opt, atom_opt);
-                if (!ylen)
+                cerr<<"Warning! Cannot parse file: "<<xname
+                    <<". Chain length 0."<<endl;
+                continue;
+            }
+            NewArray(&xa, xlen, 3);
+            seqx = new char[xlen + 1];
+            secx = new int[xlen];
+            xresno = new int[xlen];
+            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
+            make_sec(xa, xlen, secx); // secondary structure assignment
+
+            for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
+            {
+                /* parse chain 2 */
+                if (PDB_lines2.size()==0)
                 {
-                    cerr<<"Warning! Cannot parse file: "<<yname
-                        <<". Chain length 0."<<endl;
-                    PDB_lines2.clear();
-                    continue;
+                    yname=chain2_list[j];
+                    ychainnum=get_PDB_lines(yname.c_str(), PDB_lines2,
+                        chainID_list2, resi_vec2, byresi_opt, ter_opt,
+                        atom_opt, split_opt);
+                    if (!ychainnum)
+                    {
+                        cerr<<"Warning! Cannot parse file: "<<yname
+                            <<". Chain number 0."<<endl;
+                        continue;
+                    }
                 }
-                NewArray(&ya, ylen, 3);
-                seqy = new char[ylen + 1];
-                yresno = new int[ylen];
-                secy = new int[ylen];
-                ylen = read_PDB(PDB_lines2, ya, seqy, yresno);
-                make_sec(ya, ylen, secy);
-            }
+                for (int chain_j=0;chain_j<ychainnum;chain_j++)
+                {
+                    ylen=PDB_lines2[chain_j].size();
+                    if (!ylen)
+                    {
+                        cerr<<"Warning! Cannot parse file: "<<yname
+                            <<". Chain length 0."<<endl;
+                        continue;
+                    }
+                    NewArray(&ya, ylen, 3);
+                    seqy = new char[ylen + 1];
+                    yresno = new int[ylen];
+                    secy = new int[ylen];
+                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
+                    make_sec(ya, ylen, secy);
 
-            if (byresi_opt)
-            {
-                sequence.clear();
-                sequence.push_back("");
-                sequence.push_back("");
-                extract_aln_from_resi(sequence,seqx,seqy,
-                    resi_vec1,resi_vec2,byresi_opt);
-            }
+                    if (byresi_opt)
+                    {
+                        sequence.clear();
+                        sequence.push_back("");
+                        sequence.push_back("");
+                        extract_aln_from_resi(sequence,seqx,seqy,
+                            resi_vec1,resi_vec2,byresi_opt);
+                    }
 
-            /* declare variable specific to this pair of TMalign */
-            double t0[3], u0[3][3];
-            double TM1, TM2;
-            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
-            double d0_0, TM_0;
-            double d0A, d0B, d0u, d0a;
-            double d0_out=5.0;
-            string seqM, seqxA, seqyA;// for output alignment
-            double rmsd0 = 0.0;
-            int L_ali;                // Aligned length in standard_TMscore
-            double Liden=0;
-            double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
-            int n_ali=0;
-            int n_ali8=0;
+                    /* declare variable specific to this pair of TMalign */
+                    double t0[3], u0[3][3];
+                    double TM1, TM2;
+                    double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+                    double d0_0, TM_0;
+                    double d0A, d0B, d0u, d0a;
+                    double d0_out=5.0;
+                    string seqM, seqxA, seqyA;// for output alignment
+                    double rmsd0 = 0.0;
+                    int L_ali;                // Aligned length in standard_TMscore
+                    double Liden=0;
+                    double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+                    int n_ali=0;
+                    int n_ali8=0;
 
-            /* entry function for structure alignment */
-            TMalign_main(
-                xa, ya, xresno, yresno, seqx, seqy, secx, secy,
-                t0, u0, TM1, TM2, TM3, TM4, TM5,
-                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
-                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
+                    /* entry function for structure alignment */
+                    TMalign_main(
+                        xa, ya, xresno, yresno, seqx, seqy, secx, secy,
+                        t0, u0, TM1, TM2, TM3, TM4, TM5,
+                        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                        seqM, seqxA, seqyA,
+                        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                        i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
 
-            /* print result */
-            if (outfmt_opt==0) print_version();
-            output_results(
-                xname.substr(dir1_opt.size()).c_str(),
-                yname.substr(dir2_opt.size()).c_str(),
-                xlen, ylen, t0, u0, TM1, TM2, 
-                TM3, TM4, TM5, rmsd0, d0_out,
-                seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-                n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
-                TM_0, d0_0, d0A, d0B,
-                Lnorm_ass, d0_scale, d0a, d0u, fname_matrix.c_str(),
-                outfmt_opt, ter_opt, fname_super.c_str(),
-                i_opt, I_opt, o_opt, a_opt, u_opt, d_opt);
+                    /* print result */
+                    if (outfmt_opt==0) print_version();
+                    output_results(
+                        xname.substr(dir1_opt.size()).c_str(),
+                        yname.substr(dir2_opt.size()).c_str(),
+                        chainID_list1[chain_i].c_str(),
+                        chainID_list2[chain_j].c_str(),
+                        xlen, ylen, t0, u0, TM1, TM2, 
+                        TM3, TM4, TM5, rmsd0, d0_out,
+                        seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
+                        n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+                        TM_0, d0_0, d0A, d0B,
+                        Lnorm_ass, d0_scale, d0a, d0u, 
+                        (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
+                        outfmt_opt, ter_opt, 
+                        (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
+                        i_opt, I_opt, a_opt, u_opt, d_opt);
 
-            /* Done! Free memory */
-            seqM.clear();
-            seqxA.clear();
-            seqyA.clear();
-            if (chain2_list.size()>1)
-            {
-                yname.clear();
-                PDB_lines2.clear();
-                resi_vec2.clear();
-                DeleteArray(&ya, ylen);
-                delete [] seqy;
-                delete [] secy;
-                delete [] yresno;
-            }
-        }
+                    /* Done! Free memory */
+                    seqM.clear();
+                    seqxA.clear();
+                    seqyA.clear();
+                    DeleteArray(&ya, ylen);
+                    delete [] seqy;
+                    delete [] secy;
+                    delete [] yresno;
+                } // chain_j
+                if (chain2_list.size()>1)
+                {
+                    yname.clear();
+                    for (int chain_j=0;chain_j<ychainnum;chain_j++)
+                        PDB_lines2[chain_j].clear();
+                    PDB_lines2.clear();
+                    resi_vec2.clear();
+                    chainID_list2.clear();
+                }
+            } // j
+            DeleteArray(&xa, xlen);
+            delete [] seqx;
+            delete [] secx;
+            delete [] xresno;
+        } // chain_i
         xname.clear();
         PDB_lines1.clear();
         resi_vec1.clear();
-        DeleteArray(&xa, xlen);
-        delete [] seqx;
-        delete [] secx;
-        delete [] xresno;
-    }
+        chainID_list1.clear();
+    } // i
     if (chain2_list.size()==1)
     {
         yname.clear();
+        for (int chain_j=0;chain_j<ychainnum;chain_j++)
+            PDB_lines2[chain_j].clear();
         PDB_lines2.clear();
         resi_vec2.clear();
-        DeleteArray(&ya, ylen);
-        delete [] seqy;
-        delete [] secy;
-        delete [] yresno;
+        chainID_list2.clear();
     }
     chain1_list.clear();
     chain2_list.clear();

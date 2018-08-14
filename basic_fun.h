@@ -113,15 +113,18 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
     sscanf(cstr, "%d", no);
 }
 
-int get_PDB_lines(const char *filename, vector<string> &PDB_lines, 
-    vector<string> &resi_vec, const int byresi_opt, 
-    const int ter_opt=3, const string atom_opt="auto")
+int get_PDB_lines(const char *filename, vector<vector<string> >&PDB_lines,
+    vector<string> &chainID_list, vector<string> &resi_vec,
+    const int byresi_opt, const int ter_opt=3,
+    const string atom_opt="auto", const int split_opt=0)
 {
     int i=0; // resi
     string line, str, i8;    
     char chainID=0;
     string resi="";
     bool select_atom=false;
+    int model_idx=0;
+    vector<string> tmp_str_vec;
     
     ifstream fin (filename);
     if (fin.is_open())
@@ -134,6 +137,7 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
                 else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
+            if (split_opt && line.compare(0,3,"END")==0) chainID=0;
             if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
                (line[16]==' ' || line[16]=='A'))
             {
@@ -147,8 +151,52 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
                 else    select_atom=(line.compare(12,4,atom_opt)==0);
                 if (select_atom)
                 {
-                    if (!chainID) chainID=line[21];
+                    if (!chainID)
+                    {
+                        chainID=line[21];
+                        model_idx++;
+                        stringstream i8_stream;
+                        i=0;
+                        if (split_opt==2) // split by chain
+                        {
+                            if (chainID==' ')
+                            {
+                                if (ter_opt>=1) i8_stream << ":_";
+                                else i8_stream<<':'<<model_idx<<":_";
+                            }
+                            else
+                            {
+                                if (ter_opt>=1) i8_stream << ':' << chainID;
+                                else i8_stream<<':'<<model_idx<<':'<<chainID;
+                            }
+                            chainID_list.push_back(i8_stream.str());
+                        }
+                        else if (split_opt==1) // split by model
+                        {
+                            i8_stream << ':' << model_idx;
+                            chainID_list.push_back(i8_stream.str());
+                        }
+                        PDB_lines.push_back(tmp_str_vec);
+                    }
                     else if (ter_opt>=2 && chainID!=line[21]) break;
+                    if (split_opt==2 && chainID!=line[21])
+                    {
+                        chainID=line[21];
+                        i=0;
+                        stringstream i8_stream;
+                        if (chainID==' ')
+                        {
+                            if (ter_opt>=1) i8_stream << ":_";
+                            else i8_stream<<':'<<model_idx<<":_";
+                        }
+                        else
+                        {
+                            if (ter_opt>=1) i8_stream << ':' << chainID;
+                            else i8_stream<<':'<<model_idx<<':'<<chainID;
+                        }
+                        chainID_list.push_back(i8_stream.str());
+                        PDB_lines.push_back(tmp_str_vec);
+                    }
 
                     if (resi==line.substr(22,5))
                         cerr<<"Warning! Duplicated residue "<<resi<<endl;
@@ -158,12 +206,12 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
 
                     /* change residue index in line */
                     stringstream i8_stream;
-                    i8_stream << i;
+                    i8_stream << i+1;
                     i8=i8_stream.str();
                     if (i8.size()<4) i8=string(4-i8.size(), ' ')+i8;
-                    line=line.substr(0,22)+i8+line.substr(26);
+                    line=line.substr(0,22)+i8+line.substr(26,29);
 
-                    PDB_lines.push_back(line);
+                    PDB_lines.back().push_back(line);
                     i++;
                 }
             }
@@ -172,7 +220,8 @@ int get_PDB_lines(const char *filename, vector<string> &PDB_lines,
     }
     else return 0;
     line.clear();
-    return i;
+    if (!split_opt) chainID_list.push_back("");
+    return PDB_lines.size();
 }
 
 /* extract pairwise sequence alignment from residue index vectors,

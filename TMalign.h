@@ -1332,8 +1332,9 @@ void output_rotation_matrix(const char* fname_matrix,
 
 //output the final results
 void output_results(
-    const char *xname, const char *yname, const int xlen, const int ylen,
-    double t[3], double u[3][3],
+    const char *xname, const char *yname,
+    const char *chainID1, const char *chainID2,
+    const int xlen, const int ylen, double t[3], double u[3][3],
     const double TM1, const double TM2,
     const double TM3, const double TM4, const double TM5,
     const double rmsd, const double d0_out,
@@ -1344,14 +1345,14 @@ void output_results(
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
     const int outfmt_opt, const int ter_opt, const char *fname_super,
-    const bool i_opt, const bool I_opt, const bool o_opt, const bool a_opt,
+    const bool i_opt, const bool I_opt, const bool a_opt,
     const bool u_opt, const bool d_opt)
 {
     if (outfmt_opt<=0)
     {
-        printf("\nName of Chain_1: %s (to be superimposed onto Chain_2)\n",
-            xname);
-        printf("Name of Chain_2: %s\n", yname);
+        printf("\nName of Chain_1: %s%s (to be superimposed onto Chain_2)\n",
+            xname,chainID1);
+        printf("Name of Chain_2: %s%s\n", yname,chainID2);
         printf("Length of Chain_1: %d residues\n", xlen);
         printf("Length of Chain_2: %d residues\n\n", ylen);
 
@@ -1379,11 +1380,11 @@ void output_results(
     }
     else if (outfmt_opt==1)
     {
-        printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            xname, xlen, d0B, Liden/xlen, TM2);
+        printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
+            xname, chainID1, xlen, d0B, Liden/xlen, TM2);
         printf("%s\n", seqxA);
-        printf(">%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            yname, ylen, d0A, Liden/ylen, TM1);
+        printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
+            yname, chainID2, ylen, d0A, Liden/ylen, TM1);
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
@@ -1405,14 +1406,17 @@ void output_results(
     }
     else if (outfmt_opt==2)
     {
-        printf("%s\t%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
-            xname, yname, TM2, TM1, rmsd, Liden/xlen, Liden/ylen,
-            Liden/(n_ali8+0.00000001), xlen, ylen, n_ali8);
+        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
+            xname, chainID1, yname, chainID2, TM2, TM1, rmsd,
+            Liden/xlen, Liden/ylen, Liden/(n_ali8+0.00000001),
+            xlen, ylen, n_ali8);
     }
     cout << endl;
 
-    if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
-    if (o_opt) output_superpose(xname, fname_super, t, u, ter_opt);
+    if (strlen(fname_matrix)) 
+        output_rotation_matrix(fname_matrix, t, u);
+    if (strlen(fname_super))
+        output_superpose(xname, fname_super, t, u, ter_opt);
 }
 
 double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
