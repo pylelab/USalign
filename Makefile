@@ -4,7 +4,7 @@ LDFLAGS=-static# -lm
 
 all: TMalign
 
-TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h
+TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 clean:

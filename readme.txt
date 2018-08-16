@@ -35,6 +35,7 @@
                re-alignment as in TMscore and TMscore -c
    2018/08/07: Added the -dir option
    2018/08/14: Added the -split option
+   2018/08/15: Added the -infmt1, -infmt2 options. Read .gz and .bz2 files.
 ===============================================================================
 
 =========================
@@ -78,4 +79,4 @@ Note that this C++ version of TM-align implemented several features not
 available in the fortran version. A full list of these features can be
 explored by TMalign -h.
 
-08/05/2018
+08/15/2018

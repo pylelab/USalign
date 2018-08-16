@@ -29,6 +29,7 @@
                re-alignment as in TMscore and TMscore -c
    2018/08/07: Added the -dir option
    2018/08/14: Added the -split option
+   2018/08/15: Added the -infmt1, -infmt2 options. Read .gz and .bz2 files.
 ===============================================================================
 */
 #include "TMalign.h"
@@ -40,7 +41,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180814): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180815): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -79,7 +80,7 @@ void print_extra_help()
 "             1: ENDMDL or END\n"
 "             0: (default in the first C++ TMalign) end of file\n"
 "\n"
-"    -split   Whether to split structure into multiple chains\n"
+"    -split   Whether to split PDB file into multiple chains\n"
 "             0: (default) treat the whole structure as one single chain\n"
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
@@ -97,6 +98,12 @@ void print_extra_help()
 "                align by residue index and chain ID\n"
 "             3: (similar to TMscore -c, should be used with -ter 1)\n"
 "                align by residue index and order of chain\n"
+"\n"
+"    -infmt1  Input format for chain1\n"
+"    -infmt2  Input format for chain2\n"
+"             0: (default) PDB format\n"
+//"             1: SPICKER format\n"
+"             2: xyz format\n"
     <<endl;
 }
 
@@ -179,8 +186,10 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int    ter_opt   = 3;    // TER, END, or different chainID
-    int    split_opt = 0;    // do not split chain
+    int    infmt1_opt=0;     // PDB format for chain_1
+    int    infmt2_opt=0;     // PDB format for chain_2
+    int    ter_opt   =3;     // TER, END, or different chainID
+    int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
@@ -238,6 +247,14 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-fast"))
         {
             fast_opt = true;
+        }
+        else if ( !strcmp(argv[i],"-infmt1") && i < (argc-1) )
+        {
+            infmt1_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-infmt2") && i < (argc-1) )
+        {
+            infmt2_opt=atoi(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-ter") && i < (argc-1) )
         {
@@ -469,8 +486,8 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname.c_str(), PDB_lines1, chainID_list1,
-            resi_vec1, byresi_opt, ter_opt, atom_opt, split_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
+            resi_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -499,9 +516,9 @@ int main(int argc, char *argv[])
                 if (PDB_lines2.size()==0)
                 {
                     yname=chain2_list[j];
-                    ychainnum=get_PDB_lines(yname.c_str(), PDB_lines2,
+                    ychainnum=get_PDB_lines(yname, PDB_lines2,
                         chainID_list2, resi_vec2, byresi_opt, ter_opt,
-                        atom_opt, split_opt);
+                        infmt2_opt, atom_opt, split_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
