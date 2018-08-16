@@ -262,12 +262,44 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             }
         }
     }
+    else if (infmt_opt==1) // SPICKER format
+    {
+        int L=0;
+        float x,y,z;
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) fin_gz>>L>>x>>y>>z;
+            else               fin   >>L>>x>>y>>z;
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (!(compress_type?fin_gz.good():fin.good())) break;
+            model_idx++;
+            stringstream i8_stream;
+            i8_stream << ':' << model_idx;
+            chainID_list.push_back(i8_stream.str());
+            PDB_lines.push_back(tmp_str_vec);
+            for (i=0;i<L;i++)
+            {
+                if (compress_type) fin_gz>>x>>y>>z;
+                else               fin   >>x>>y>>z;
+                stringstream i8_stream;
+                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  UNK  "<<setw(4)
+                    <<i+1<<"    "<<setiosflags(ios::fixed)<<setprecision(3)
+                    <<setw(8)<<x<<setw(8)<<y<<setw(8)<<z;
+                line=i8_stream.str();
+                if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
+                if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
+                PDB_lines.back().push_back(line);
+            }
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+        }
+    }
     else if (infmt_opt==2) // xyz format
     {
         int L=0;
         char A;
-        string x,y,z;
-        string i8;
+        float x,y,z;
         while (compress_type?fin_gz.good():fin.good())
         {
             if (compress_type) getline(fin_gz, line);
@@ -277,25 +309,21 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             else               getline(fin, line);
             for (i=0;i<line.size();i++)
                 if (line[i]==' '||line[i]=='\t') break;
+            if (!(compress_type?fin_gz.good():fin.good())) break;
             chainID_list.push_back(':'+line.substr(0,i));
             PDB_lines.push_back(tmp_str_vec);
             for (i=0;i<L;i++)
             {
-                stringstream i8_stream;
-                i8_stream << setw(4) << i+1;
-                i8=i8_stream.str();
-                if (byresi_opt==1) resi_vec.push_back(i8);
-                if (byresi_opt>=2) resi_vec.push_back(i8+' ');
-
                 if (compress_type) fin_gz>>A>>x>>y>>z;
                 else               fin   >>A>>x>>y>>z;
-
-                if (x.size()<8) x=string(8-x.size(), ' ')+x;
-                if (y.size()<8) y=string(8-y.size(), ' ')+y;
-                if (z.size()<8) z=string(8-z.size(), ' ')+z;
-                
-                PDB_lines.back().push_back(
-                    "ATOM   "+i8+"  CA  "+AAmap(A)+"  "+i8+"    "+x+y+z);
+                stringstream i8_stream;
+                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "<<AAmap(A)<<"  "
+                    <<setw(4)<<i+1<<"    "<<setiosflags(ios::fixed)
+                    <<setprecision(3)<<setw(8)<<x<<setw(8)<<y<<setw(8)<<z;
+                line=i8_stream.str();
+                if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
+                if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
+                PDB_lines.back().push_back(line);
             }
             if (compress_type) getline(fin_gz, line);
             else               getline(fin, line);

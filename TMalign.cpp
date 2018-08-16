@@ -29,7 +29,8 @@
                re-alignment as in TMscore and TMscore -c
    2018/08/07: Added the -dir option
    2018/08/14: Added the -split option
-   2018/08/15: Added the -infmt1, -infmt2 options. Read .gz and .bz2 files.
+   2018/08/16: Added the -infmt1, -infmt2 options.
+               TMalign can now read .gz and .bz2 compressed files.
 ===============================================================================
 */
 #include "TMalign.h"
@@ -41,7 +42,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180815): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20180816): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -102,7 +103,7 @@ void print_extra_help()
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "             0: (default) PDB format\n"
-//"             1: SPICKER format\n"
+"             1: SPICKER format\n"
 "             2: xyz format\n"
     <<endl;
 }
