@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         else xname=argv[i];
     }
 
-    if(xname.size()==0) print_help();
+    if(xname.size()==0||xname=="-h") print_help();
 
     if (suffix_opt.size() && dir_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir is set");
