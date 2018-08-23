@@ -11,7 +11,7 @@ void print_help()
 "\n"
 "    -dir     Convert all chains listed by 'chain_list' under 'chain_folder'.\n"
 "             Note that the slash is necessary.\n"
-"             $ TMalign -dir chain_folder/ chain_list\n"
+"             $ pdb2xyz -dir chain_folder/ chain_list\n"
 "\n"
 "    -suffix  (Only when -dir is set, default is empty)\n"
 "             add file name suffix to files listed by chain_list\n"
