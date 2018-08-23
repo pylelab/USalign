@@ -97,30 +97,38 @@ int main(int argc, char *argv[])
     fp.close();
 
     /* extract listed entries in xyz file */
+    string txt;
     while (compress_type?fin_gz.good():fin.good())
     {
         if (compress_type) getline(fin_gz, line);
         else               getline(fin, line);
         L=atoi(line.c_str());
+        txt+=line+'\n';
         if (compress_type) getline(fin_gz, line);
         else               getline(fin, line);
         for (i=0;i<line.size();i++)
             if (line[i]==' '||line[i]=='\t') break;
         if (!(compress_type?fin_gz.good():fin.good())) break;
         if (find(chain_list.begin(), chain_list.end(),
-            line.substr(0,i)) == chain_list.end()) continue;
-        cout<<L<<'\n'<<line;
+            line.substr(0,i))==chain_list.end())
+        {
+            txt.clear();
+            continue;
+        }
+        txt+=line;
         for (i=0;i<L;i++)
         {
             if (compress_type) getline(fin_gz, line);
             else               getline(fin, line);
-            cout<<'\n'<<line;
+            txt+='\n'+line;
         }
-        cout<<endl;
+        cout<<txt<<endl;
+        txt.clear();
     }
     if (compress_type) fin_gz.close();
     else               fin.close();
     /* clean up */
+    txt.clear();
     line.clear();
     filename.clear();
     list_opt.clear();
