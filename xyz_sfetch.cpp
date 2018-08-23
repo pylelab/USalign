@@ -7,11 +7,11 @@ using namespace std;
 void print_help()
 {
     cout <<
-"Usage: xyzSubset ca.xyz\n"
+"Usage: xyz_sfetch ca.xyz\n"
 "    List all entries in xyz file 'ca.xyz'\n"
 "    them to 'subset.xyz'\n"
 "\n"
-"Usage: xyzSubset ca.xyz list > subset.xyz\n"
+"Usage: xyz_sfetch ca.xyz list > subset.xyz\n"
 "    From xyz file 'ca.xyz', extract all entries listed by 'list'. Output\n"
 "    them to 'subset.xyz'\n"
     <<endl;
