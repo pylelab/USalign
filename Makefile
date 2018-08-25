@@ -14,5 +14,8 @@ pdb2xyz: pdb2xyz.cpp basic_fun.h pstream.h
 xyz_sfetch: xyz_sfetch.cpp
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
+pdb2fasta: pdb2fasta.cpp basic_fun.h pstream.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
 clean:
 	rm -f ${PROGRAM}
