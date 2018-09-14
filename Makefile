@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
 LDFLAGS=-static# -lm
-PROGRAM=TMalign pdb2xyz xyz_sfetch se
+PROGRAM=TMalign se pdb2xyz xyz_sfetch pdb2fasta
 
 all: ${PROGRAM}
 
