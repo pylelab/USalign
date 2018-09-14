@@ -317,7 +317,6 @@ int main(int argc, char *argv[])
             secx = new int[xlen];
             xresno = new int[xlen];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
-            make_sec(xa, xlen, secx); // secondary structure assignment
 
             for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -349,7 +348,6 @@ int main(int argc, char *argv[])
                     yresno = new int[ylen];
                     secy = new int[ylen];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
-                    make_sec(ya, ylen, secy);
 
                     /* declare variable specific to this pair of TMalign */
                     double TM1, TM2;
