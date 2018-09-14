@@ -504,6 +504,11 @@ int main(int argc, char *argv[])
                     <<". Chain length 0."<<endl;
                 continue;
             }
+            else if (xlen<=5)
+            {
+                cerr<<"Sequence is too short <=5!: "<<xname<<endl;
+                continue;
+            }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
             secx = new int[xlen];
@@ -534,6 +539,11 @@ int main(int argc, char *argv[])
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
                             <<". Chain length 0."<<endl;
+                        continue;
+                    }
+                    else if (ylen<=5)
+                    {
+                        cerr<<"Sequence is too short <=5!: "<<yname<<endl;
                         continue;
                     }
                     NewArray(&ya, ylen, 3);
