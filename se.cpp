@@ -279,7 +279,6 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    int    *secx, *secy;       // for the secondary structure 
     int    *xresno, *yresno;   // residue number for fragment gapless threading
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
@@ -314,7 +313,6 @@ int main(int argc, char *argv[])
             }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
-            secx = new int[xlen];
             xresno = new int[xlen];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
 
@@ -346,7 +344,6 @@ int main(int argc, char *argv[])
                     NewArray(&ya, ylen, 3);
                     seqy = new char[ylen + 1];
                     yresno = new int[ylen];
-                    secy = new int[ylen];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
 
                     /* declare variable specific to this pair of TMalign */
@@ -365,13 +362,11 @@ int main(int argc, char *argv[])
 
                     /* entry function for structure alignment */
                     se_main(
-                        xa, ya, xresno, yresno, seqx, seqy, secx, secy,
-                        TM1, TM2, TM3, TM4, TM5,
+                        xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                        xlen, ylen, Lnorm_ass, d0_scale,
-                        a_opt, u_opt, d_opt);
+                        xlen, ylen, Lnorm_ass, d0_scale, a_opt, u_opt, d_opt);
 
                     /* print result */
                     output_results(
@@ -394,7 +389,6 @@ int main(int argc, char *argv[])
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
-                    delete [] secy;
                     delete [] yresno;
                 } // chain_j
                 if (chain2_list.size()>1)
@@ -409,7 +403,6 @@ int main(int argc, char *argv[])
             } // j
             DeleteArray(&xa, xlen);
             delete [] seqx;
-            delete [] secx;
             delete [] xresno;
         } // chain_i
         xname.clear();

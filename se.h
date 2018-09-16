@@ -2,8 +2,7 @@
 
 /* entry function for se */
 int se_main(
-    double **xa, double **ya, const int  *xresno, const int *yresno,
-    const char *seqx, const char *seqy, const int *secx, const int *secy,
+    double **xa, double **ya, const char *seqx, const char *seqy,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
