@@ -299,7 +299,6 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
     {
         int L=0;
         char A;
-        float x,y,z;
         while (compress_type?fin_gz.good():fin.good())
         {
             if (compress_type) getline(fin_gz, line);
@@ -314,19 +313,17 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             PDB_lines.push_back(tmp_str_vec);
             for (i=0;i<L;i++)
             {
-                if (compress_type) fin_gz>>A>>x>>y>>z;
-                else               fin   >>A>>x>>y>>z;
+                if (compress_type) getline(fin_gz, line);
+                else               getline(fin, line);
                 stringstream i8_stream;
-                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "<<AAmap(A)<<"  "
-                    <<setw(4)<<i+1<<"    "<<setiosflags(ios::fixed)
-                    <<setprecision(3)<<setw(8)<<x<<setw(8)<<y<<setw(8)<<z;
+                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "
+                    <<AAmap(line[0])<<"  "<<setw(4)<<i+1<<"    "
+                    <<line.substr(2,8)<<line.substr(11,8)<<line.substr(20,8);
                 line=i8_stream.str();
                 if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
                 if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
                 PDB_lines.back().push_back(line);
             }
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
         }
     }
     if (compress_type) fin_gz.close();
