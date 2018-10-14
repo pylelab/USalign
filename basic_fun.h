@@ -52,7 +52,7 @@ template <class A> void NewArray(A *** array, int Narray1, int Narray2)
 {
     *array=new A* [Narray1];
     for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
-};
+}
 
 template <class A> void DeleteArray(A *** array, int Narray)
 {
@@ -60,7 +60,7 @@ template <class A> void DeleteArray(A *** array, int Narray)
         if(*(*array+i)) delete [] *(*array+i);
     if(Narray) delete [] (*array);
     (*array)=NULL;
-};
+}
 
 string AAmap(char A)
 {
@@ -437,7 +437,7 @@ void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
 }
 
 /* strip white space at the begining or end of string */
-string Trim(string inputString)
+string Trim(const string &inputString)
 {
     string result = inputString;
     int idxBegin = inputString.find_first_not_of(" \n\r\t");
@@ -445,4 +445,72 @@ string Trim(string inputString)
     if (idxBegin >= 0 && idxEnd >= 0)
         result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
     return result;
+}
+
+/* read user specified pairwise alignment from 'fname_lign' to 'sequence'.
+ * This function should only be called by main function, as it will
+ * terminate a program if wrong alignment is given */
+void read_user_alignment(vector<string>&sequence, const string &fname_lign,
+    const bool I_opt)
+{
+    if (fname_lign == "")
+        PrintErrorAndQuit("Please provide a file name for option -i!");
+    // open alignment file
+    int n_p = 0;// number of structures in alignment file
+    string line;
+    
+    ifstream fileIn(fname_lign.c_str());
+    if (fileIn.is_open())
+    {
+        while (fileIn.good())
+        {
+            getline(fileIn, line);
+            if (line.compare(0, 1, ">") == 0)// Flag for a new structure
+            {
+                if (n_p >= 2) break;
+                sequence.push_back("");
+                n_p++;
+            }
+            else if (n_p > 0 && line!="") sequence.back()+=line;
+        }
+        fileIn.close();
+    }
+    else PrintErrorAndQuit("ERROR! Alignment file does not exist.");
+    
+    if (n_p < 2)
+        PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
+    if (sequence[0].size() != sequence[1].size())
+        PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal respectively to the two aligned proteins.");
+    if (I_opt)
+    {
+        int aligned_resNum=0;
+        for (int i=0;i<sequence[0].size();i++) 
+            aligned_resNum+=(sequence[0][i]!='-' && sequence[1][i]!='-');
+        if (aligned_resNum<3)
+            PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");
+    }
+    line.clear();
+    return;
+}
+
+/* read list of entries from 'name' to 'chain_list'.
+ * dir_opt is the folder name (prefix).
+ * suffix_opt is the file name extension (suffix_opt).
+ * This function should only be called by main function, as it will
+ * terminate a program if wrong alignment is given */
+void parse_file_list(vector<string>&chain_list, const string &name,
+    const string &dir_opt, const string &suffix_opt)
+{
+    ifstream fp(name.c_str());
+    if (! fp.is_open())
+        PrintErrorAndQuit(("Can not open file: "+name+'\n').c_str());
+    string line;
+    while (fp.good())
+    {
+        getline(fp, line);
+        if (! line.size()) continue;
+        chain_list.push_back(dir_opt+Trim(line)+suffix_opt);
+    }
+    fp.close();
+    line.clear();
 }

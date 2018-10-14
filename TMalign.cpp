@@ -42,7 +42,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20180816): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20181014): A protein structural alignment algorithm     *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -126,7 +126,7 @@ void print_help(bool h_opt=false)
 "    -i    Ask TM-align to start with an alignment, specified in fasta\n"
 "          file 'align.txt'\n"
 "\n"
-"    -I    Ask TM-align to stick the alignment to 'align.txt'\n"
+"    -I    Ask TM-align to stick to the alignment 'align.txt'\n"
 "\n"
 "    -m    Output TM-align rotation matrix\n"
 "\n"
@@ -323,8 +323,8 @@ int main(int argc, char *argv[])
     if (!B_opt) 
         PrintErrorAndQuit("Please provide structure B");
 
-    if (suffix_opt.size() && dir1_opt.size()==0 && dir2_opt.size()==0)
-        PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
+    if (suffix_opt.size() && dir_opt.size()+dir1_opt.size()+dir2_opt.size()==0)
+        PrintErrorAndQuit("-suffix is only valid if -dir, -dir1 or -dir2 is set");
     if ((dir_opt.size() || dir1_opt.size() || dir2_opt.size()))
     {
         if (m_opt || o_opt)
@@ -359,50 +359,7 @@ int main(int argc, char *argv[])
     
 
     /* read initial alignment file from 'align.txt' */
-    string basename = string(argv[0]);
-    int idx = basename.find_last_of("\\");
-    basename = basename.substr(0, idx + 1);
-    if (i_opt || I_opt)// Ask TM-align to start with an alignment,specified in fasta file 'align.txt'
-    {
-        if (fname_lign == "")
-            PrintErrorAndQuit("Please provide a file name for option -i!");
-        // open alignment file
-        int n_p = 0;// number of structures in alignment file
-        string line;
-
-        string fullpath = basename + fname_lign;
-        ifstream fileIn(fullpath.c_str());
-        if (fileIn.is_open())
-        {
-            while (fileIn.good())
-            {
-                getline(fileIn, line);
-                if (line.compare(0, 1, ">") == 0)// Flag for a new structure
-                {
-                    if (n_p >= 2) break;
-                    sequence.push_back("");
-                    n_p++;
-                }
-                else if (n_p > 0 && line!="") sequence.back()+=line;
-            }
-            fileIn.close();
-        }
-        else
-            PrintErrorAndQuit("ERROR! Alignment file does not exist.");
-
-        if (n_p < 2)
-            PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
-        if (sequence[0].size() != sequence[1].size())
-            PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal respectively to the two aligned proteins.");
-        if (I_opt)
-        {
-            int aligned_resNum=0;
-            for (int i=0;i<sequence[0].size();i++) 
-                aligned_resNum+=(sequence[0][i]!='-' && sequence[1][i]!='-');
-            if (aligned_resNum<3)
-                PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");
-        }
-    }
+    if (i_opt || I_opt) read_user_alignment(sequence, fname_lign, I_opt);
 
     if (byresi_opt) I_opt=true;
 
@@ -410,54 +367,14 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
 
     /* parse file list */
-    if (dir1_opt.size()==0 && dir_opt.size()==0)
-        chain1_list.push_back(xname);
-    else
-    {
-        ifstream fp(xname.c_str());
-        if (! fp.is_open())
-        {
-            char message[5000];
-            sprintf(message, "Can not open file: %s\n", xname.c_str());
-            PrintErrorAndQuit(message);
-        }
-        string line;
-        while (fp.good())
-        {
-            getline(fp, line);
-            if (! line.size()) continue;
-            chain1_list.push_back(dir_opt+dir1_opt+Trim(line)+suffix_opt);
-        }
-        fp.close();
-        line.clear();
-    }
+    if (dir1_opt.size()+dir_opt.size()==0) chain1_list.push_back(xname);
+    else parse_file_list(chain1_list, xname, dir_opt+dir1_opt, suffix_opt);
 
     if (dir_opt.size())
-    {
         for (int i=0;i<chain1_list.size();i++)
             chain2_list.push_back(chain1_list[i]);
-    }
-    else if (dir2_opt.size()==0)
-        chain2_list.push_back(yname);
-    else
-    {
-        ifstream fp(yname.c_str());
-        if (! fp.is_open())
-        {
-            char message[5000];
-            sprintf(message, "Can not open file: %s\n", yname.c_str());
-            PrintErrorAndQuit(message);
-        }
-        string line;
-        while (fp.good())
-        {
-            getline(fp, line);
-            if (! line.size()) continue;
-            chain2_list.push_back(dir2_opt+Trim(line)+suffix_opt);
-        }
-        fp.close();
-        line.clear();
-    }
+    else if (dir2_opt.size()==0) chain2_list.push_back(yname);
+    else parse_file_list(chain2_list, yname, dir2_opt, suffix_opt);
 
     if (outfmt_opt==2)
         cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
