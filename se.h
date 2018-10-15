@@ -9,8 +9,8 @@ int se_main(
     string &seqM, string &seqxA, string &seqyA,
     double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
-    const int xlen, const int ylen,
-    const double Lnorm_ass, const double d0_scale,
+    const int xlen, const int ylen, const vector<string> &sequence,
+    const double Lnorm_ass, const double d0_scale, const bool i_opt,
     const bool a_opt, const bool u_opt, const bool d_opt)
 {
     double D0_MIN;        //for d0
@@ -51,9 +51,30 @@ int se_main(
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
             score_d8, d0u, d0_search, dcu0); // set d0u
 
-    /* perform alignment by NW */
-    NWDP_TM(score, path, val, xa, ya, xlen, ylen,
-        t, u, d0*d0, 0, invmap);
+    /* perform alignment */
+    if (!i_opt)
+        NWDP_TM(score, path, val, xa, ya, xlen, ylen, t, u, d0*d0, 0, invmap);
+    else
+    {
+        for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
+            invmap[j] = -1;
+
+        int i1 = -1;// in C version, index starts from zero, not from one
+        int i2 = -1;
+        int L1 = sequence[0].size();
+        int L2 = sequence[1].size();
+        int L = min(L1, L2);// Get positions for aligned residues
+        for (int kk1 = 0; kk1 < L; kk1++)
+        {
+            if (sequence[0][kk1] != '-') i1++;
+            if (sequence[1][kk1] != '-')
+            {
+                i2++;
+                if (i2 >= ylen || i1 >= xlen) kk1 = L;
+                else if (sequence[0][kk1] != '-') invmap[i2] = i1;
+            }
+        }
+    }
 
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
     int k=0;

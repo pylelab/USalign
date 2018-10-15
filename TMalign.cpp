@@ -368,13 +368,13 @@ int main(int argc, char *argv[])
 
     /* parse file list */
     if (dir1_opt.size()+dir_opt.size()==0) chain1_list.push_back(xname);
-    else parse_file_list(chain1_list, xname, dir_opt+dir1_opt, suffix_opt);
+    else file2chainlist(chain1_list, xname, dir_opt+dir1_opt, suffix_opt);
 
     if (dir_opt.size())
         for (int i=0;i<chain1_list.size();i++)
             chain2_list.push_back(chain1_list[i]);
     else if (dir2_opt.size()==0) chain2_list.push_back(yname);
-    else parse_file_list(chain2_list, yname, dir2_opt, suffix_opt);
+    else file2chainlist(chain2_list, yname, dir2_opt, suffix_opt);
 
     if (outfmt_opt==2)
         cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
@@ -470,14 +470,8 @@ int main(int argc, char *argv[])
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
                     make_sec(ya, ylen, secy);
 
-                    if (byresi_opt)
-                    {
-                        sequence.clear();
-                        sequence.push_back("");
-                        sequence.push_back("");
-                        extract_aln_from_resi(sequence,seqx,seqy,
-                            resi_vec1,resi_vec2,byresi_opt);
-                    }
+                    if (byresi_opt) extract_aln_from_resi(sequence,
+                        seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
 
                     /* declare variable specific to this pair of TMalign */
                     double t0[3], u0[3][3];

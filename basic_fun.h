@@ -340,6 +340,10 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     const vector<string> resi_vec1, const vector<string> resi_vec2,
     const int byresi_opt)
 {
+    sequence.clear();
+    sequence.push_back("");
+    sequence.push_back("");
+
     int i1=0; // positions in resi_vec1
     int i2=0; // positions in resi_vec2
     int xlen=resi_vec1.size();
@@ -498,7 +502,7 @@ void read_user_alignment(vector<string>&sequence, const string &fname_lign,
  * suffix_opt is the file name extension (suffix_opt).
  * This function should only be called by main function, as it will
  * terminate a program if wrong alignment is given */
-void parse_file_list(vector<string>&chain_list, const string &name,
+void file2chainlist(vector<string>&chain_list, const string &name,
     const string &dir_opt, const string &suffix_opt)
 {
     ifstream fp(name.c_str());
