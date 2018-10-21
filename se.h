@@ -11,7 +11,7 @@ int se_main(
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen, const vector<string> &sequence,
     const double Lnorm_ass, const double d0_scale, const bool i_opt,
-    const bool a_opt, const bool u_opt, const bool d_opt)
+    const bool a_opt, const bool u_opt, const bool d_opt, const int mol_type)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -41,15 +41,15 @@ int se_main(
     parameter_set4search(xlen, ylen, D0_MIN, Lnorm,
         score_d8, d0, d0_search, dcu0); // set score_d8
     parameter_set4final(xlen, D0_MIN, Lnorm,
-        score_d8, d0B, d0_search, dcu0); // set d0B
+        score_d8, d0B, d0_search, dcu0, mol_type); // set d0B
     parameter_set4final(ylen, D0_MIN, Lnorm,
-        score_d8, d0A, d0_search, dcu0); // set d0A
+        score_d8, d0A, d0_search, dcu0, mol_type); // set d0A
     if (a_opt)
         parameter_set4final((xlen+ylen)*0.5, D0_MIN, Lnorm,
-            score_d8, d0a, d0_search, dcu0); // set d0a
+            score_d8, d0a, d0_search, dcu0, mol_type); // set d0a
     if (u_opt)
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
-            score_d8, d0u, d0_search, dcu0); // set d0u
+            score_d8, d0u, d0_search, dcu0, mol_type); // set d0u
 
     /* perform alignment */
     if (!i_opt)

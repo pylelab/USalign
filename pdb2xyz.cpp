@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 
     /* declare previously global variables */
     vector<vector<string> >PDB_lines; // text of chain
+    vector<int> mol_vec;              // molecule type of chain
     vector<string> chainID_list;      // list of chainID1
     vector<string> resi_vec;          // residue index for chain
     int    i;                         // file index
@@ -125,7 +126,7 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            resi_vec, 0, ter_opt, 0, atom_opt, split_opt);
+            resi_vec, mol_vec, 0, ter_opt, 0, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

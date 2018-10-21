@@ -1,10 +1,10 @@
 /*
 ===============================================================================
-   This is a re-implementation of TM-align algorithm in C/C++. The code was
-   is written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang
-   lab, Department of Computational Medicine and Bioinformatics, University of
-   Michigan, 100 Washtenaw Avenue, Ann Arbor, MI 48109-2218. Please report bugs
-   and questions to zhng@umich.edu
+   This is a re-implementation of TM-align algorithm in C++. This program was
+   written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong and
+   Chengxin Zhang at the Yang Zhang lab, Department of Computational Medicine
+   and Bioinformatics, University of Michigan, 100 Washtenaw Avenue, Ann
+   Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for
@@ -31,6 +31,11 @@
    2018/08/14: Added the -split option
    2018/08/16: Added the -infmt1, -infmt2 options.
                TMalign can now read .gz and .bz2 compressed files.
+   2018/10/20: Chengxin Zhang and Sha Gong updated the RNA alignment part of
+               the program. Changes include:
+              (1) new d0 calculation for RNA.
+              (2) secondary structure assignment for RNA.
+              (3) automatic detection of molecule type (protein vs RNA).
 ===============================================================================
 */
 #include "TMalign.h"
@@ -42,7 +47,7 @@ void print_version()
     cout << 
 "\n"
 " *****************************************************************************\n"
-" * TM-align (Version 20181014): A protein structural alignment algorithm     *\n"
+" * TM-align (Version 20181020): protein and RNA structural alignment         *\n"
 " * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
 " * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
 " *****************************************************************************"
@@ -74,6 +79,9 @@ void print_extra_help()
 "    -atom    4-character atom name used to represent a residue.\n"
 "             Default is \" C3'\" for RNA/DNA and \" CA \" for proteins\n"
 "             (note the spaces before and after CA).\n"
+"\n"
+"    -mol     Molecule type: RNA or protein\n"
+"             Default is detect molecule type automatically\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (default) TER, ENDMDL, END or different chain ID\n"
@@ -194,6 +202,7 @@ int main(int argc, char *argv[])
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
+    string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
     string dir_opt   ="";    // set -dir to empty
     string dir1_opt  ="";    // set -dir1 to empty
@@ -269,6 +278,10 @@ int main(int argc, char *argv[])
         {
             atom_opt=argv[i + 1]; i++;
         }
+        else if ( !strcmp(argv[i],"-mol") && i < (argc-1) )
+        {
+            mol_opt=argv[i + 1]; i++;
+        }
         else if ( !strcmp(argv[i],"-dir") && i < (argc-1) )
         {
             dir_opt=argv[i + 1]; i++;
@@ -334,6 +347,8 @@ int main(int argc, char *argv[])
     }
     if (atom_opt.size()!=4)
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+    if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
+        PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
 
     if (i_opt && I_opt)
         PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
@@ -383,6 +398,8 @@ int main(int argc, char *argv[])
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
     vector<vector<string> >PDB_lines2; // text of chain2
+    vector<int> mol_vec1;              // molecule type of chain1, RNA if >0
+    vector<int> mol_vec2;              // molecule type of chain2, RNA if >0
     vector<string> chainID_list1;      // list of chainID1
     vector<string> chainID_list2;      // list of chainID2
     int    i,j;                // file index
@@ -404,8 +421,8 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            resi_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, resi_vec1,
+            mol_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -415,6 +432,8 @@ int main(int argc, char *argv[])
         for (int chain_i=0;chain_i<xchainnum;chain_i++)
         {
             xlen=PDB_lines1[chain_i].size();
+            if (mol_opt=="RNA") mol_vec1[chain_i]=1;
+            else if (mol_opt=="protein") mol_vec1[chain_i]=-1;
             if (!xlen)
             {
                 cerr<<"Warning! Cannot parse file: "<<xname
@@ -431,7 +450,8 @@ int main(int argc, char *argv[])
             secx = new int[xlen];
             xresno = new int[xlen];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
-            make_sec(xa, xlen, secx); // secondary structure assignment
+            if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
+            else make_sec(xa, xlen, secx); // secondary structure assignment
 
             for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -439,8 +459,8 @@ int main(int argc, char *argv[])
                 if (PDB_lines2.size()==0)
                 {
                     yname=chain2_list[j];
-                    ychainnum=get_PDB_lines(yname, PDB_lines2,
-                        chainID_list2, resi_vec2, byresi_opt, ter_opt,
+                    ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
+                        resi_vec2, mol_vec2, byresi_opt, ter_opt,
                         infmt2_opt, atom_opt, split_opt);
                     if (!ychainnum)
                     {
@@ -452,6 +472,8 @@ int main(int argc, char *argv[])
                 for (int chain_j=0;chain_j<ychainnum;chain_j++)
                 {
                     ylen=PDB_lines2[chain_j].size();
+                    if (mol_opt=="RNA") mol_vec2[chain_j]=1;
+                    else if (mol_opt=="protein") mol_vec2[chain_j]=-1;
                     if (!ylen)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -468,7 +490,9 @@ int main(int argc, char *argv[])
                     yresno = new int[ylen];
                     secy = new int[ylen];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
-                    make_sec(ya, ylen, secy);
+                    if (mol_vec2[chain_j]>0)
+                         make_sec(seqy, ya, ylen, secy, atom_opt);
+                    else make_sec(ya, ylen, secy);
 
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -496,7 +520,8 @@ int main(int argc, char *argv[])
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt);
+                        i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt,
+                        mol_vec1[chain_i]+mol_vec2[chain_j]);
 
                     /* print result */
                     if (outfmt_opt==0) print_version();

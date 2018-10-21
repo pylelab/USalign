@@ -27,6 +27,9 @@ void print_extra_help()
 "             Default is \" C3'\" for RNA/DNA and \" CA \" for proteins\n"
 "             (note the spaces before and after CA).\n"
 "\n"
+"    -mol     Molecule type: RNA or protein\n"
+"             Default is detect molecule type automatically\n"
+"\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             3: (default) TER, ENDMDL, END or different chain ID\n"
 "             2: ENDMDL, END, or different chain ID\n"
@@ -120,6 +123,7 @@ int main(int argc, char *argv[])
     int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
+    string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
     string dir_opt   ="";    // set -dir to empty
     string dir1_opt  ="";    // set -dir1 to empty
@@ -175,6 +179,10 @@ int main(int argc, char *argv[])
         {
             atom_opt=argv[i + 1]; i++;
         }
+        else if ( !strcmp(argv[i],"-mol") && i < (argc-1) )
+        {
+            mol_opt=argv[i + 1]; i++;
+        }
         else if ( !strcmp(argv[i],"-dir") && i < (argc-1) )
         {
             dir_opt=argv[i + 1]; i++;
@@ -227,6 +235,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
     if (atom_opt.size()!=4)
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+    if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
+        PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
     if (u_opt && Lnorm_ass<=0)
         PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
     if (d_opt && d0_scale<=0)
@@ -269,6 +279,8 @@ int main(int argc, char *argv[])
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
     vector<vector<string> >PDB_lines2; // text of chain2
+    vector<int> mol_vec1;              // molecule type of chain1, RNA if >0
+    vector<int> mol_vec2;              // molecule type of chain2, RNA if >0
     vector<string> chainID_list1;      // list of chainID1
     vector<string> chainID_list2;      // list of chainID2
     int    i,j;                // file index
@@ -291,8 +303,8 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            resi_vec1, 0, ter_opt, infmt1_opt, atom_opt, split_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, resi_vec1,
+            mol_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -302,6 +314,8 @@ int main(int argc, char *argv[])
         for (int chain_i=0;chain_i<xchainnum;chain_i++)
         {
             xlen=PDB_lines1[chain_i].size();
+            if (mol_opt=="RNA") mol_vec1[chain_i]=1;
+            else if (mol_opt=="protein") mol_vec1[chain_i]=-1;
             if (!xlen)
             {
                 cerr<<"Warning! Cannot parse file: "<<xname
@@ -319,8 +333,8 @@ int main(int argc, char *argv[])
                 if (PDB_lines2.size()==0)
                 {
                     yname=chain2_list[j];
-                    ychainnum=get_PDB_lines(yname, PDB_lines2,
-                        chainID_list2, resi_vec2, 0, ter_opt,
+                    ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
+                        resi_vec2, mol_vec2, byresi_opt, ter_opt,
                         infmt2_opt, atom_opt, split_opt);
                     if (!ychainnum)
                     {
@@ -332,6 +346,8 @@ int main(int argc, char *argv[])
                 for (int chain_j=0;chain_j<ychainnum;chain_j++)
                 {
                     ylen=PDB_lines2[chain_j].size();
+                    if (mol_opt=="RNA") mol_vec2[chain_j]=1;
+                    else if (mol_opt=="protein") mol_vec2[chain_j]=-1;
                     if (!ylen)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -367,7 +383,8 @@ int main(int argc, char *argv[])
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, a_opt, u_opt, d_opt);
+                        i_opt, a_opt, u_opt, d_opt,
+                        mol_vec1[chain_i]+mol_vec2[chain_j]);
 
                     /* print result */
                     output_results(

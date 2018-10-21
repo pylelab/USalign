@@ -765,7 +765,8 @@ int sec_str(double dis13, double dis14, double dis15,
 }
 
 
-//1->coil, 2->helix, 3->turn, 4->strand
+/* secondary stucture assignment for protein:
+ * 1->coil, 2->helix, 3->turn, 4->strand */
 void make_sec(double **x, int len, int *sec)
 {
     int j1, j2, j3, j4, j5;
@@ -792,6 +793,130 @@ void make_sec(double **x, int len, int *sec)
     } 
 }
 
+/* a c d b: a paired to b, c paired to d */
+bool overlap(const int a1,const int b1,const int c1,const int d1,
+             const int a2,const int b2,const int c2,const int d2)
+{
+    return (a2>=a1&&a2<=c1)||(c2>=a1&&c2<=c1)||
+           (d2>=a1&&d2<=c1)||(b2>=a1&&b2<=c1)||
+           (a2>=d1&&a2<=b1)||(c2>=d1&&c2<=b1)||
+           (d2>=d1&&d2<=b1)||(b2>=d1&&b2<=b1);
+}
+
+/* find base pairing stacks in RNA*/
+void sec_str(int len,char *seq, const vector<vector<bool> >&bp, 
+    int a, int b,int &c, int &d)
+{
+    int i,j;
+    
+    for (i=0;i<len;i++)
+    {
+        if (a+i<len-3 && b-i>0)
+        {
+            if (a+i<b-i && bp[a+i][b-i]) continue;
+            break;
+        }
+    }
+    c=a+i-1;d=b-i+1;
+}
+
+/* secondary structure assignment for RNA:
+ * 1->unpair, 2->paired with upstream, 3->paired with downstream, 
+ * 4->paired with both upstream and downstream */
+void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
+{
+    int ii,jj,i,j;
+
+    float lb=12.5; // lower bound for " C3'"
+    float ub=15.5; // upper bound for " C3'"
+    if     (atom_opt==" C4'") {lb=14;ub=16;}
+    else if(atom_opt==" O5'") {lb=13;ub=13;}
+    else if(atom_opt==" C5'") {lb=16;ub=18;}
+    else if(atom_opt==" P  ") {lb=16.5;ub=18;}
+    else if(atom_opt==" O3'") {lb=15.5;ub=17;}
+
+    float dis;
+    vector<bool> bp_tmp(len,false);
+    vector<vector<bool> > bp(len,bp_tmp);
+    bp_tmp.clear();
+    for (i=0; i<len; i++)
+    {
+        sec[i]=1;
+        for (j=i+1; j<len; j++)
+        {
+            dis=sqrt(dist(x[i], x[j]));
+            bp[j][i]=bp[i][j]=dis>lb && dis<ub && (
+                (seq[i]=='u' && seq[j]=='a')||
+                (seq[i]=='a' && seq[j]=='u')||
+                (seq[i]=='t' && seq[j]=='a')||
+                (seq[i]=='a' && seq[j]=='t')||
+                (seq[i]=='g' && seq[j]=='u')||
+                (seq[i]=='u' && seq[j]=='g')||
+                (seq[i]=='g' && seq[j]=='c')||
+                (seq[i]=='c' && seq[j]=='g'));
+        }
+    }
+    
+    // From 5' to 3': A0 C0 D0 B0: A0 paired to B0, C0 paired to D0
+    vector<int> A0,B0,C0,D0;
+    for (i=0; i<len-2; i++)
+    {
+        for (j=i+3; j<len; j++)
+        {
+            if (!bp[i][j]) continue;
+            if (i>0 && j+1<len && bp[i-1][j+1]) continue;
+            if (!bp[i+1][j-1]) continue;
+            sec_str(len,seq, bp, i,j,ii,jj);
+            A0.push_back(i);
+            B0.push_back(j);
+            C0.push_back(ii);
+            D0.push_back(jj);
+        }
+    }
+    
+    int sign;
+    for (i=0;i<A0.size();i++)
+    {
+        /*
+        sign=0;
+        if(C0[i]-A0[i]<=1)
+        {
+            for(j=0;j<A0.size();j++)
+            {
+                if(i==j) continue;
+
+                if((A0[j]>=A0[i]&&A0[j]<=C0[i])||
+                   (C0[j]>=A0[i]&&C0[j]<=C0[i])||
+                   (D0[j]>=A0[i]&&D0[j]<=C0[i])||
+                   (B0[j]>=A0[i]&&B0[j]<=C0[i])||
+                   (A0[j]>=D0[i]&&A0[j]<=B0[i])||
+                   (C0[j]>=D0[i]&&C0[j]<=B0[i])||
+                   (D0[j]>=D0[i]&&D0[j]<=B0[i])||
+                   (B0[j]>=D0[i]&&B0[j]<=B0[i]))
+                {
+                    sign=-1;
+                    break;
+                }
+            }
+        }
+        if(sign!=0) continue;
+        */
+
+        for (j=0;;j++)
+        {
+            if(A0[i]+j>C0[i]) break;
+            sec[A0[i]+j]=2;
+            sec[D0[i]+j]=3;
+        }
+    }
+
+    /* clean up */
+    A0.clear();
+    B0.clear();
+    C0.clear();
+    D0.clear();
+    bp.clear();
+}
 
 //get initial alignment from secondary structure alignment
 //input: x, y, xlen, ylen
@@ -1422,16 +1547,26 @@ void output_results(
 double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
     double **xt, double **x, double **y, int xlen, int ylen, int invmap[],
     int& L_ali, double& RMSD, double D0_MIN, double Lnorm, double d0,
-    double d0_search, double score_d8, double t[3], double u[3][3])
+    double d0_search, double score_d8, double t[3], double u[3][3],
+    const int mol_type)
 {
     D0_MIN = 0.5;
     Lnorm = ylen;
-    if (Lnorm > 21)
-        d0 = (1.24*pow((Lnorm*1.0 - 15), 1.0 / 3) - 1.8);
+    if (mol_type>0) // RNA
+    {
+        if     (Lnorm<=11) d0=0.3; 
+        else if(Lnorm>11 && Lnorm<=15) d0=0.4;
+        else if(Lnorm>15 && Lnorm<=19) d0=0.5;
+        else if(Lnorm>19 && Lnorm<=23) d0=0.6;
+        else if(Lnorm>23 && Lnorm<30)  d0=0.7;
+        else d0=(0.6*pow((Lnorm*1.0-0.5), 1.0/2)-2.5);
+    }
     else
-        d0 = D0_MIN;
-    if (d0 < D0_MIN)
-        d0 = D0_MIN;
+    {
+        if (Lnorm > 21) d0=(1.24*pow((Lnorm*1.0-15), 1.0/3) -1.8);
+        else d0 = D0_MIN;
+        if (d0 < D0_MIN) d0 = D0_MIN;
+    }
     double d0_input = d0;// Scaled by seq_min
 
     double tmscore;// collected alined residues from invmap
@@ -1494,7 +1629,7 @@ int TMalign_main(
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale,
     const bool i_opt, const bool I_opt, const bool a_opt,
-    const bool u_opt, const bool d_opt, const bool fast_opt)
+    const bool u_opt, const bool d_opt, const bool fast_opt, const int mol_type)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -1573,7 +1708,7 @@ int TMalign_main(
         double prevd0 = d0;
         TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
             invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0, d0_search, score_d8,
-            t, u);
+            t, u, mol_type);
         D0_MIN = prevD0_MIN;
         Lnorm = prevLnorm;
         d0 = prevd0;
@@ -1750,7 +1885,7 @@ int TMalign_main(
             double prevd0 = d0;
             TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya,
                 xlen, ylen, invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0,
-                d0_search, score_d8, t, u);
+                d0_search, score_d8, t, u, mol_type);
             D0_MIN = prevD0_MIN;
             Lnorm = prevLnorm;
             d0 = prevd0;
@@ -1867,7 +2002,7 @@ int TMalign_main(
 
     //normalized by length of structure A
     parameter_set4final(Lnorm_0, D0_MIN, Lnorm,
-        score_d8, d0, d0_search, dcu0);
+        score_d8, d0, d0_search, dcu0, mol_type);
     d0A=d0;
     d0_0=d0A;
     local_d0_search = d0_search;
@@ -1877,7 +2012,7 @@ int TMalign_main(
 
     //normalized by length of structure B
     parameter_set4final(xlen+0.0, D0_MIN, Lnorm,
-        score_d8, d0, d0_search, dcu0);
+        score_d8, d0, d0_search, dcu0, mol_type);
     d0B=d0;
     local_d0_search = d0_search;
     TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
@@ -1889,7 +2024,7 @@ int TMalign_main(
         //normalized by average length of structures A, B
         Lnorm_0=(xlen+ylen)*0.5;
         parameter_set4final(Lnorm_0, D0_MIN, Lnorm,
-            score_d8, d0, d0_search, dcu0);
+            score_d8, d0, d0_search, dcu0, mol_type);
         d0a=d0;
         d0_0=d0a;
         local_d0_search = d0_search;
@@ -1903,7 +2038,7 @@ int TMalign_main(
     {
         //normalized by user assigned length
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
-            score_d8, d0, d0_search, dcu0);
+            score_d8, d0, d0_search, dcu0, mol_type);
         d0u=d0;
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;

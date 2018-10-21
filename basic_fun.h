@@ -145,7 +145,7 @@ void get_xyz(string line, double *x, double *y, double *z, char *resname, int *n
 }
 
 int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
-    vector<string> &chainID_list, vector<string> &resi_vec,
+    vector<string> &chainID_list, vector<string> &resi_vec, vector<int> &mol_vec,
     const int byresi_opt, const int ter_opt=3, const int infmt_opt=0,
     const string atom_opt="auto", const int split_opt=0)
 {
@@ -224,6 +224,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                             chainID_list.push_back(i8_stream.str());
                         }
                         PDB_lines.push_back(tmp_str_vec);
+                        mol_vec.push_back(0);
                     }
                     else if (ter_opt>=2 && chainID!=line[21]) break;
                     if (split_opt==2 && chainID!=line[21])
@@ -243,6 +244,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                         }
                         chainID_list.push_back(i8_stream.str());
                         PDB_lines.push_back(tmp_str_vec);
+                        mol_vec.push_back(0);
                     }
 
                     if (resi==line.substr(22,5))
@@ -257,6 +259,8 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                     line=line.substr(0,22)+i8_stream.str()+line.substr(26,29);
 
                     PDB_lines.back().push_back(line);
+                    if (line[17]==' ' && (line[18]=='D'||line[18]==' ')) mol_vec.back()++;
+                    else mol_vec.back()--;
                     i++;
                 }
             }
@@ -278,6 +282,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             i8_stream << ':' << model_idx;
             chainID_list.push_back(i8_stream.str());
             PDB_lines.push_back(tmp_str_vec);
+            mol_vec.push_back(0);
             for (i=0;i<L;i++)
             {
                 if (compress_type) fin_gz>>x>>y>>z;
@@ -311,6 +316,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             if (!(compress_type?fin_gz.good():fin.good())) break;
             chainID_list.push_back(':'+line.substr(0,i));
             PDB_lines.push_back(tmp_str_vec);
+            mol_vec.push_back(0);
             for (i=0;i<L;i++)
             {
                 if (compress_type) getline(fin_gz, line);
@@ -323,6 +329,8 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                 if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
                 if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
                 PDB_lines.back().push_back(line);
+                if (line[0]>='a' && line[0]<='z') mol_vec.back()++; // RNA
+                else mol_vec.back()--;
             }
         }
     }

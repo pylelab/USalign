@@ -23,9 +23,34 @@ void parameter_set4search(const int xlen, const int ylen,
     score_d8=1.5*pow(Lnorm*1.0, 0.3)+3.5; //remove pairs with dis>d8 during search & final
 }
 
-void parameter_set4final(const double len, double &D0_MIN, double &Lnorm,
+void parameter_set4final_C3prime(const double len, double &D0_MIN, double &Lnorm,
     double &score_d8, double &d0, double &d0_search, double &dcu0)
 {
+    D0_MIN=0.3; 
+ 
+    Lnorm=len;            //normaliz TMscore by this in searching
+    if(Lnorm<=11) d0=0.3;
+    else if(Lnorm>11&&Lnorm<=15) d0=0.4;
+    else if(Lnorm>15&&Lnorm<=19) d0=0.5;
+    else if(Lnorm>19&&Lnorm<=23) d0=0.6;
+    else if(Lnorm>23&&Lnorm<30)  d0=0.7;
+    else d0=(0.6*pow((Lnorm*1.0-0.5), 1.0/2)-2.5);
+
+    d0_search=d0;
+    if (d0_search>8)   d0_search=8;
+    if (d0_search<4.5) d0_search=4.5;
+}
+
+void parameter_set4final(const double len, double &D0_MIN, double &Lnorm,
+    double &score_d8, double &d0, double &d0_search, double &dcu0,
+    const int mol_type)
+{
+    if (mol_type>0) // RNA
+    {
+        parameter_set4final_C3prime(len, D0_MIN, Lnorm,
+            score_d8, d0, d0_search, dcu0);
+        return;
+    }
     D0_MIN=0.5; 
  
     Lnorm=len;            //normaliz TMscore by this in searching

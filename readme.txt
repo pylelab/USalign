@@ -1,9 +1,9 @@
 ===============================================================================
    This is a re-implementation of TM-align algorithm in C++. This program was
-   is written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong
-   and Chengxin Zhang at the Yang Zhang lab, Department of Computational
-   Medicine and Bioinformatics, University of Michigan, 100 Washtenaw Avenue,
-   Ann Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
+   written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong and
+   Chengxin Zhang at the Yang Zhang lab, Department of Computational Medicine
+   and Bioinformatics, University of Michigan, 100 Washtenaw Avenue, Ann
+   Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
