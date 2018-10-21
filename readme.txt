@@ -1,9 +1,9 @@
 ===============================================================================
-   This is a re-implementation of TM-align algorithm in C/C++. The code was 
-   written by Jianyi Yang and later updated by Jianjie Wu at The Yang Zhang 
-   lab, Department of Computational Medicine and Bioinformatics, University of 
-   Michigan, 100 Washtenaw Avenue, Ann Arbor, MI 48109-2218. Please report bugs 
-   and questions to zhng@umich.edu
+   This is a re-implementation of TM-align algorithm in C++. This program was
+   is written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong
+   and Chengxin Zhang at the Yang Zhang lab, Department of Computational
+   Medicine and Bioinformatics, University of Michigan, 100 Washtenaw Avenue,
+   Ann Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
@@ -37,12 +37,17 @@
    2018/08/14: Added the -split option
    2018/08/16: Added the -infmt1, -infmt2 options.
                TMalign can now read .gz and .bz2 compressed files.
+   2018/10/20: Chengxin Zhang and Sha Gong updated the RNA alignment part of
+               the program. Changes include:
+              (1) new d0 calculation for RNA.
+              (2) secondary structure assignment for RNA.
+              (3) automatic detection of molecule type (protein vs RNA).
 ===============================================================================
 
 =========================
  How to install TM-align
 =========================
-to compile the program in your Linux computer, simply enter
+To compile the program in your Linux computer, simply enter
 
  make
 
@@ -50,25 +55,15 @@ or
 
  g++ -static -O3 -ffast-math -lm -o TMalign TMalign.cpp
 
+The '-static' flag should be removed on Mac OS, which does not support
+building static executables.
+
 =====================
  How to use TM-align
 =====================
-you can run the program without arguments to obtain a brief instruction
+You can run the program without arguments to obtain a brief instruction
 
  ./TMalign structure1.pdb structure2.pdb
-
-====================
- About this program
-====================
-   This program is written by Jianyi Yang at
-   Yang Zhang lab
-   And it is updated by Jianjie Wu at
-   Yang Zhang lab
-   Department of Computational Medicine and Bioinformatics 
-   University of Michigan 
-   100 Washtenaw Avenue, Ann Arbor, MI 48109-2218 
-           
-   Please report bugs and questions to zhng@umich.edu
 
 ===================
  Fortran version
@@ -76,8 +71,9 @@ you can run the program without arguments to obtain a brief instruction
 You can download the fortran version of TM-align from
 https://zhanglab.ccmb.med.umich.edu/TM-align/
 
-Note that this C++ version of TM-align implemented several features not
-available in the fortran version. A full list of these features can be
-explored by TMalign -h.
+This C++ version of TM-align implemented several features not available in the
+fortran version, including RNA alignment and batch alignment of multiple 
+structures. A full list of available options can be explored by:
+  ./TMalign -h
 
-08/16/2018
+10/20/2018
