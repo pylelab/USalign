@@ -9,5 +9,6 @@ TMalign
 TMalignc
 pdb2xyz
 pdb2fasta
+pdb2ss
 xyz_sfetch
 se
