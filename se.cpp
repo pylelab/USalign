@@ -417,6 +417,7 @@ int main(int argc, char *argv[])
                     PDB_lines2.clear();
                     resi_vec2.clear();
                     chainID_list2.clear();
+                    mol_vec2.clear();
                 }
             } // j
             DeleteArray(&xa, xlen);
@@ -427,6 +428,7 @@ int main(int argc, char *argv[])
         PDB_lines1.clear();
         resi_vec1.clear();
         chainID_list1.clear();
+        mol_vec1.clear();
     } // i
     if (chain2_list.size()==1)
     {
@@ -436,6 +438,7 @@ int main(int argc, char *argv[])
         PDB_lines2.clear();
         resi_vec2.clear();
         chainID_list2.clear();
+        mol_vec2.clear();
     }
     chain1_list.clear();
     chain2_list.clear();

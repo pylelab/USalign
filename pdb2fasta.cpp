@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
         xname.clear();
         PDB_lines.clear();
         resi_vec.clear();
+        mol_vec.clear();
     } // i
     chain_list.clear();
     return 0;
