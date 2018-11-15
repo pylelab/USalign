@@ -1,21 +1,3 @@
-/*
-=============================================================
-   Implementation of TM-align in C/C++   
-
-   This program is written by Jianyi Yang at
-   Yang Zhang lab
-   And it is updated by Jianjie Wu at
-   Yang Zhang lab
-   Department of Computational Medicine and Bioinformatics 
-   University of Michigan 
-   100 Washtenaw Avenue, Ann Arbor, MI 48109-2218 
-           
-   Please report bugs and questions to zhng@umich.edu
-=============================================================
-*/
-
-
-
 /**************************************************************************
 Implemetation of Kabsch algoritm for finding the best rotation matrix
 ---------------------------------------------------------------------------

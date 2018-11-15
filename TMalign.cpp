@@ -1,43 +1,3 @@
-/*
-===============================================================================
-   This is a re-implementation of TM-align algorithm in C++. This program was
-   written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong and
-   Chengxin Zhang at the Yang Zhang lab, Department of Computational Medicine
-   and Bioinformatics, University of Michigan, 100 Washtenaw Avenue, Ann
-   Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
-
-   DISCLAIMER:
-     Permission to use, copy, modify, and distribute this program for
-     any purpose, with or without fee, is hereby granted, provided that
-     the notices on the head, the reference information, and this
-     copyright notice appear in all copies or substantial portions of
-     the Software. It is provided "as is" without express or implied
-     warranty.
-   *************** updating history ********************************
-   2012/01/24: A C/C++ code of TM-align was constructed by Jianyi Yang
-   2016/05/21: Several updates of this program were made by Jianjie Wu, including
-              (1) fixed several compiling bugs
-              (2) made I/O of C/C++ version consistent with the Fortran version
-              (3) added outputs including full-atom and ligand structures
-              (4) added options of '-i', '-I' and '-m'
-   2016/05/25: Fixed a bug on PDB file reading
-   2018/06/04: Fixed a bug in PDB file with negative residue number. Added
-               options -fast, -dir1, -dir2, -suffix, -atom, -ter, -outfmt.
-               Re-write the file reading function to reduce the number of
-               times a PDB file need to be read.
-   2018/07/27: Added the -byresi option for TM-score superposition without
-               re-alignment as in TMscore and TMscore -c
-   2018/08/07: Added the -dir option
-   2018/08/14: Added the -split option
-   2018/08/16: Added the -infmt1, -infmt2 options.
-               TMalign can now read .gz and .bz2 compressed files.
-   2018/10/20: Chengxin Zhang and Sha Gong updated the RNA alignment part of
-               the program. Changes include:
-              (1) new d0 calculation for RNA.
-              (2) secondary structure assignment for RNA.
-              (3) automatic detection of molecule type (protein vs RNA).
-===============================================================================
-*/
 #include "TMalign.h"
 
 using namespace std;
@@ -46,11 +6,11 @@ void print_version()
 {
     cout << 
 "\n"
-" *****************************************************************************\n"
-" * TM-align (Version 20181020): protein and RNA structural alignment         *\n"
-" * Reference: Y Zhang and J Skolnick, Nucl Acids Res 33, 2302-9 (2005)       *\n"
-" * Please email your comments and suggestions to Yang Zhang (zhng@umich.edu) *\n"
-" *****************************************************************************"
+" ************************************************************************\n"
+" * TM-align (Version 201811150): protein and RNA structural alignment   *\n"
+" * Reference: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)     *\n"
+" * Please email your comments and suggestions to yangzhanglab@umich.edu *\n"
+" ************************************************************************"
     << endl;
 }
 
@@ -558,8 +518,10 @@ int main(int argc, char *argv[])
                     PDB_lines2.clear();
                     resi_vec2.clear();
                     chainID_list2.clear();
+                    mol_vec2.clear();
                 }
             } // j
+            PDB_lines1[chain_i].clear();
             DeleteArray(&xa, xlen);
             delete [] seqx;
             delete [] secx;
@@ -569,6 +531,7 @@ int main(int argc, char *argv[])
         PDB_lines1.clear();
         resi_vec1.clear();
         chainID_list1.clear();
+        mol_vec1.clear();
     } // i
     if (chain2_list.size()==1)
     {
@@ -578,6 +541,7 @@ int main(int argc, char *argv[])
         PDB_lines2.clear();
         resi_vec2.clear();
         chainID_list2.clear();
+        mol_vec2.clear();
     }
     chain1_list.clear();
     chain2_list.clear();

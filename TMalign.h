@@ -1,19 +1,3 @@
-/*
-=============================================================
-   Implementation of TM-align in C/C++   
-
-   This program is written by Jianyi Yang at
-   Yang Zhang lab
-   And it is updated by Jianjie Wu at
-   Yang Zhang lab
-   Department of Computational Medicine and Bioinformatics 
-   University of Michigan 
-   100 Washtenaw Avenue, Ann Arbor, MI 48109-2218 
-           
-   Please report bugs and questions to zhng@umich.edu
-=============================================================
-*/
-
 #include "param_set.h"
 #include "NW.h"
 #include "Kabsch.h"
@@ -821,19 +805,18 @@ void sec_str(int len,char *seq, const vector<vector<bool> >&bp,
 }
 
 /* secondary structure assignment for RNA:
- * 1->unpair, 2->paired with upstream, 3->paired with downstream, 
- * 4->paired with both upstream and downstream */
+ * 1->unpair, 2->paired with upstream, 3->paired with downstream */
 void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
 {
     int ii,jj,i,j;
 
     float lb=12.5; // lower bound for " C3'"
-    float ub=15.5; // upper bound for " C3'"
-    if     (atom_opt==" C4'") {lb=14;ub=16;}
-    else if(atom_opt==" O5'") {lb=13;ub=13;}
-    else if(atom_opt==" C5'") {lb=16;ub=18;}
-    else if(atom_opt==" P  ") {lb=16.5;ub=18;}
-    else if(atom_opt==" O3'") {lb=15.5;ub=17;}
+    float ub=15.0; // upper bound for " C3'"
+    if     (atom_opt==" C4'") {lb=14.0;ub=16.0;}
+    else if(atom_opt==" C5'") {lb=16.0;ub=18.0;}
+    else if(atom_opt==" O3'") {lb=13.5;ub=16.5;}
+    else if(atom_opt==" O5'") {lb=15.5;ub=18.5;}
+    else if(atom_opt==" P  ") {lb=16.5;ub=21.0;}
 
     float dis;
     vector<bool> bp_tmp(len,false);
@@ -844,16 +827,14 @@ void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
         sec[i]=1;
         for (j=i+1; j<len; j++)
         {
-            dis=sqrt(dist(x[i], x[j]));
-            bp[j][i]=bp[i][j]=dis>lb && dis<ub && (
-                (seq[i]=='u' && seq[j]=='a')||
-                (seq[i]=='a' && seq[j]=='u')||
-                (seq[i]=='t' && seq[j]=='a')||
-                (seq[i]=='a' && seq[j]=='t')||
-                (seq[i]=='g' && seq[j]=='u')||
-                (seq[i]=='u' && seq[j]=='g')||
-                (seq[i]=='g' && seq[j]=='c')||
-                (seq[i]=='c' && seq[j]=='g'));
+            if (((seq[i]=='u'||seq[i]=='t')&&(seq[j]=='a'             ))||
+                ((seq[i]=='a'             )&&(seq[j]=='u'||seq[j]=='t'))||
+                ((seq[i]=='g'             )&&(seq[j]=='c'||seq[j]=='u'))||
+                ((seq[i]=='c'||seq[i]=='u')&&(seq[j]=='g'             )))
+            {
+                dis=sqrt(dist(x[i], x[j]));
+                bp[j][i]=bp[i][j]=(dis>lb && dis<ub);
+            }
         }
     }
     

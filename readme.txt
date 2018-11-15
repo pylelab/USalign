@@ -3,7 +3,10 @@
    written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong and
    Chengxin Zhang at the Yang Zhang lab, Department of Computational Medicine
    and Bioinformatics, University of Michigan, 100 Washtenaw Avenue, Ann
-   Arbor, MI 48109-2218. Please report issues to zhng@umich.edu
+   Arbor, MI 48109-2218. Please report issues to yangzhanglab@umich.edu
+
+   Reference to cite:
+   Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
@@ -76,4 +79,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-10/20/2018
+11/15/2018
