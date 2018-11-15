@@ -1,9 +1,11 @@
 ===============================================================================
-   This is a re-implementation of TM-align algorithm in C++. This program was
-   written by (in chronological order) Jianyi Yang, Jianjie Wu, Sha Gong and
-   Chengxin Zhang at the Yang Zhang lab, Department of Computational Medicine
-   and Bioinformatics, University of Michigan, 100 Washtenaw Avenue, Ann
-   Arbor, MI 48109-2218. Please report issues to yangzhanglab@umich.edu
+   TM-align: protein and RNA structure alignment by TM-score superposition.
+
+   This program was written by (in chronological order)
+   Jianyi Yang, Jianjie Wu, Sha Gong and Chengxin Zhang
+   at Yang Zhang lab, Department of Computational Medicine and Bioinformatics,
+   University of Michigan, 100 Washtenaw Ave, Ann Arbor, MI 48109-2218.
+   Please report issues to yangzhanglab@umich.edu
 
    Reference to cite:
    Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
