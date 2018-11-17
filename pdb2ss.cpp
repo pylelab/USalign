@@ -107,6 +107,10 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
         PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+    else if (mol_opt=="protein" && atom_opt=="auto")
+        atom_opt=" CA ";
+    else if (mol_opt=="RNA" && atom_opt=="auto")
+        atom_opt=" C3'";
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");
     else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)
@@ -146,7 +150,6 @@ int main(int argc, char *argv[])
     int    xchainnum;                 // number of chains in a PDB file
     char   *seqx;                     // for the protein sequence 
     int    *secx;                     // for the secondary structure 
-    int    *xresno;                   // residue number
     double **xa;                       // for input vectors xa[0...xlen-1][0..2] and
     vector<string> resi_vec;          // residue index for chain
     string sequence;                  // secondary structure sequence
@@ -177,8 +180,7 @@ int main(int argc, char *argv[])
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
             secx = new int[xlen];
-            xresno = new int[xlen];
-            xlen = read_PDB(PDB_lines[chain_i], xa, seqx, xresno);
+            xlen = read_PDB(PDB_lines[chain_i], xa, seqx);
             if (mol_vec[chain_i]>0) // RNA
             {
                 make_sec(seqx,xa, xlen, secx,atom_opt);
@@ -201,7 +203,6 @@ int main(int argc, char *argv[])
             DeleteArray(&xa, xlen);
             delete [] seqx;
             delete [] secx;
-            delete [] xresno;
         } // chain_i
         xname.clear();
         PDB_lines.clear();

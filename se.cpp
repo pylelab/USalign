@@ -237,6 +237,10 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
         PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+    else if (mol_opt=="protein" && atom_opt=="auto")
+        atom_opt=" CA ";
+    else if (mol_opt=="RNA" && atom_opt=="auto")
+        atom_opt=" C3'";
     if (u_opt && Lnorm_ass<=0)
         PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
     if (d_opt && d0_scale<=0)
@@ -288,7 +292,6 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    int    *xresno, *yresno;   // residue number for fragment gapless threading
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -324,8 +327,7 @@ int main(int argc, char *argv[])
             }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
-            xresno = new int[xlen];
-            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
+            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx);
 
             for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -356,8 +358,7 @@ int main(int argc, char *argv[])
                     }
                     NewArray(&ya, ylen, 3);
                     seqy = new char[ylen + 1];
-                    yresno = new int[ylen];
-                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
+                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy);
 
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -407,7 +408,6 @@ int main(int argc, char *argv[])
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
-                    delete [] yresno;
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -422,7 +422,6 @@ int main(int argc, char *argv[])
             } // j
             DeleteArray(&xa, xlen);
             delete [] seqx;
-            delete [] xresno;
         } // chain_i
         xname.clear();
         PDB_lines1.clear();

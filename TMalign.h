@@ -1085,14 +1085,13 @@ void get_initial_ssplus(double **r1, double **r2, double **score, bool **path,
 }
 
 
-void find_max_frag(double **x, const int *resno, int len, int *start_max,
+void find_max_frag(double **x, int len, int *start_max,
     int *end_max, double dcu0, const bool fast_opt)
 {
     int r_min, fra_min=4;           //minimum fragment for search
     if (fast_opt) fra_min=8;
-    double d;
     int start;
-    int Lfr_max=0, flag;
+    int Lfr_max=0;
 
     r_min= (int) (len*1.0/3.0); //minimum fragment, in case too small protein
     if(r_min > fra_min) r_min=fra_min;
@@ -1107,19 +1106,8 @@ void find_max_frag(double **x, const int *resno, int len, int *start_max,
         int j=1;    //number of residues at nf-fragment
         start=0;
         for(int i=1; i<len; i++)
-        {            
-            d = dist(x[i-1], x[i]);
-            flag=0;
-            if(dcu_cut>dcu0_cut)
-            {
-                if(d<dcu_cut) flag=1;
-            }
-            else if(resno[i] == (resno[i-1]+1)) //necessary??
-            {
-                if(d<dcu_cut) flag=1;
-            }
-
-            if(flag==1)
+        {
+            if(dist(x[i-1], x[i]) < dcu_cut)
             {
                 j++;
 
@@ -1165,7 +1153,7 @@ void find_max_frag(double **x, const int *resno, int len, int *start_max,
 //the jth element in y is aligned to a gap in x if i==-1
 double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
     double **x, double **y, int xlen, int ylen, 
-    const int *xresno, const int *yresno, int *y2x, double d0, double d0_search,
+    int *y2x, double d0, double d0_search,
     double dcu0, const bool fast_opt, double t[3], double u[3][3])
 {
     int fra_min=4;           //minimum fragment for search
@@ -1174,8 +1162,8 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
 
     int xstart=0, ystart=0, xend=0, yend=0;
 
-    find_max_frag(x, xresno, xlen, &xstart, &xend, dcu0, fast_opt);
-    find_max_frag(y, yresno, ylen, &ystart, &yend, dcu0, fast_opt);
+    find_max_frag(x, xlen, &xstart, &xend, dcu0, fast_opt);
+    find_max_frag(y, ylen, &ystart, &yend, dcu0, fast_opt);
 
 
     int Lx = xend-xstart+1;
@@ -1596,8 +1584,7 @@ double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
 }
 
 /* entry function for TMalign */
-int TMalign_main(
-    double **xa, double **ya, const int  *xresno, const int *yresno,
+int TMalign_main(double **xa, double **ya,
     const char *seqx, const char *seqy, const int *secx, const int *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -1812,7 +1799,7 @@ int TMalign_main(
         /*    get initial alignment based on fragment gapless threading    */
         /*******************************************************************/
         //=initial4 in original TM-align
-        get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen, xresno, yresno,
+        get_initial_fgt(r1, r2, xtm, ytm, xa, ya, xlen, ylen,
             invmap, d0, d0_search, dcu0, fast_opt, t, u);
         TM = detailed_search(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen, invmap,
             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,

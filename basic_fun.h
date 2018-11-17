@@ -76,7 +76,7 @@ string AAmap(char A)
     return "UNK";
 }
 
-char AAmap(string AA)
+char AAmap(const string &AA)
 {
     if (AA.compare("ALA")==0) return 'A';
     if (AA.compare("ASX")==0) return 'B';
@@ -106,26 +106,6 @@ char AAmap(string AA)
     if (AA.compare(0,2," D")==0) return tolower(AA[2]);
     if (AA.compare(0,2,"  ")==0) return tolower(AA[2]);
     return 'X';
-}
-
-void get_xyz(string line, double *x, double *y, double *z, char *resname, int *no)
-{
-    char cstr[50];    
-    
-    strcpy(cstr, (line.substr(30, 8)).c_str());
-    sscanf(cstr, "%lf", x);
-    
-    strcpy(cstr, (line.substr(38, 8)).c_str());
-    sscanf(cstr, "%lf", y);
-    
-    strcpy(cstr, (line.substr(46, 8)).c_str());
-    sscanf(cstr, "%lf", z);
-    
-    strcpy(cstr, (line.substr(17, 3)).c_str());
-    *resname = AAmap(cstr);
-
-    strcpy(cstr, (line.substr(22, 4)).c_str());
-    sscanf(cstr, "%d", no);
 }
 
 int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
@@ -236,11 +216,6 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                     resi=line.substr(22,5); // including insertion code
                     if (byresi_opt==1) resi_vec.push_back(resi);
                     if (byresi_opt>=2) resi_vec.push_back(resi+line[21]);
-
-                    /* change residue index in line */
-                    stringstream i8_stream;
-                    i8_stream << setw(4) << i+1;
-                    line=line.substr(0,22)+i8_stream.str()+line.substr(26,29);
 
                     PDB_lines.back().push_back(line);
                     if (line[17]==' ' && (line[18]=='D'||line[18]==' ')) mol_vec.back()++;
@@ -394,11 +369,16 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     return sequence[0].size();
 }
 
-int read_PDB(const vector<string> &PDB_lines, double **a, char *seq, int *resno)
+int read_PDB(const vector<string> &PDB_lines, double **a, char *seq)
 {
     int i;
     for (i=0;i<PDB_lines.size();i++)
-        get_xyz(PDB_lines[i], &a[i][0], &a[i][1], &a[i][2], &seq[i], &resno[i]);
+    {
+        a[i][0] = atof(PDB_lines[i].substr(30, 8).c_str());
+        a[i][1] = atof(PDB_lines[i].substr(38, 8).c_str());
+        a[i][2] = atof(PDB_lines[i].substr(46, 8).c_str());
+        seq[i]  = AAmap(PDB_lines[i].substr(17, 3));
+    }
     seq[i]='\0'; 
     return i;
 }

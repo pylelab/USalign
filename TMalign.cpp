@@ -6,11 +6,11 @@ void print_version()
 {
     cout << 
 "\n"
-" ************************************************************************\n"
-" * TM-align (Version 201811150): protein and RNA structural alignment   *\n"
-" * Reference: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)     *\n"
-" * Please email your comments and suggestions to yangzhanglab@umich.edu *\n"
-" ************************************************************************"
+" *********************************************************************\n"
+" * TM-align (Version 201811150): protein and RNA structure alignment *\n"
+" * Reference: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
+" * Please email comments and suggestions to yangzhanglab@umich.edu   *\n"
+" *********************************************************************"
     << endl;
 }
 
@@ -100,10 +100,10 @@ void print_help(bool h_opt=false)
 "\n"
 "    -d    TM-score scaled by an assigned d0, e.g. 5 Angstroms\n"
 "\n"
-"    -o    output the superposition of chain1 to TM.sup\n"
-"          $ TMalign chain1 chain2 -o TM.sup\n"
-"          To view superimposed full-atom structures:\n"
-"          $ pymol TM.sup chain2\n"
+"    -o    Output the superposition of PDB1.pdb to TM_sup.pdb\n"
+"          $ TMalign PDB1.pdb PDB2.pdb -o TM_sup.pdb\n"
+"          To view superposed full-atom structures:\n"
+"          $ pymol TM_sup.pdb PDB2.pdb\n"
 "\n"
 "    -v    print the version of TM-align\n"
 "\n"
@@ -309,6 +309,10 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
         PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+    else if (mol_opt=="protein" && atom_opt=="auto")
+        atom_opt=" CA ";
+    else if (mol_opt=="RNA" && atom_opt=="auto")
+        atom_opt=" C3'";
 
     if (i_opt && I_opt)
         PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
@@ -368,7 +372,6 @@ int main(int argc, char *argv[])
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
     int    *secx, *secy;       // for the secondary structure 
-    int    *xresno, *yresno;   // residue number for fragment gapless threading
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -408,8 +411,7 @@ int main(int argc, char *argv[])
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
             secx = new int[xlen];
-            xresno = new int[xlen];
-            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, xresno);
+            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx);
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
 
@@ -447,9 +449,8 @@ int main(int argc, char *argv[])
                     }
                     NewArray(&ya, ylen, 3);
                     seqy = new char[ylen + 1];
-                    yresno = new int[ylen];
                     secy = new int[ylen];
-                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy, yresno);
+                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy);
                     if (mol_vec2[chain_j]>0)
                          make_sec(seqy, ya, ylen, secy, atom_opt);
                     else make_sec(ya, ylen, secy);
@@ -474,7 +475,7 @@ int main(int argc, char *argv[])
 
                     /* entry function for structure alignment */
                     TMalign_main(
-                        xa, ya, xresno, yresno, seqx, seqy, secx, secy,
+                        xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                         seqM, seqxA, seqyA,
@@ -508,7 +509,6 @@ int main(int argc, char *argv[])
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
                     delete [] secy;
-                    delete [] yresno;
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -525,7 +525,6 @@ int main(int argc, char *argv[])
             DeleteArray(&xa, xlen);
             delete [] seqx;
             delete [] secx;
-            delete [] xresno;
         } // chain_i
         xname.clear();
         PDB_lines1.clear();
