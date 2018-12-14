@@ -1,9 +1,15 @@
-/*    Please note this fucntion is not a correct implementation of 
-*     the N-W dynamic programming because the score tracks back only 
-*     one layer of the matrix. This code was exploited in TM-align 
-*     because it is about 1.5 times faster than a complete N-W code
-*     and does not influence much the final structure alignment result.
-*/
+/* Partial implementation of Needleman-Wunsch (NW) dymanamic programming for
+ * global alignment. The three NWDP_TM functions below are not complete
+ * implementation of NW algorithm because gap jumping in the standard Gotoh
+ * algorithm is not considered. Since the gap opening and gap extension is
+ * the same, this is not a problem. This code was exploited in TM-align
+ * because it is about 1.5 times faster than a complete NW implementation.
+ * Nevertheless, if gap openning != gap extension shall be implemented in
+ * the future, the Gotoh algorithm must be implemented. In rare scenarios,
+ * it is also possible to have asymmetric alignment (i.e. 
+ * TMalign A.pdb B.pdb and TMalign B.pdb A.pdb have different TM_A and TM_B
+ * values) caused by the NWPD_TM implement.
+ */
 void NWDP_TM( double **score, bool **path, double **val,
     int len1, int len2, double gap_open, int j2i[])
 {
