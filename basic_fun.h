@@ -1,3 +1,4 @@
+/* File parsing and basic geometry operations */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -16,7 +17,7 @@
 #include <iomanip>
 #include <map>
 
-#include "pstream.h"
+#include "pstream.h" // For reading gzip and bz2 compressed files
 
 using namespace std;
 
@@ -108,13 +109,13 @@ char AAmap(const string &AA)
     return 'X';
 }
 
-int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
-    vector<string> &chainID_list, vector<string> &resi_vec, vector<int> &mol_vec,
-    const int byresi_opt, const int ter_opt=3, const int infmt_opt=0,
+int get_PDB_lines(const string filename,
+    vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
+    vector<int> &mol_vec, const int ter_opt=3, const int infmt_opt=0,
     const string atom_opt="auto", const int split_opt=0)
 {
     int i=0; // resi
-    string line;    
+    string line;
     char chainID=0;
     string resi="";
     bool select_atom=false;
@@ -214,8 +215,6 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
                     if (resi==line.substr(22,5))
                         cerr<<"Warning! Duplicated residue "<<resi<<endl;
                     resi=line.substr(22,5); // including insertion code
-                    if (byresi_opt==1) resi_vec.push_back(resi);
-                    if (byresi_opt>=2) resi_vec.push_back(resi+line[21]);
 
                     PDB_lines.back().push_back(line);
                     if (line[17]==' ' && (line[18]=='D'||line[18]==' ')) mol_vec.back()++;
@@ -229,6 +228,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
     {
         int L=0;
         float x,y,z;
+        stringstream i8_stream;
         while (compress_type?fin_gz.good():fin.good())
         {
             if (compress_type) fin_gz>>L>>x>>y>>z;
@@ -246,13 +246,11 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             {
                 if (compress_type) fin_gz>>x>>y>>z;
                 else               fin   >>x>>y>>z;
-                stringstream i8_stream;
                 i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  UNK  "<<setw(4)
                     <<i+1<<"    "<<setiosflags(ios::fixed)<<setprecision(3)
                     <<setw(8)<<x<<setw(8)<<y<<setw(8)<<z;
                 line=i8_stream.str();
-                if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
-                if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
+                i8_stream.str(string());
                 PDB_lines.back().push_back(line);
             }
             if (compress_type) getline(fin_gz, line);
@@ -263,6 +261,7 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
     {
         int L=0;
         char A;
+        stringstream i8_stream;
         while (compress_type?fin_gz.good():fin.good())
         {
             if (compress_type) getline(fin_gz, line);
@@ -280,13 +279,11 @@ int get_PDB_lines(const string filename, vector<vector<string> >&PDB_lines,
             {
                 if (compress_type) getline(fin_gz, line);
                 else               getline(fin, line);
-                stringstream i8_stream;
                 i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "
                     <<AAmap(line[0])<<"  "<<setw(4)<<i+1<<"    "
                     <<line.substr(2,8)<<line.substr(11,8)<<line.substr(20,8);
                 line=i8_stream.str();
-                if (byresi_opt==1) resi_vec.push_back(line.substr(22,5));
-                if (byresi_opt>=2) resi_vec.push_back(line.substr(22,5)+' ');
+                i8_stream.str(string());
                 PDB_lines.back().push_back(line);
                 if (line[0]>='a' && line[0]<='z') mol_vec.back()++; // RNA
                 else mol_vec.back()--;
@@ -369,7 +366,8 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     return sequence[0].size();
 }
 
-int read_PDB(const vector<string> &PDB_lines, double **a, char *seq)
+int read_PDB(const vector<string> &PDB_lines, double **a, char *seq,
+    vector<string> &resi_vec, const int byresi_opt)
 {
     int i;
     for (i=0;i<PDB_lines.size();i++)
@@ -378,6 +376,10 @@ int read_PDB(const vector<string> &PDB_lines, double **a, char *seq)
         a[i][1] = atof(PDB_lines[i].substr(38, 8).c_str());
         a[i][2] = atof(PDB_lines[i].substr(46, 8).c_str());
         seq[i]  = AAmap(PDB_lines[i].substr(17, 3));
+
+        if (byresi_opt>=2) resi_vec.push_back(PDB_lines[i].substr(22,5)+
+                                              PDB_lines[i][21]);
+        if (byresi_opt==1) resi_vec.push_back(PDB_lines[i].substr(22,5));
     }
     seq[i]='\0'; 
     return i;
