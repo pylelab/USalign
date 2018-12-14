@@ -1,3 +1,8 @@
+/* These functions implement d0 normalization. The d0 for final TM-score
+ * output is implemented by parameter_set4final. For both RNA alignment
+ * and protein alignment, using d0 set by parameter_set4search yields
+ * slightly better results during initial alignment-superposition iteration.
+ */
 #include <math.h>
 #include "basic_fun.h"
 
@@ -23,8 +28,8 @@ void parameter_set4search(const int xlen, const int ylen,
     score_d8=1.5*pow(Lnorm*1.0, 0.3)+3.5; //remove pairs with dis>d8 during search & final
 }
 
-void parameter_set4final_C3prime(const double len, double &D0_MIN, double &Lnorm,
-    double &score_d8, double &d0, double &d0_search, double &dcu0)
+void parameter_set4final_C3prime(const double len, double &D0_MIN,
+    double &Lnorm, double &d0, double &d0_search)
 {
     D0_MIN=0.3; 
  
@@ -42,13 +47,12 @@ void parameter_set4final_C3prime(const double len, double &D0_MIN, double &Lnorm
 }
 
 void parameter_set4final(const double len, double &D0_MIN, double &Lnorm,
-    double &score_d8, double &d0, double &d0_search, double &dcu0,
-    const int mol_type)
+    double &d0, double &d0_search, const int mol_type)
 {
     if (mol_type>0) // RNA
     {
         parameter_set4final_C3prime(len, D0_MIN, Lnorm,
-            score_d8, d0, d0_search, dcu0);
+            d0, d0_search);
         return;
     }
     D0_MIN=0.5; 
@@ -63,7 +67,7 @@ void parameter_set4final(const double len, double &D0_MIN, double &Lnorm,
 }
 
 void parameter_set4scale(const int len, const double d_s, double &Lnorm,
-    double &score_d8, double &d0, double &d0_search, double &dcu0)
+    double &d0, double &d0_search)
 {
     d0=d_s;          
     Lnorm=len;            //normaliz TMscore by this in searching
