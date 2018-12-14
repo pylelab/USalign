@@ -1,3 +1,6 @@
+/* Functions for the core TMalign algorithm, including the entry function
+ * TMalign_main */
+
 #include "param_set.h"
 #include "NW.h"
 #include "Kabsch.h"
@@ -1583,7 +1586,72 @@ double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
     return tmscore;
 }
 
-/* entry function for TMalign */
+/* copy the value of t and u into t0,u0 */
+void copy_t_u(double t[3], double u[3][3], double t0[3], double u0[3][3])
+{
+    int i,j;
+    for (i=0;i<3;i++)
+    {
+        t0[i]=t[i];
+        for (j=0;j<3;j++) u0[i][j]=u[i][j];
+    }
+}
+
+/* calculate approximate TM-score given rotation matrix */
+double approx_TM(const int xlen, const int ylen, const int a_opt,
+    double **xa, double **ya, double t[3], double u[3][3],
+    const int invmap0[], const int mol_type)
+{
+    double Lnorm_0=xlen;
+    if (a_opt==0 && ylen>xlen) Lnorm_0=ylen;       // longer
+    else if (a_opt==-1 && ylen<xlen) Lnorm_0=ylen; // shorter
+    else if (a_opt==1) Lnorm_0=(xlen+ylen)/2.;     // average
+    
+    double D0_MIN;
+    double Lnorm;
+    double d0;
+    double d0_search;
+    parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
+    double TMtmp=0;
+    double d;
+    double xtmp[3]={0,0,0};
+
+    for(int i=0,j=0; j<ylen; j++)
+    {
+        i=invmap0[j];
+        if(i>=0)//aligned
+        {
+            transform(t, u, &xa[i][0], &xtmp[0]);
+            d=sqrt(dist(&xtmp[0], &ya[j][0]));
+            TMtmp+=1/(1+(d/d0)*(d/d0));
+            //if (d <= score_d8) TMtmp+=1/(1+(d/d0)*(d/d0));
+        }
+    }
+    TMtmp/=Lnorm_0;
+    return TMtmp;
+}
+
+void clean_up_after_approx_TM(int *invmap0, int *invmap,
+    double **score, bool **path, double **val, double **xtm, double **ytm,
+    double **xt, double **r1, double **r2, const int xlen, const int minlen)
+{
+    delete [] invmap0;
+    delete [] invmap;
+    DeleteArray(&score, xlen+1);
+    DeleteArray(&path, xlen+1);
+    DeleteArray(&val, xlen+1);
+    DeleteArray(&xtm, minlen);
+    DeleteArray(&ytm, minlen);
+    DeleteArray(&xt, xlen);
+    DeleteArray(&r1, minlen);
+    DeleteArray(&r2, minlen);
+    return;
+}
+
+/* Entry function for TM-align. Return TM-score calculation status:
+ * 0   - full TM-score calculation 
+ * 1   - terminated due to exception
+ * 2-7 - pre-terminated due to low TM-score */
 int TMalign_main(double **xa, double **ya,
     const char *seqx, const char *seqy, const int *secx, const int *secy,
     double t0[3], double u0[3][3],
@@ -1596,8 +1664,9 @@ int TMalign_main(double **xa, double **ya,
     const int xlen, const int ylen,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale,
-    const bool i_opt, const bool I_opt, const bool a_opt,
-    const bool u_opt, const bool d_opt, const bool fast_opt, const int mol_type)
+    const bool i_opt, const bool I_opt, const int a_opt,
+    const bool u_opt, const bool d_opt, const bool fast_opt,
+    const int mol_type, const double TMcut=-1)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -1701,6 +1770,7 @@ int TMalign_main(double **xa, double **ya,
             t, u, simplify_step, score_sum_method, local_d0_search, Lnorm,
             score_d8, d0);
         if (TM>TMmax) TMmax = TM;
+        if (TMcut>0) copy_t_u(t, u, t0, u0);
         //run dynamic programing iteratively to find the best alignment
         TM = DP_iter( r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
              xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30, local_d0_search,
@@ -1709,8 +1779,22 @@ int TMalign_main(double **xa, double **ya,
         {
             TMmax = TM;
             for (int i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+            if (TMcut>0) copy_t_u(t, u, t0, u0);
         }
 
+        if (TMcut>0) // pre-terminate if TM-score is too low
+        {
+            double TMtmp=approx_TM(xlen, ylen, a_opt,
+                xa, ya, t0, u0, invmap0, mol_type);
+
+            if (TMtmp<0.5*TMcut)
+            {
+                TM1=TM2=TM3=TM4=TM5=TMtmp;
+                clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                    xtm, ytm, xt, r1, r2, xlen, minlen);
+                return 2;
+            }
+        }
 
         /************************************************************/
         /*    get initial alignment based on secondary structure    */
@@ -1723,6 +1807,7 @@ int TMalign_main(double **xa, double **ya,
         {
             TMmax = TM;
             for (int i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+            if (TMcut>0) copy_t_u(t, u, t0, u0);
         }
         if (TM > TMmax*0.2)
         {
@@ -1733,9 +1818,23 @@ int TMalign_main(double **xa, double **ya,
             {
                 TMmax = TM;
                 for (int i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+                if (TMcut>0) copy_t_u(t, u, t0, u0);
             }
         }
 
+        if (TMcut>0) // pre-terminate if TM-score is too low
+        {
+            double TMtmp=approx_TM(xlen, ylen, a_opt,
+                xa, ya, t0, u0, invmap0, mol_type);
+
+            if (TMtmp<0.52*TMcut)
+            {
+                TM1=TM2=TM3=TM4=TM5=TMtmp;
+                clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                    xtm, ytm, xt, r1, r2, xlen, minlen);
+                return 3;
+            }
+        }
 
         /************************************************************/
         /*    get initial alignment based on local superposition    */
@@ -1751,6 +1850,7 @@ int TMalign_main(double **xa, double **ya,
             {
                 TMmax = TM;
                 for (int i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+                if (TMcut>0) copy_t_u(t, u, t0, u0);
             }
             if (TM > TMmax*ddcc)
             {
@@ -1761,12 +1861,26 @@ int TMalign_main(double **xa, double **ya,
                 {
                     TMmax = TM;
                     for (int i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+                    if (TMcut>0) copy_t_u(t, u, t0, u0);
                 }
             }
         }
         else
             cerr << "\n\nWarning: initial alignment from local superposition fail!\n\n" << endl;
 
+        if (TMcut>0) // pre-terminate if TM-score is too low
+        {
+            double TMtmp=approx_TM(xlen, ylen, a_opt,
+                xa, ya, t0, u0, invmap0, mol_type);
+
+            if (TMtmp<0.54*TMcut)
+            {
+                TM1=TM2=TM3=TM4=TM5=TMtmp;
+                clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                    xtm, ytm, xt, r1, r2, xlen, minlen);
+                return 4;
+            }
+        }
 
         /********************************************************************/
         /* get initial alignment by local superposition+secondary structure */
@@ -1781,6 +1895,7 @@ int TMalign_main(double **xa, double **ya,
         {
             TMmax = TM;
             for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+            if (TMcut>0) copy_t_u(t, u, t0, u0);
         }
         if (TM > TMmax*ddcc)
         {
@@ -1791,9 +1906,23 @@ int TMalign_main(double **xa, double **ya,
             {
                 TMmax = TM;
                 for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+                if (TMcut>0) copy_t_u(t, u, t0, u0);
             }
         }
 
+        if (TMcut>0) // pre-terminate if TM-score is too low
+        {
+            double TMtmp=approx_TM(xlen, ylen, a_opt,
+                xa, ya, t0, u0, invmap0, mol_type);
+
+            if (TMtmp<0.56*TMcut)
+            {
+                TM1=TM2=TM3=TM4=TM5=TMtmp;
+                clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                    xtm, ytm, xt, r1, r2, xlen, minlen);
+                return 5;
+            }
+        }
 
         /*******************************************************************/
         /*    get initial alignment based on fragment gapless threading    */
@@ -1808,6 +1937,7 @@ int TMalign_main(double **xa, double **ya,
         {
             TMmax = TM;
             for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+            if (TMcut>0) copy_t_u(t, u, t0, u0);
         }
         if (TM > TMmax*ddcc)
         {
@@ -1818,9 +1948,23 @@ int TMalign_main(double **xa, double **ya,
             {
                 TMmax = TM;
                 for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+                if (TMcut>0) copy_t_u(t, u, t0, u0);
             }
         }
 
+        if (TMcut>0) // pre-terminate if TM-score is too low
+        {
+            double TMtmp=approx_TM(xlen, ylen, a_opt,
+                xa, ya, t0, u0, invmap0, mol_type);
+
+            if (TMtmp<0.58*TMcut)
+            {
+                TM1=TM2=TM3=TM4=TM5=TMtmp;
+                clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                    xtm, ytm, xt, r1, r2, xlen, minlen);
+                return 6;
+            }
+        }
 
         //************************************************//
         //    get initial alignment from user's input:    //
@@ -1883,7 +2027,7 @@ int TMalign_main(double **xa, double **ya,
     //*******************************************************************//
     //    The alignment will not be changed any more in the following    //
     //*******************************************************************//
-    //check if the initial alignment is generated approately
+    //check if the initial alignment is generated approriately
     bool flag=false;
     for(i=0; i<ylen; i++)
     {
@@ -1900,6 +2044,20 @@ int TMalign_main(double **xa, double **ya,
         return 1;
     }
 
+    /* last TM-score pre-termination */
+    if (TMcut>0)
+    {
+        double TMtmp=approx_TM(xlen, ylen, a_opt,
+            xa, ya, t0, u0, invmap0, mol_type);
+
+        if (TMtmp<0.6*TMcut)
+        {
+            TM1=TM2=TM3=TM4=TM5=TMtmp;
+            clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+                xtm, ytm, xt, r1, r2, xlen, minlen);
+            return 7;
+        }
+    }
 
     //********************************************************************//
     //    Detailed TMscore search engine --> prepare for final TMscore    //
@@ -1969,8 +2127,7 @@ int TMalign_main(double **xa, double **ya,
 
 
     //normalized by length of structure A
-    parameter_set4final(Lnorm_0, D0_MIN, Lnorm,
-        score_d8, d0, d0_search, dcu0, mol_type);
+    parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
     d0A=d0;
     d0_0=d0A;
     local_d0_search = d0_search;
@@ -1979,20 +2136,18 @@ int TMalign_main(double **xa, double **ya,
     TM_0 = TM1;
 
     //normalized by length of structure B
-    parameter_set4final(xlen+0.0, D0_MIN, Lnorm,
-        score_d8, d0, d0_search, dcu0, mol_type);
+    parameter_set4final(xlen+0.0, D0_MIN, Lnorm, d0, d0_search, mol_type);
     d0B=d0;
     local_d0_search = d0_search;
     TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
     double Lnorm_d0;
-    if (a_opt)
+    if (a_opt>0)
     {
         //normalized by average length of structures A, B
         Lnorm_0=(xlen+ylen)*0.5;
-        parameter_set4final(Lnorm_0, D0_MIN, Lnorm,
-            score_d8, d0, d0_search, dcu0, mol_type);
+        parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
         d0a=d0;
         d0_0=d0a;
         local_d0_search = d0_search;
@@ -2006,7 +2161,7 @@ int TMalign_main(double **xa, double **ya,
     {
         //normalized by user assigned length
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
-            score_d8, d0, d0_search, dcu0, mol_type);
+            d0, d0_search, mol_type);
         d0u=d0;
         d0_0=d0u;
         Lnorm_0=Lnorm_ass;
@@ -2019,8 +2174,7 @@ int TMalign_main(double **xa, double **ya,
     if (d_opt)
     {
         //scaled by user assigned d0
-        parameter_set4scale(ylen, d0_scale, Lnorm, 
-            score_d8, d0, d0_search, dcu0);
+        parameter_set4scale(ylen, d0_scale, Lnorm, d0, d0_search);
         d0_out=d0_scale;
         d0_0=d0_scale;
         //Lnorm_0=ylen;
@@ -2095,17 +2249,9 @@ int TMalign_main(double **xa, double **ya,
     seqM =seqM.substr(0,kk);
 
     /* free memory */
-    delete [] invmap0;
-    delete [] invmap;
+    clean_up_after_approx_TM(invmap0, invmap, score, path, val,
+        xtm, ytm, xt, r1, r2, xlen, minlen);
     delete [] m1;
     delete [] m2;
-    DeleteArray(&score, xlen+1);
-    DeleteArray(&path, xlen+1);
-    DeleteArray(&val, xlen+1);
-    DeleteArray(&xtm, minlen);
-    DeleteArray(&ytm, minlen);
-    DeleteArray(&xt, xlen);
-    DeleteArray(&r1, minlen);
-    DeleteArray(&r2, minlen);
     return 0; // zero for no exception
 }
