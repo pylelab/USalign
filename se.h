@@ -41,15 +41,15 @@ int se_main(
     parameter_set4search(xlen, ylen, D0_MIN, Lnorm,
         score_d8, d0, d0_search, dcu0); // set score_d8
     parameter_set4final(xlen, D0_MIN, Lnorm,
-        score_d8, d0B, d0_search, dcu0, mol_type); // set d0B
+        d0B, d0_search, mol_type); // set d0B
     parameter_set4final(ylen, D0_MIN, Lnorm,
-        score_d8, d0A, d0_search, dcu0, mol_type); // set d0A
+        d0A, d0_search, mol_type); // set d0A
     if (a_opt)
         parameter_set4final((xlen+ylen)*0.5, D0_MIN, Lnorm,
-            score_d8, d0a, d0_search, dcu0, mol_type); // set d0a
+            d0a, d0_search, mol_type); // set d0a
     if (u_opt)
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
-            score_d8, d0u, d0_search, dcu0, mol_type); // set d0u
+            d0u, d0_search, mol_type); // set d0u
 
     /* perform alignment */
     if (!i_opt)
