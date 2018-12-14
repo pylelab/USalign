@@ -95,6 +95,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-split 1 should be used with -ter 0");
     else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)
         PrintErrorAndQuit("-split 2 should be used with -ter 0 or 1");
+    if (split_opt<0 || split_opt>2)
+        PrintErrorAndQuit("-split can only be 0, 1 or 2");
 
     /* parse file list */
     if (dir_opt.size()==0)
@@ -136,7 +138,7 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            resi_vec, mol_vec, 0, ter_opt, infmt_opt, atom_opt, split_opt);
+            mol_vec, ter_opt, infmt_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

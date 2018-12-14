@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            resi_vec, mol_vec, 0, ter_opt, 0, atom_opt, split_opt);
+            mol_vec, ter_opt, 0, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
