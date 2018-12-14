@@ -49,9 +49,9 @@ void print_extra_help()
 "    -byresi  Whether to align two structures by residue index.\n"
 "             0: (default) do not align by residue index\n"
 "             1: (same as TMscore program) align by residue index\n"
-"             2: (same as TMscore -c, should be used with -ter 1)\n"
+"             2: (same as TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and chain ID\n"
-"             3: (similar to TMscore -c, should be used with -ter 1)\n"
+"             3: (similar to TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and order of chain\n"
 "\n"
 "    -infmt1  Input format for chain1\n"
@@ -77,11 +77,11 @@ void print_help(bool h_opt=false)
 "    -a    TM-score normalized by the average length of two structures\n"
 "          T or F, (default F)\n"
 "\n"
-"    -i    Start with an alignment specified in fasta file 'align.txt'\n"
+"    -i    (Same as -I) use alignment specified in fasta file 'align.txt'\n"
 "\n"
 "    -d    TM-score scaled by an assigned d0, e.g. 5 Angstroms\n"
 "\n"
-"    -h    print the full help message.\n"
+"    -h    Print the full help message.\n"
 "\n"
 "    (Options -u, -a, -d won't change the final structure alignment)\n"
 "\n"
@@ -109,8 +109,6 @@ int main(int argc, char *argv[])
     vector<string> sequence; // get value from alignment file
     double Lnorm_ass, d0_scale;
 
-    bool A_opt = false; // marker for whether structure A is specified
-    bool B_opt = false; // marker for whether structure B is specified
     bool h_opt = false; // print full help message
     bool i_opt = false; // flag for -i, stick to user given alignment
     bool a_opt = false; // flag for -a, normalized by average length
@@ -132,7 +130,6 @@ int main(int argc, char *argv[])
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
 
-    int nameIdx = 0;
     for(int i = 1; i < argc; i++)
     {
         if ( (!strcmp(argv[i],"-u") || 
@@ -155,9 +152,9 @@ int main(int argc, char *argv[])
         {
             h_opt = true;
         }
-        else if (!strcmp(argv[i], "-i") && i < (argc-1) )
+        else if ((!strcmp(argv[i],"-i")||!strcmp(argv[i],"-I")) && i<(argc-1))
         {
-            fname_lign = argv[i + 1]; i_opt = true; i++;
+            fname_lign = argv[i + 1];      i_opt = true; i++;
         }
         else if ( !strcmp(argv[i],"-infmt1") && i < (argc-1) )
         {
@@ -207,27 +204,22 @@ int main(int argc, char *argv[])
         {
             byresi_opt=atoi(argv[i + 1]); i++;
         }
-        else
-        {
-            if (nameIdx == 0)
-            {
-                xname=argv[i]; B_opt = true;
-            }
-            else if (nameIdx == 1)
-            {
-                yname=argv[i]; A_opt = true;
-            }
-            nameIdx++;
-        }
+        else if (xname.size() == 0) xname=argv[i];
+        else if (yname.size() == 0) yname=argv[i];
+        else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
     }
 
-    if(!B_opt || (!A_opt && dir_opt.size()==0) || (A_opt && dir_opt.size()))
+    if(xname.size()==0 || (yname.size()==0 && dir_opt.size()==0) || 
+                          (yname.size()    && dir_opt.size()))
+    {
         if (h_opt) print_help(h_opt);
-
-    if (!A_opt && dir_opt.size()==0) 
-        PrintErrorAndQuit("Please provide structure A");
-    if (!B_opt) 
-        PrintErrorAndQuit("Please provide structure B");
+        if (xname.size()==0)
+            PrintErrorAndQuit("Please provide input structures");
+        else if (yname.size()==0 && dir_opt.size()==0)
+            PrintErrorAndQuit("Please provide structure B");
+        else if (yname.size() && dir_opt.size())
+            PrintErrorAndQuit("Please provide only one file name if -dir is set");
+    }
 
     if (suffix_opt.size() && dir_opt.size()+dir1_opt.size()+dir2_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir1 or -dir2 is set");
@@ -247,19 +239,21 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("Wrong value for option -d!  It should be >0");
     if (outfmt_opt>=2 && (a_opt || u_opt || d_opt))
         PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
-    if (byresi_opt)
+    if (byresi_opt!=0)
     {
         if (i_opt)
-            PrintErrorAndQuit("-byresi 1 or 2 cannot be used with -i");
+            PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
         if (byresi_opt<0 || byresi_opt>3)
             PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
-        if (split_opt)
-            PrintErrorAndQuit("-byresi >0 cannot be used with -split >0");
+        if (byresi_opt>=2 && ter_opt>=2)
+            PrintErrorAndQuit("-byresi >=2 should be used with -ter <=1");
     }
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");
     else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)
         PrintErrorAndQuit("-split 2 should be used with -ter 0 or 1");
+    if (split_opt<0 || split_opt>2)
+        PrintErrorAndQuit("-split can only be 0, 1 or 2");
 
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, false);
@@ -306,8 +300,8 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, resi_vec1,
-            mol_vec1, byresi_opt, ter_opt, infmt1_opt, atom_opt, split_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
+            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -327,7 +321,8 @@ int main(int argc, char *argv[])
             }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
-            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx);
+            xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
+                resi_vec1, byresi_opt);
 
             for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -336,8 +331,7 @@ int main(int argc, char *argv[])
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        resi_vec2, mol_vec2, byresi_opt, ter_opt,
-                        infmt2_opt, atom_opt, split_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -358,7 +352,8 @@ int main(int argc, char *argv[])
                     }
                     NewArray(&ya, ylen, 3);
                     seqy = new char[ylen + 1];
-                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy);
+                    ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
+                        resi_vec2, byresi_opt);
 
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -408,6 +403,7 @@ int main(int argc, char *argv[])
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
+                    resi_vec2.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -415,17 +411,16 @@ int main(int argc, char *argv[])
                     for (int chain_j=0;chain_j<ychainnum;chain_j++)
                         PDB_lines2[chain_j].clear();
                     PDB_lines2.clear();
-                    resi_vec2.clear();
                     chainID_list2.clear();
                     mol_vec2.clear();
                 }
             } // j
             DeleteArray(&xa, xlen);
             delete [] seqx;
+            resi_vec1.clear();
         } // chain_i
         xname.clear();
         PDB_lines1.clear();
-        resi_vec1.clear();
         chainID_list1.clear();
         mol_vec1.clear();
     } // i
