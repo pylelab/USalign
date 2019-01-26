@@ -1,4 +1,7 @@
 /* File parsing and basic geometry operations */
+#ifndef TMalign_basic_fun_h
+#define TMalign_basic_fun_h 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -22,7 +25,7 @@
 using namespace std;
 
 
-void PrintErrorAndQuit(string sErrorString)
+void PrintErrorAndQuit(const string sErrorString)
 {
     cout << sErrorString << endl;
     exit(1);
@@ -109,12 +112,36 @@ char AAmap(const string &AA)
     return 'X';
 }
 
+/* split a long string into vectors by whitespace 
+ * line          - input string
+ * line_vec      - output vector 
+ * delimiter     - delimiter */
+void split(const string &line, vector<string> &line_vec,
+    const char delimiter=' ')
+{
+    bool within_word = false;
+    for (int pos=0;pos<line.size();pos++)
+    {
+        if (line[pos]==delimiter)
+        {
+            within_word = false;
+            continue;
+        }
+        if (!within_word)
+        {
+            within_word = true;
+            line_vec.push_back("");
+        }
+        line_vec.back()+=line[pos];
+    }
+}
+
 int get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
-    vector<int> &mol_vec, const int ter_opt=3, const int infmt_opt=0,
+    vector<int> &mol_vec, const int ter_opt=3, const int infmt_opt=-1,
     const string atom_opt="auto", const int split_opt=0)
 {
-    int i=0; // resi
+    int i=0; // resi i.e. atom index
     string line;
     char chainID=0;
     string resi="";
@@ -139,12 +166,15 @@ int get_PDB_lines(const string filename,
     }
     else fin.open(filename.c_str());
 
-    if (infmt_opt==0) // PDB format
+    if (infmt_opt==0||infmt_opt==-1) // PDB format
     {
         while (compress_type?fin_gz.good():fin.good())
         {
             if (compress_type) getline(fin_gz, line);
             else               getline(fin, line);
+            if (infmt_opt==-1 && line.compare(0,5,"loop_")==0) // PDBx/mmCIF
+                return get_PDB_lines(filename,PDB_lines,chainID_list,
+                    mol_vec, ter_opt, 3, atom_opt, split_opt);
             if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
@@ -290,6 +320,174 @@ int get_PDB_lines(const string filename,
             }
         }
     }
+    else if (infmt_opt==3) // PDBx/mmCIF format
+    {
+        bool loop_ = false; // not reading following content
+        map<string,int> _atom_site;
+        int atom_site_pos;
+        vector<string> line_vec;
+        string alt_id=".";  // alternative location indicator
+        string asym_id="."; // this is similar to chainID, except that
+                            // chainID is char while asym_id is a string
+                            // with possibly multiple char
+        string prev_asym_id="";
+        string AA="";       // residue name
+        string atom="";
+        string prev_resi="";
+        string model_index=""; // the same as model_idx but type is string
+        stringstream i8_stream;
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (loop_) loop_ = line.compare(0,2,"# ");
+            if (!loop_)
+            {
+                if (line.compare(0,5,"loop_")) continue;
+                if (compress_type) getline(fin_gz, line);
+                else               getline(fin, line);
+                if (line.compare(0,11,"_atom_site.")) continue;
+
+                loop_=true;
+                _atom_site.clear();
+                atom_site_pos=0;
+                _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+
+                while(1)
+                {
+                    if (compress_type) getline(fin_gz, line);
+                    else               getline(fin, line);
+                    if (line.compare(0,11,"_atom_site.")) break;
+                    _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                }
+
+
+                if (_atom_site.count("group_PDB")*
+                    _atom_site.count("label_atom_id")*
+                    _atom_site.count("label_comp_id")*
+                   (_atom_site.count("auth_asym_id")+
+                    _atom_site.count("label_asym_id"))*
+                   (_atom_site.count("auth_seq_id")+
+                    _atom_site.count("label_seq_id"))*
+                    _atom_site.count("Cartn_x")*
+                    _atom_site.count("Cartn_y")*
+                    _atom_site.count("Cartn_z")==0)
+                {
+                    loop_ = false;
+                    cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, label_atom_id, label_atom_id, auth_asym_id/label_asym_id, auth_seq_id/label_seq_id, Cartn_x, Cartn_y, Cartn_z"<<endl;
+                    continue;
+                }
+            }
+
+            line_vec.clear();
+            split(line,line_vec);
+            if (line_vec[_atom_site["group_PDB"]]!="ATOM") continue;
+            
+            alt_id=".";
+            if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
+                alt_id=line_vec[_atom_site["label_alt_id"]];
+            if (alt_id!="." && alt_id!="A") continue;
+
+            atom=line_vec[_atom_site["label_atom_id"]];
+            if (atom[0]=='"') atom=atom.substr(1);
+            if (atom.size() && atom[atom.size()-1]=='"')
+                atom=atom.substr(0,atom.size()-1);
+            if (atom.size()==0) continue;
+            if      (atom.size()==1) atom=" "+atom+"  ";
+            else if (atom.size()==2) atom=" "+atom+" "; // wrong for sidechain H
+            else if (atom.size()==3) atom=" "+atom;
+            else if (atom.size()>=5) continue;
+
+            AA=line_vec[_atom_site["label_comp_id"]]; // residue name
+            if      (AA.size()==1) AA="  "+AA;
+            else if (AA.size()==2) AA=" " +AA;
+            else if (AA.size()>=4) continue;
+
+            if (atom_opt=="auto")
+            {
+                if (AA[0]==' ' && (AA[1]=='D'||AA[1]==' ')) // DNA || RNA
+                     select_atom=(atom==" C3'");
+                else select_atom=(atom==" CA ");
+            }
+            else     select_atom=(atom==atom_opt);
+
+            if (!select_atom) continue;
+
+            if (_atom_site.count("auth_asym_id"))
+                 asym_id=line_vec[_atom_site["auth_asym_id"]];
+            else asym_id=line_vec[_atom_site["label_asym_id"]];
+            if (asym_id==".") asym_id=" ";
+            
+            if (_atom_site.count("pdbx_PDB_model_num") && 
+                model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])
+            {
+                model_index=line_vec[_atom_site["pdbx_PDB_model_num"]];
+                if (PDB_lines.size() && ter_opt>=1) break;
+                if (PDB_lines.size()==0 || split_opt>=1)
+                {
+                    PDB_lines.push_back(tmp_str_vec);
+                    mol_vec.push_back(0);
+                    prev_asym_id=asym_id;
+
+                    if (split_opt==1 && ter_opt==0) chainID_list.push_back(
+                        ':'+model_index);
+                    else if (split_opt==2 && ter_opt==0)
+                        chainID_list.push_back(':'+model_index+':'+asym_id);
+                    else if (split_opt==2 && ter_opt==1)
+                        chainID_list.push_back(':'+asym_id);
+                }
+            }
+
+            if (prev_asym_id!=asym_id)
+            {
+                if (prev_asym_id!="" && ter_opt>=2) break;
+                if (split_opt>=2)
+                {
+                    PDB_lines.push_back(tmp_str_vec);
+                    mol_vec.push_back(0);
+
+                    if (split_opt==1 && ter_opt==0) chainID_list.push_back(
+                        ':'+model_index);
+                    else if (split_opt==2 && ter_opt==0)
+                        chainID_list.push_back(':'+model_index+':'+asym_id);
+                    else if (split_opt==2 && ter_opt==1)
+                        chainID_list.push_back(':'+asym_id);
+                }
+            }
+            if (prev_asym_id!=asym_id) prev_asym_id=asym_id;
+
+            if (AA[0]==' ' && (AA[1]=='D'||AA[1]==' ')) mol_vec.back()++;
+            else mol_vec.back()--;
+
+            if (_atom_site.count("auth_seq_id"))
+                 resi=line_vec[_atom_site["auth_seq_id"]];
+            else resi=line_vec[_atom_site["label_seq_id"]];
+            if (_atom_site.count("pdbx_PDB_ins_code") && 
+                line_vec[_atom_site["pdbx_PDB_ins_code"]]!="?")
+                resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
+            else resi+=" ";
+
+            if (prev_resi==resi)
+                cerr<<"Warning! Duplicated residue "<<resi<<endl;
+            prev_resi=resi;
+
+            i++;
+            i8_stream<<"ATOM  "
+                <<setw(5)<<i<<" "<<atom<<" "<<AA<<" "<<asym_id[0]
+                <<setw(5)<<resi.substr(0,5)<<"   "
+                <<setw(8)<<line_vec[_atom_site["Cartn_x"]]
+                <<setw(8)<<line_vec[_atom_site["Cartn_y"]]
+                <<setw(8)<<line_vec[_atom_site["Cartn_z"]];
+            PDB_lines.back().push_back(i8_stream.str());
+            i8_stream.str(string());
+        }
+        _atom_site.clear();
+        line_vec.clear();
+        alt_id.clear();
+        asym_id.clear();
+        AA.clear();
+    }
+
     if (compress_type) fin_gz.close();
     else               fin.close();
     line.clear();
@@ -458,7 +656,7 @@ void read_user_alignment(vector<string>&sequence, const string &fname_lign,
     if (n_p < 2)
         PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
     if (sequence[0].size() != sequence[1].size())
-        PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal respectively to the two aligned proteins.");
+        PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal for the two aligned proteins.");
     if (I_opt)
     {
         int aligned_resNum=0;
@@ -492,3 +690,5 @@ void file2chainlist(vector<string>&chain_list, const string &name,
     fp.close();
     line.clear();
 }
+
+#endif

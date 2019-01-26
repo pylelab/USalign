@@ -56,9 +56,11 @@ void print_extra_help()
 "\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
-"             0: (default) PDB format\n"
+"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
+"             0: PDB format\n"
 "             1: SPICKER format\n"
 "             2: xyz format\n"
+"             3: PDBx/mmCIF format\n"
     <<endl;
 }
 
@@ -115,8 +117,8 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int    infmt1_opt=0;     // PDB format for chain_1
-    int    infmt2_opt=0;     // PDB format for chain_2
+    int    infmt1_opt=-1;    // PDB or PDBx/mmCIF format for chain_1
+    int    infmt2_opt=-1;    // PDB or PDBx/mmCIF format for chain_2
     int    ter_opt   =3;     // TER, END, or different chainID
     int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output

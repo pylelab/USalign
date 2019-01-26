@@ -62,9 +62,10 @@ void print_extra_help()
 "             2: tabular format very compact output\n"
 "            -1: full output, but without version or citation information\n"
 "\n"
-"    -byresi  Whether to align two structures by residue index.\n"
-"             0: (default) do not align by residue index\n"
-"             1: (same as TMscore program) align by residue index\n"
+"    -byresi  Whether to assume residue index correspondence between the\n" "             two structures.\n"
+"             0: (default) sequence independent alignment\n"
+"             1: (same as TMscore program) sequence-dependent superposition,\n"
+"                i.e. align by residue index\n"
 "             2: (same as TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and chain ID\n"
 "             3: (similar to TMscore -c, should be used with -ter <=1)\n"
@@ -72,9 +73,11 @@ void print_extra_help()
 "\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
-"             0: (default) PDB format\n"
+"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
+"             0: PDB format\n"
 "             1: SPICKER format\n"
 "             2: xyz format\n"
+"             3: PDBx/mmCIF format\n"
     <<endl;
 }
 
@@ -154,8 +157,8 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int    infmt1_opt=0;     // PDB format for chain_1
-    int    infmt2_opt=0;     // PDB format for chain_2
+    int    infmt1_opt=-1;    // PDB or PDBx/mmCIF format for chain_1
+    int    infmt2_opt=-1;    // PDB or PDBx/mmCIF format for chain_2
     int    ter_opt   =3;     // TER, END, or different chainID
     int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output
@@ -479,8 +482,8 @@ int main(int argc, char *argv[])
                     /* print result */
                     if (outfmt_opt==0) print_version();
                     output_results(
-                        xname.substr(dir1_opt.size()).c_str(),
-                        yname.substr(dir2_opt.size()).c_str(),
+                        xname.substr(dir1_opt.size()),
+                        yname.substr(dir2_opt.size()),
                         chainID_list1[chain_i].c_str(),
                         chainID_list2[chain_j].c_str(),
                         xlen, ylen, t0, u0, TM1, TM2, 

@@ -31,9 +31,11 @@ void print_help()
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
-"    -infmt   Input format for chain2\n"
-"             0: (default) PDB format\n"
+"    -infmt   Input format for chain\n"
+"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
+"             0: PDB format\n"
 "             2: xyz format\n"
+"             3: PDBx/mmCIF format\n"
     <<endl;
     exit(EXIT_SUCCESS);
 }
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
     /**********************/
     string xname     = "";
     int    ter_opt   =3;     // TER, END, or different chainID
-    int    infmt_opt =0;     // PDB format
+    int    infmt_opt =-1;    // PDB or PDBx/mmCIF format
     int    split_opt =0;     // do not split chain
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string suffix_opt="";    // set -suffix to empty

@@ -1353,43 +1353,122 @@ double DP_iter(double **r1, double **r2, double **xtm, double **ytm,
 }
 
 
-void output_superpose(const char *xname, const char *fname_super,
+void output_superpose(const string filename, const char *fname_super,
     double t[3], double u[3][3], const int ter_opt=3)
 {
-    ifstream fin(xname);
+    int compress_type=0; // uncompressed file
+    ifstream fin;
+    redi::ipstream fin_gz; // if file is compressed
+    if (filename.size()>=3 && 
+        filename.substr(filename.size()-3,3)==".gz")
+    {
+        fin_gz.open("zcat "+filename);
+        compress_type=1;
+    }
+    else if (filename.size()>=4 && 
+        filename.substr(filename.size()-4,4)==".bz2")
+    {
+        fin_gz.open("bzcat "+filename);
+        compress_type=2;
+    }
+    else fin.open(filename.c_str());
+
     stringstream buf;
     string line;
     double x[3];  // before transform
     double x1[3]; // after transform
-    if (fin.is_open())
+
+    /* for PDBx/mmCIF only */
+    map<string,int> _atom_site;
+    int atom_site_pos;
+    vector<string> line_vec;
+
+    while (compress_type?fin_gz.good():fin.good())
     {
-        while (fin.good())
+        if (compress_type) getline(fin_gz, line);
+        else               getline(fin, line);
+        if (line.compare(0, 6, "ATOM  ")==0 || 
+            line.compare(0, 6, "HETATM")==0) // PDB format
         {
-            getline(fin, line);
-            if (line.compare(0, 6, "ATOM  ")==0 || 
-                line.compare(0, 6, "HETATM")==0)
+            x[0]=atof(line.substr(30,8).c_str());
+            x[1]=atof(line.substr(38,8).c_str());
+            x[2]=atof(line.substr(46,8).c_str());
+            transform(t, u, x, x1);
+            buf<<line.substr(0,30)<<setiosflags(ios::fixed)
+                <<setprecision(3)
+                <<setw(8)<<x1[0] <<setw(8)<<x1[1] <<setw(8)<<x1[2]
+                <<line.substr(54)<<'\n';
+        }
+        else if (line.compare(0,5,"loop_")==0) // PDBx/mmCIF
+        {
+            buf<<line<<'\n';
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            buf<<line<<'\n';
+            if (line.compare(0,11,"_atom_site.")) continue;
+            _atom_site.clear();
+            atom_site_pos=0;
+            _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+            while(1)
             {
-                x[0]=atof(line.substr(30,8).c_str());
-                x[1]=atof(line.substr(38,8).c_str());
-                x[2]=atof(line.substr(46,8).c_str());
-                transform(t, u, x, x1);
-                buf<<line.substr(0,30)<<setiosflags(ios::fixed)
-                    <<setprecision(3)
-                    <<setw(8)<<x1[0] <<setw(8)<<x1[1] <<setw(8)<<x1[2]
-                    <<line.substr(54)<<'\n';
-            }
-            else if (line.size())
+                if (compress_type) getline(fin_gz, line);
+                else               getline(fin, line);
+                if (line.compare(0,11,"_atom_site.")) break;
+                _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
                 buf<<line<<'\n';
+            }
+
+            if (_atom_site.count("group_PDB")*
+                _atom_site.count("Cartn_x")*
+                _atom_site.count("Cartn_y")*
+                _atom_site.count("Cartn_z")==0)
+            {
+                buf<<line<<'\n';
+                cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, Cartn_x, Cartn_y, Cartn_z"<<endl;
+                continue;
+            }
+
+            while(1)
+            {
+                line_vec.clear();
+                split(line,line_vec);
+                if (line_vec[_atom_site["group_PDB"]]!="ATOM" &&
+                    line_vec[_atom_site["group_PDB"]]!="HETATM") break;
+
+                x[0]=atof(line_vec[_atom_site["Cartn_x"]].c_str());
+                x[1]=atof(line_vec[_atom_site["Cartn_y"]].c_str());
+                x[2]=atof(line_vec[_atom_site["Cartn_z"]].c_str());
+                transform(t, u, x, x1);
+
+                for (atom_site_pos=0; atom_site_pos<_atom_site.size(); atom_site_pos++)
+                {
+                    if (atom_site_pos==_atom_site["Cartn_x"])
+                        buf<<setiosflags(ios::fixed)<<setprecision(3)
+                           <<setw(8)<<x1[0]<<' ';
+                    else if (atom_site_pos==_atom_site["Cartn_y"])
+                        buf<<setiosflags(ios::fixed)<<setprecision(3)
+                           <<setw(8)<<x1[1]<<' ';
+                    else if (atom_site_pos==_atom_site["Cartn_z"])
+                        buf<<setiosflags(ios::fixed)<<setprecision(3)
+                           <<setw(8)<<x1[2]<<' ';
+                    else buf<<line_vec[atom_site_pos]<<' ';
+                }
+                buf<<'\n';
+
+                if (compress_type && fin_gz.good()) getline(fin_gz, line);
+                else if (!compress_type && fin.good()) getline(fin, line);
+                else break;
+            }
+            if (compress_type?fin_gz.good():fin.good()) buf<<line<<'\n';
+        }
+        else if (line.size())
+        {
+            buf<<line<<'\n';
             if (ter_opt>=1 && line.compare(0,3,"END")==0) break;
         }
-        fin.close();
     }
-    else
-    {
-        char message[5000];
-        sprintf(message, "Can not open file: %s\n", xname);
-        PrintErrorAndQuit(message);
-    }
+    if (compress_type) fin_gz.close();
+    else               fin.close();
 
     ofstream fp(fname_super);
     fp<<buf.str();
@@ -1429,7 +1508,7 @@ void output_rotation_matrix(const char* fname_matrix,
 
 //output the final results
 void output_results(
-    const char *xname, const char *yname,
+    const string xname, const string yname,
     const char *chainID1, const char *chainID2,
     const int xlen, const int ylen, double t[3], double u[3][3],
     const double TM1, const double TM2,
@@ -1448,8 +1527,8 @@ void output_results(
     if (outfmt_opt<=0)
     {
         printf("\nName of Chain_1: %s%s (to be superimposed onto Chain_2)\n",
-            xname,chainID1);
-        printf("Name of Chain_2: %s%s\n", yname,chainID2);
+            xname.c_str(), chainID1);
+        printf("Name of Chain_2: %s%s\n", yname.c_str(), chainID2);
         printf("Length of Chain_1: %d residues\n", xlen);
         printf("Length of Chain_2: %d residues\n\n", ylen);
 
@@ -1466,7 +1545,7 @@ void output_results(
             printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
         if (d_opt)
             printf("TM-score= %6.5f (if scaled by user-specified d0= %.2f, and LN= %d)\n", TM5, d0_scale, ylen);
-        printf("(You should use TM-score normalized by length of the reference protein)\n");
+        printf("(You should use TM-score normalized by length of the reference structure)\n");
     
         //output alignment
         printf("\n(\":\" denotes residue pairs of d < %4.1f Angstrom, ", d0_out);
@@ -1478,10 +1557,10 @@ void output_results(
     else if (outfmt_opt==1)
     {
         printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            xname, chainID1, xlen, d0B, Liden/xlen, TM2);
+            xname.c_str(), chainID1, xlen, d0B, Liden/xlen, TM2);
         printf("%s\n", seqxA);
         printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            yname, chainID2, ylen, d0A, Liden/ylen, TM1);
+            yname.c_str(), chainID2, ylen, d0A, Liden/ylen, TM1);
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
@@ -1504,7 +1583,7 @@ void output_results(
     else if (outfmt_opt==2)
     {
         printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
-            xname, chainID1, yname, chainID2, TM2, TM1, rmsd,
+            xname.c_str(), chainID1, yname.c_str(), chainID2, TM2, TM1, rmsd,
             Liden/xlen, Liden/ylen, Liden/(n_ali8+0.00000001),
             xlen, ylen, n_ali8);
     }
