@@ -47,6 +47,7 @@
               (1) new d0 calculation for RNA.
               (2) secondary structure assignment for RNA.
               (3) automatic detection of molecule type (protein vs RNA).
+   2019/01/07: Chengxin Zhang added support for PDBx/mmCIF format
 ===============================================================================
 
 =========================
@@ -81,4 +82,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-11/15/2018
+01/07/2019

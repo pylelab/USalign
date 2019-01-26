@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " *********************************************************************\n"
-" * TM-align (Version 201811150): protein and RNA structure alignment *\n"
+" * TM-align (Version 20190107): protein and RNA structure alignment  *\n"
 " * Reference: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu   *\n"
 " *********************************************************************"
