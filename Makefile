@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
 LDFLAGS=-static# -lm
-PROGRAM=TMalign qTMclust se pdb2xyz xyz_sfetch pdb2fasta pdb2ss
+PROGRAM=TMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss
 
 all: ${PROGRAM}
 
@@ -26,5 +26,8 @@ xyz_sfetch: xyz_sfetch.cpp
 pdb2fasta: pdb2fasta.cpp basic_fun.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
+Contactlib: Contactlib.cpp Contactlib.h TMalign.h basic_fun.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
 clean:
-	rm -f ${PROGRAM}
+	rm -f ${PROGRAM} qTMclust Contactlib

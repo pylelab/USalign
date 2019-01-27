@@ -1,3 +1,4 @@
+//#include "Contactlib.h"
 #include "TMalign.h"
 
 using namespace std;
@@ -19,9 +20,11 @@ void print_extra_help()
 "             Default is detect molecule type automatically\n"
 "\n"
 "    -infmt   Input format\n"
-"             0: (default) PDB format\n"
+"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
+"             0: PDB format\n"
 "             1: SPICKER format\n"
 "             2: xyz format\n"
+"             3: PDBx/mmCIF format\n"
     <<endl;
 }
 
@@ -65,7 +68,7 @@ void print_help(bool h_opt=false)
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
-"    -h    print the full help message, including additional options.\n"
+"    -h       Print the full help message, including additional options.\n"
 "\n"
     <<endl;
 
@@ -98,7 +101,7 @@ int main(int argc, char *argv[])
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
-    int    infmt_opt=0;      // PDB format for chain_1
+    int    infmt_opt =-1;    // PDB or PDBx/mmCIF format
     int    ter_opt   =3;     // TER, END, or different chainID
     int    split_opt =0;     // do not split chain
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
@@ -241,6 +244,29 @@ int main(int argc, char *argv[])
     vector<vector<float> >xyz_tmp;
     int r; // residue index
     int newchainnum;
+
+#ifdef TMalign_Contactlib_h
+    vector<vector<vector<int> > >vindexLocal_vec;
+    vector<vector<vector<int> > >vindexRemote_vec;
+    vector<vector<int> >vindexLocal;
+    vector<vector<int> >vindexRemote;
+    vector<int> SeqNum; // residue index in int, dummy variable
+    map<int, char> ssDSSP;
+
+    /* These parameters controls Contactlib filter. building and searching
+     * Contactlib database also takes some time. Therefore, if there are
+     * only a handful of existing cluster representatives, or the new chain
+     * is very short and thus unlikely to have much contact groups, the
+     * filter is skipped. Note that Contactlib database could be very large.
+     * In this case, it might be necessary to split the database. */
+    const int repr_num_cutoff=100; // The number of remaining representatives
+                                   // after filter
+    const int sizePROT_cutoff=1000;// minimum number of representatives
+                                   // above which Contactlib filter is used.
+    const int xlen_cutoff=100;     // maximum number of residues below which
+                                   // Contactlib filter is not used
+#endif
+
     for (i=0;i<chain_list.size();i++)
     {
         xname=chain_list[i];
@@ -284,6 +310,28 @@ int main(int argc, char *argv[])
             sec_vec.push_back(sec_tmp);
             xyz_vec.push_back(xyz_tmp);
 
+#ifdef TMalign_Contactlib_h
+            /* make contactlib*/
+            if (xlen>xlen_cutoff)
+            {
+                SeqNum.assign(xlen,0);
+                for (r=0;r<xlen;r++)
+                {
+                    SeqNum[r]=r;
+                    ssDSSP[r]=sec_tmp[r];
+                }
+                ContactlibBuild_main(xlen, xa, SeqNum, ssDSSP, sizeLocal,
+                    sizeRemote, mingapRemote, vindexLocal, vindexRemote);
+                SeqNum.clear();
+                ssDSSP.clear();
+            }
+            vindexLocal_vec.push_back(vindexLocal);
+            vindexRemote_vec.push_back(vindexRemote);
+
+            /* clean up */
+            vindexLocal.clear();
+            vindexRemote.clear();
+#endif
             seq_tmp.clear();
             sec_tmp.clear();
             xyz_tmp.clear();
@@ -295,8 +343,17 @@ int main(int argc, char *argv[])
     }
     flt_tmp.clear();
     chain_list.clear();
+
     // swap completely destroy the vector and free up the memory capacity
     vector<vector<string> >().swap(PDB_lines);
+    int Nstruct=chainLen_list.size();
+#ifdef TMalign_Contactlib_h
+    if (Nstruct<=sizePROT_cutoff)
+    {
+        vector<vector<vector<int> > >().swap(vindexLocal_vec);
+        vector<vector<vector<int> > >().swap(vindexRemote_vec);
+    }
+#endif
 
     /* sort by chain length */
     stable_sort(chainLen_list.begin(),chainLen_list.end(),
@@ -309,18 +366,31 @@ int main(int argc, char *argv[])
         <<chainLen_list.back().first<<" residues."<<endl;
 
     /* set the first cluster */
-    int Nstruct=chainLen_list.size();
     vector<int> clust_mem_vec(Nstruct,-1); // cluster membership
     vector<int> clust_repr_vec; // the same as number of clusters
     int chain_i=chainLen_list[0].second;
     clust_repr_vec.push_back(chain_i);
     clust_mem_vec[chain_i]=0;
+    map<int,int> clust_repr_map;
 
     /* perform alignment */
     int chain_j;
-    double fast_lb=50.;   // proteins shorter than fast_lb never use -fast
-    double fast_ub=1000.; // proteins longer than fast_ub always use -fast
-    double Lave;          // average protein length for chain_i and chain_j
+    const double fast_lb=50.;   // proteins shorter than fast_lb never use -fast
+    const double fast_ub=1000.; // proteins longer than fast_ub always use -fast
+    double Lave;                // average protein length for chain_i and chain_j
+    int sizePROT;          // number of representatives for current chain
+    vector<int> index_vec; // index of cluster representatives for this chain
+
+#ifdef TMalign_Contactlib_h
+    vector<int> psizeLocal; // local contact group number of each protein
+    vector<int> psizeRemote;// remote contact group number of each protein
+    vector<pair<double,int> > contactlibScore_list;
+    double scoreLocal1,  scoreLocal2; // 1 for target, 2 for database
+    double scoreRemote1, scoreRemote2;
+    double scoreLocal,   scoreRemote, scoreCombine;
+    int   tidsizeLocal, tidsizeRemote;
+#endif
+
     for (i=1;i<Nstruct;i++)
     {
         chain_i=chainLen_list[i].second;
@@ -332,10 +402,6 @@ int main(int argc, char *argv[])
             clust_repr_vec.push_back(clust_repr_vec.size());
             continue;
         }
-
-        cout<<'>'<<chainID_list[chain_i]<<'\t'<<xlen<<'\t'
-            <<100.*i/Nstruct<<"%\n";
-            //<<&seq_vec[chain_i][0]<<endl;
 
         NewArray(&xa, xlen, 3);
         for (r=0;r<xlen;r++)
@@ -351,6 +417,89 @@ int main(int argc, char *argv[])
         for (j=clust_repr_vec.size()-1;j>=0;j--)
         {
             chain_j=clust_repr_vec[j];
+            ylen=xyz_vec[chain_j].size();
+            if (a_opt==0 && xlen<TMcut*ylen) continue;
+            else if (a_opt==1 && xlen<TMcut*(xlen+ylen)/2) continue;
+            index_vec.push_back(chain_j);
+        }
+        sizePROT=index_vec.size();
+
+        cout<<'>'<<chainID_list[chain_i]<<'\t'<<xlen<<'\t'
+            <<setiosflags(ios::fixed)<<setprecision(2)
+            <<100.*i/Nstruct<<"%(#"<<i<<")\t"<<"#repr="<<sizePROT<<endl;
+
+#ifdef TMalign_Contactlib_h
+        /* Contactlib filter by itself also take sometime. It is
+         * only used with larger number of cluster representatives. */
+        if (sizePROT>sizePROT_cutoff && xlen>xlen_cutoff)
+        {
+            int *thitsLocal;   // number of target hits
+            int *thitsRemote;  // number of target hits
+            int *dbhitsLocal;  // number of database hits
+            int *dbhitsRemote; // number of database hits
+            int *hitsLocal;    // number of hits between target and database
+            int *hitsRemote;   // number of hits between target and database
+            thitsLocal  =new int[sizePROT];
+            thitsRemote =new int[sizePROT];
+            dbhitsLocal =new int[sizePROT];
+            dbhitsRemote=new int[sizePROT];
+            hitsLocal   =new int[sizePROT];
+            hitsRemote  =new int[sizePROT];
+            for (j=0;j<sizePROT;j++)
+                thitsLocal[j] =dbhitsLocal[j] =hitsLocal[j] =
+                thitsRemote[j]=dbhitsRemote[j]=hitsRemote[j]=0;
+
+            Contactlib_main(vindexLocal_vec[chain_i],
+                vindexRemote_vec[chain_i],
+                vindexLocal_vec, vindexRemote_vec, index_vec, 
+                psizeLocal, psizeRemote, thitsLocal, thitsRemote,
+                dbhitsLocal, dbhitsRemote, hitsLocal, hitsRemote);
+
+            tidsizeLocal =vindexLocal_vec[chain_i].size();
+            tidsizeRemote=vindexRemote_vec[chain_i].size();
+            for (j=0;j<sizePROT;j++)
+            {
+                scoreLocal1  = 1.*thitsLocal[j]  / tidsizeLocal;
+                scoreLocal2  = 1.*dbhitsLocal[j] / psizeLocal[j];
+                scoreLocal   = sqrt(scoreLocal1  * scoreLocal2);
+
+                scoreRemote1 = 1.*thitsRemote[j] / tidsizeRemote;
+                scoreRemote2 = 1.*dbhitsRemote[j]/ psizeRemote[j];
+                scoreRemote  = sqrt(scoreRemote1 * scoreRemote2);
+
+                scoreCombine = scoreLocal*wLocal + scoreRemote*wRemote;
+                contactlibScore_list.push_back(make_pair(scoreCombine,
+                    index_vec[j]));
+            }
+            stable_sort(contactlibScore_list.begin(),contactlibScore_list.end(),
+                greater<pair<double,int> >());
+
+            index_vec.clear();
+            for (j=0;j<sizePROT;j++)
+            {
+                if (j>=repr_num_cutoff) break;
+                chain_j=contactlibScore_list[j].second;
+                index_vec.push_back(chain_j);
+                //cout<<"#"<<chain_j<<"\t"<<chainID_list[chain_j]<<"\t"
+                    //<<setiosflags(ios::fixed)<<setprecision(4)
+                    //<<contactlibScore_list[j].first<<endl;
+            }
+
+            contactlibScore_list.clear();
+            psizeLocal.clear();
+            psizeRemote.clear();
+            delete[]thitsLocal;
+            delete[]thitsRemote;
+            delete[]dbhitsLocal;
+            delete[]dbhitsRemote;
+            delete[]hitsLocal;
+            delete[]hitsRemote;
+        }
+#endif
+
+        for (j=0;j<sizePROT;j++)
+        {
+            chain_j=index_vec[j];
             ylen=xyz_vec[chain_j].size();
             if (a_opt==0 && xlen<TMcut*ylen) continue;
             else if (a_opt==1 && xlen<TMcut*(xlen+ylen)/2) continue;
@@ -392,20 +541,11 @@ int main(int argc, char *argv[])
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 false, I_opt, a_opt, u_opt, d_opt, overwrite_fast_opt,
                 mol_vec[chain_i]+mol_vec[chain_j],TMcut);
-            cout<<status<<'\t'<<chainID_list[chain_j]<<'\t'<<TM2
-                <<'\t'<<TM1<<'\t'<<overwrite_fast_opt<<endl;
 
-            //output_results( "", "",
-                //chainID_list[chain_i].c_str(),
-                //chainID_list[chain_j].c_str(),
-                //xlen, ylen, t0, u0, TM1, TM2, 
-                //TM3, TM4, TM5, rmsd0, d0_out,
-                //seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-                //n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
-                //TM_0, d0_0, d0A, d0B,
-                //Lnorm_ass, d0_scale, d0a, d0u, 
-                //"", -1, ter_opt, "",
-                //false, I_opt, a_opt, u_opt, d_opt);
+            if (false)
+            cout<<status<<'\t'<<chainID_list[chain_j]<<'\t'
+                <<setiosflags(ios::fixed)<<setprecision(4)
+                <<TM2<<'\t'<<TM1<<'\t'<<overwrite_fast_opt<<endl;
 
             seqM.clear();
             seqxA.clear();
@@ -428,7 +568,7 @@ int main(int argc, char *argv[])
             if (TM>=TMcut+dTM || 
                (TM>=TMcut && (fast_opt || overwrite_fast_opt==false)))
             {
-                clust_mem_vec[chain_i]=j;
+                clust_mem_vec[chain_i]=clust_repr_map[chain_j];
                 DeleteArray(&ya, ylen);
                 break;
             }
@@ -456,23 +596,32 @@ int main(int argc, char *argv[])
                 cout<<"*\t"<<chainID_list[chain_j]<<'\t'<<TM2<<'\t'<<TM1<<endl;
                 if (TM>=TMcut)
                 {
-                    clust_mem_vec[chain_i]=j;
+                    clust_mem_vec[chain_i]=clust_repr_map[chain_j];
                     break;
                 }
             }
         }
         DeleteArray(&xa, xlen);
+        index_vec.clear();
 
         if (clust_mem_vec[chain_i]<0) // new cluster
         {
             clust_mem_vec[chain_i]=clust_repr_vec.size();
+            clust_repr_map[chain_i]=clust_repr_vec.size();
             clust_repr_vec.push_back(chain_i);
         }
         else // member structures are not used further
         {
-            sec_vec[chain_i].clear();
-            seq_vec[chain_i].clear();
-            xyz_vec[chain_i].clear();
+            vector<char> ().swap(seq_vec[chain_i]);
+            vector<int> ().swap(sec_vec[chain_i]);
+            vector<vector<float> > ().swap(xyz_vec[chain_i]);
+#ifdef TMalign_Contactlib_h
+            if (xlen>xlen_cutoff)
+            {
+                vector<vector<int> > ().swap(vindexLocal_vec[chain_i]);
+                vector<vector<int> > ().swap(vindexRemote_vec[chain_i]);
+            }
+#endif
         }
     }
 
@@ -508,6 +657,15 @@ int main(int argc, char *argv[])
     clust_repr_vec.clear();
     clust_mem_vec.clear();
     chainID_list.clear();
+    clust_repr_map.clear();
+
+#ifdef TMalign_Contactlib_h
+    if (Nstruct>sizePROT_cutoff)
+    {
+        vector<vector<vector<int> > >().swap(vindexLocal_vec);
+        vector<vector<vector<int> > >().swap(vindexRemote_vec);
+    }
+#endif
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
