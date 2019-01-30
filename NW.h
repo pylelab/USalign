@@ -103,18 +103,19 @@ void NWDP_TM( bool **path, double **val, double **x, double **y,
     int i, j;
     double h, v, d;
 
-    //initialization
+    //initialization. use old val[i][0] and val[0][j] initialization
+    //to minimize difference from TMalign fortran version
     for(i=0; i<=len1; i++)
     {
-        //val[i][0]=0;
-        val[i][0]=i*gap_open;
+        val[i][0]=0;
+        //val[i][0]=i*gap_open;
         path[i][0]=false; //not from diagonal
     }
 
     for(j=0; j<=len2; j++)
     {
-        //val[0][j]=0;
-        val[0][j]=j*gap_open;
+        val[0][j]=0;
+        //val[0][j]=j*gap_open;
         path[0][j]=false; //not from diagonal
         j2i[j]=-1;    //all are not aligned, only use j2i[1:len2]
     }      
