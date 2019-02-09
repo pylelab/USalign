@@ -1177,7 +1177,7 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
     y2x_= new int[ylen+1];
 
     //select what piece will be used. The original implement may cause 
-    //asysmetry, but only when xlen==ylen and Lx==Ly
+    //asymetry, but only when xlen==ylen and Lx==Ly
     //if L1=Lfr1 and L2=Lfr2 (normal proteins), it will be the same as initial1
 
     if(Lx<Ly || (Lx==Ly && xlen<ylen))
@@ -1188,7 +1188,7 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
     {        
         for(int i=0; i<L_fr; i++) ifr[i]=ystart+i;
     }
-    else if (Lx==Ly && xlen==ylen) // solve asymetric for 1x5gA vs 2q7nA5
+    else // solve asymetric for 1x5gA vs 2q7nA5
     {
         /* In this case, L0==xlen==ylen; L_fr==Lx==Ly */
         int L0=xlen;
@@ -1618,7 +1618,7 @@ void output_results(
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
     const int outfmt_opt, const int ter_opt, const char *fname_super,
-    const bool i_opt, const bool I_opt, const bool a_opt,
+    const bool i_opt, const bool I_opt, const int a_opt,
     const bool u_opt, const bool d_opt)
 {
     if (outfmt_opt<=0)
@@ -1636,7 +1636,7 @@ void output_results(
         printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
         printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
-        if (a_opt)
+        if (a_opt==1)
             printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.1f, d0= %.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
         if (u_opt)
             printf("TM-score= %6.5f (if normalized by user-specified LN=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
@@ -1778,9 +1778,9 @@ double approx_TM(const int xlen, const int ylen, const int a_opt,
     double **xa, double **ya, double t[3], double u[3][3],
     const int invmap0[], const int mol_type)
 {
-    double Lnorm_0=xlen;
-    if (a_opt==0 && ylen>xlen) Lnorm_0=ylen;       // longer
-    else if (a_opt==-1 && ylen<xlen) Lnorm_0=ylen; // shorter
+    double Lnorm_0=ylen; // normalized by the second protein
+    if (a_opt==-2 && xlen>ylen) Lnorm_0=xlen;      // longer
+    else if (a_opt==-1 && xlen<ylen) Lnorm_0=xlen; // shorter
     else if (a_opt==1) Lnorm_0=(xlen+ylen)/2.;     // average
     
     double D0_MIN;

@@ -9,8 +9,9 @@ void print_version()
     cout << 
 "\n"
 " *********************************************************************\n"
-" * TM-align (Version 20190107): protein and RNA structure alignment  *\n"
-" * Reference: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
+" * TM-align (Version 20190209): protein and RNA structure alignment  *\n"
+" * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005) *\n"
+" *             S Gong, C Zhang, Y Zhang. Bioinformatics (2019)       *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu   *\n"
 " *********************************************************************"
     << endl;
@@ -70,6 +71,15 @@ void print_extra_help()
 "                align by residue index and chain ID\n"
 "             3: (similar to TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and order of chain\n"
+"\n"
+"    -TMcut   -1: (default) do not consider TMcut\n"
+"             Values in [0.5,1): Do not proceed with TM-align for this\n"
+"                 structure pair if TM-score is unlikely to reach TMcut.\n"
+"                 TMcut is normalized is set by -a option:\n"
+"                 -2: normalized by longer structure length\n"
+"                 -1: normalized by shorter structure length\n"
+"                  0: (default, same as F) normalized by second structure\n"
+"                  1: same as T, normalized by average structure length\n"
 "\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
@@ -153,10 +163,11 @@ int main(int argc, char *argv[])
     bool i_opt = false; // flag for -i, with user given initial alignment
     bool I_opt = false; // flag for -I, stick to user given alignment
     bool o_opt = false; // flag for -o, output superposed structure
-    bool a_opt = false; // flag for -a, normalized by average length
+    int  a_opt = 0;     // flag for -a, do not normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
+    double TMcut     =-1;
     int    infmt1_opt=-1;    // PDB or PDBx/mmCIF format for chain_1
     int    infmt2_opt=-1;    // PDB or PDBx/mmCIF format for chain_2
     int    ter_opt   =3;     // TER, END, or different chainID
@@ -188,7 +199,12 @@ int main(int argc, char *argv[])
         {
             if (!strcmp(argv[i + 1], "T"))      a_opt=true;
             else if (!strcmp(argv[i + 1], "F")) a_opt=false;
-            else PrintErrorAndQuit("Wrong value for option -a! It should be T or F");
+            else 
+            {
+                a_opt=atoi(argv[i + 1]);
+                if (a_opt!=-2 && a_opt!=-1 && a_opt!=1)
+                    PrintErrorAndQuit("-a must be -2, -1, 1, T or F");
+            }
             i++;
         }
         else if ( !strcmp(argv[i],"-d") && i < (argc-1) )
@@ -262,6 +278,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-outfmt") && i < (argc-1) )
         {
             outfmt_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-TMcut") && i < (argc-1) )
+        {
+            TMcut=atof(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-byresi") && i < (argc-1) )
         {
@@ -477,7 +497,7 @@ int main(int argc, char *argv[])
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j]);
+                        mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
