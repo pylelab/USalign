@@ -1890,7 +1890,6 @@ int TMalign_main(double **xa, double **ya,
     //    get initial alignment from user's input:    //
     //    Stick to the initial alignment              //
     //************************************************//
-    char dest[1000];
     bool bAlignStick = false;
     if (I_opt)// if input has set parameter for "-I"
     {
