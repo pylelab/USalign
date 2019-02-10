@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    int    *seq2int1,*seq2int2; // aa2int
     int    l; // residue index
 
     /* loop over file names */
@@ -249,11 +248,9 @@ int main(int argc, char *argv[])
                 continue;
             }
             seqx = new char[xlen + 1];
-            seq2int1 = new int[xlen];
             for (l=0;l<xlen;l++)
                 seqx[l]=AAmap(PDB_lines1[chain_i][l].substr(17,3));
             seqx[xlen]=0;
-            aa2int(seqx,xlen,seq2int1);
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -282,18 +279,15 @@ int main(int argc, char *argv[])
                         continue;
                     }
                     seqy = new char[ylen + 1];
-                    seq2int2 = new int[ylen];
                     for (l=0;l<ylen;l++)
                         seqy[l]=AAmap(PDB_lines2[chain_j][l].substr(17,3));
                     seqy[ylen]=0;
-                    aa2int(seqy,ylen,seq2int2);
 
                     int L_ali;                // Aligned length
                     double Liden=0;
                     string seqM, seqxA, seqyA;// for output alignment
                     
-                    int aln_score=NWalign(seqx, seqy, seq2int1, seq2int2,
-                        xlen, ylen, seqxA, seqyA, 
+                    int aln_score=NWalign(seqx, seqy, xlen, ylen, seqxA, seqyA, 
                         mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
                     
                     get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
@@ -310,7 +304,6 @@ int main(int argc, char *argv[])
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
-                    delete [] seq2int2;
                     delete [] seqy;
                 } // chain_j
                 if (chain2_list.size()>1)
@@ -325,7 +318,6 @@ int main(int argc, char *argv[])
             } // j
             PDB_lines1[chain_i].clear();
             delete [] seqx;
-            delete [] seq2int1;
         } // chain_i
         xname.clear();
         PDB_lines1.clear();

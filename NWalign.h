@@ -42,32 +42,13 @@ const int BLOSUM62[24][24]={
 const int gapopen_blastn=-5;
 const int gapext_blastn=-2;
 
-const int BLASTN[24][24]={
+const int BLASTN[5][5]={
 //a  c  g  t  u
-{ 2,-3,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//a
-{-3, 2,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//c
-{-3,-3, 2,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//g
-{-3,-3,-3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//t
-{-3,-3,-3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//u
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+{ 2,-3,-3,-3,-3},//a
+{-3, 2,-3,-3,-3},//c
+{-3,-3, 2,-3,-3},//g
+{-3,-3,-3, 2, 2},//t
+{-3,-3,-3, 2, 2},//u
 };
 
 const int aa_ascii2int[128]={
@@ -105,23 +86,16 @@ const int aa_ascii2int[128]={
     23, /*124 |   */ 23, /*125 }   */ 23, /*126 ~   */ 23, /*127 DEL */
 };
 
-/* convert amino acid to int */
-void aa2int(const char *sequence, const int xlen, int *seq2int)
-{
-    for (int l=0;l<xlen;l++) seq2int[l]=aa_ascii2int[sequence[l]];
-}
-
 /* initialize matrix in gotoh algorithm */
-void init_gotoh_mat(int **JumpH, int **JumpV,
-    int **P, int **S, int **H, int **V,
-    const int xlen, const int ylen, const int gapopen,const int gapext,
-    const int glocal=0, const int alt_init=1)
+void init_gotoh_mat(int **S, int **JumpH, int **JumpV, int **P,
+    int **H, int **V, const int xlen, const int ylen, const int gapopen,
+    const int gapext, const int glocal=0, const int alt_init=1)
 {
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
     for (i=0;i<xlen+1;i++)
         for (j=0;j<ylen+1;j++)
-            S[i][j]=H[i][j]=V[i][j]=P[i][j]=JumpH[i][j]=JumpV[i][j]=0;
+            H[i][j]=V[i][j]=P[i][j]=JumpH[i][j]=JumpV[i][j]=0;
     for (i=0;i<xlen+1;i++)
     {
         if (glocal<2) P[i][0]=4; // -
@@ -197,21 +171,18 @@ void find_highest_align_score( int **S, int **P,
  *         0 : use yang zhang's matrix initialization, does NOT work
  *             for glocal alignment
  */
-int calculate_score_gotoh(const int *seq2int1, const int *seq2int2,
-    const int xlen,const int ylen, int** JumpH, int** JumpV, int **P,
-    const int ScoringMatrix[24][24], const int gapopen,const int gapext,
+int calculate_score_gotoh(const int xlen,const int ylen, int **S,
+    int** JumpH, int** JumpV, int **P, const int gapopen,const int gapext,
     const int glocal=0, const int alt_init=1)
 {
-    int **S;
     int **H;
     int **V;
-    NewArray(&S,xlen+1,ylen+1);
     NewArray(&H,xlen+1,ylen+1); // penalty score for horizontal long gap
     NewArray(&V,xlen+1,ylen+1); // penalty score for vertical long gap
     
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
-    init_gotoh_mat(JumpH, JumpV, P, S, H, V, xlen, ylen,
+    init_gotoh_mat(S, JumpH, JumpV, P, H, V, xlen, ylen,
         gapopen, gapext, glocal, alt_init);
 
     // fill S and P
@@ -243,9 +214,7 @@ int calculate_score_gotoh(const int *seq2int1, const int *seq2int2,
                 JumpV[i][j]=(V[i][j]==V[i-1][j])?(JumpV[i-1][j]+1):1;
             }
 
-            diag_score=S[i-1][j-1]; // match-mismatch '\'
-            if (seq2int1[i-1]<24 && seq2int2[j-1]<24)
-                diag_score+=ScoringMatrix[seq2int1[i-1]][seq2int2[j-1]];
+            diag_score=S[i-1][j-1]+S[i][j]; // match-mismatch '\'
             left_score=H[i][j];     // deletion       '-'
             up_score  =V[i][j];     // insertion      '|'
 
@@ -286,7 +255,6 @@ int calculate_score_gotoh(const int *seq2int1, const int *seq2int2,
         find_highest_align_score(S,P,aln_score,xlen,ylen);
 
     // release memory
-    DeleteArray(&S,xlen+1);
     DeleteArray(&H,xlen+1);
     DeleteArray(&V,xlen+1);
     return aln_score; // final alignment score
@@ -452,22 +420,44 @@ void trace_back_sw(const char *seqx, const char *seqy,
 }
 
 /* entry function for NWalign */
-int NWalign(const char *seqx, const char *seqy, 
-    const int* seq2int1, const int* seq2int2, const int xlen, const int ylen,
+int NWalign(const char *seqx, const char *seqy, const int xlen, const int ylen,
     string & seqxA,string & seqyA, const int mol_type, const int glocal=0)
 {
     int **JumpH;
     int **JumpV;
     int **P;
+    int **S;
     NewArray(&JumpH,xlen+1,ylen+1);
     NewArray(&JumpV,xlen+1,ylen+1);
     NewArray(&P,xlen+1,ylen+1);
+    NewArray(&S,xlen+1,ylen+1);
     
     int aln_score;
-    if (mol_type>0) aln_score=calculate_score_gotoh(seq2int1,seq2int2,xlen,
-        ylen,JumpH,JumpV,P, BLASTN,gapopen_blastn,gapext_blastn,glocal);
-    else            aln_score=calculate_score_gotoh(seq2int1,seq2int2,xlen,
-        ylen,JumpH,JumpV,P, BLOSUM62,gapopen_blosum62,gapext_blosum62,glocal);
+    int gapopen=gapopen_blosum62;
+    int gapext =gapext_blosum62;
+    int i,j;
+    if (mol_type>0) // RNA or DNA
+    {
+        gapopen=gapopen_blastn;
+        gapext =gapext_blastn;
+    }
+    int aa1=23;
+    int aa2=23;
+    for (i=0;i<xlen+1;i++)
+    {
+        if (i) aa1=aa_ascii2int[seqx[i-1]];
+        for (j=0;j<ylen+1;j++)
+        {
+            S[i][j]=0;
+            if (i*j==0) continue;
+            aa2=aa_ascii2int[seqy[j-1]];
+            if (mol_type>0 && aa1<5 && aa2<5) S[i][j]=BLASTN[aa1][aa2];
+            else if (mol_type<=0)           S[i][j]=BLOSUM62[aa1][aa2];
+        }
+    }
+
+    aln_score=calculate_score_gotoh(xlen, ylen, S, JumpH, JumpV, P,
+        gapopen, gapext, glocal);
 
     if (glocal<3) trace_back_gotoh(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
     else trace_back_sw(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
@@ -475,6 +465,7 @@ int NWalign(const char *seqx, const char *seqy,
     DeleteArray(&JumpH, xlen+1);
     DeleteArray(&JumpV, xlen+1);
     DeleteArray(&P, xlen+1);
+    DeleteArray(&S, xlen+1);
     return aln_score; // aligment score
 }
 
