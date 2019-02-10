@@ -1679,7 +1679,7 @@ void output_results(
     }
     else if (outfmt_opt==2)
     {
-        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
+        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
             xname.c_str(), chainID1, yname.c_str(), chainID2, TM2, TM1, rmsd,
             Liden/xlen, Liden/ylen, Liden/(n_ali8+0.00000001),
             xlen, ylen, n_ali8);
