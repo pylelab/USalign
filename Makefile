@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
 LDFLAGS=-static# -lm
-PROGRAM=TMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss
+PROGRAM=TMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign
 
 all: ${PROGRAM}
 
@@ -17,7 +17,7 @@ se: se.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 pdb2ss: pdb2ss.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-NWalign: NWalign.cpp NWalign.h pstream.h
+NWalign: NWalign.cpp NWalign.h basic_fun.h pstream.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 pdb2xyz: pdb2xyz.cpp basic_fun.h pstream.h
