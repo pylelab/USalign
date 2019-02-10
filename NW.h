@@ -96,7 +96,7 @@ void NWDP_TM(double **score, bool **path, double **val,
 /* Input: vectors x, y, rotation matrix t, u, scale factor d02, and gap_open
  * Output: j2i[1:len2] \in {1:len1} U {-1}
  * path[0:len1, 0:len2]=1,2,3, from diagonal, horizontal, vertical */
-void NWDP_TM( bool **path, double **val, double **x, double **y,
+void NWDP_TM(bool **path, double **val, double **x, double **y,
     int len1, int len2, double t[3], double u[3][3],
     double d02, double gap_open, int j2i[])
 {

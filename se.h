@@ -53,7 +53,7 @@ int se_main(
 
     /* perform alignment */
     if (!i_opt)
-        NWDP_TM(score, path, val, xa, ya, xlen, ylen, t, u, d0*d0, 0, invmap);
+        NWDP_TM(path, val, xa, ya, xlen, ylen, t, u, d0*d0, 0, invmap);
     else
     {
         for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
