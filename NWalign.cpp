@@ -1,5 +1,3 @@
-/* command line argument parsing and document of TMalign main program */
-
 #include "NWalign.h"
 
 using namespace std;
@@ -11,15 +9,15 @@ void print_extra_help()
 "    -dir     Perform all-against-all alignment among the list of PDB\n"
 "             chains listed by 'chain_list' under 'chain_folder'. Note\n"
 "             that the slash is necessary.\n"
-"             $ TMalign -dir chain_folder/ chain_list\n"
+"             $ NWalign -dir chain_folder/ chain_list\n"
 "\n"
 "    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
 "             under 'chain1_folder'. Note that the slash is necessary.\n"
-"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
+"             $ NWalign -dir1 chain1_folder/ chain1_list chain2\n"
 "\n"
 "    -dir2    Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
 "             under 'chain2_folder'\n"
-"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
+"             $ NWalign chain1 -dir2 chain2_folder/ chain2_list\n"
 "\n"
 "    -suffix  (Only when -dir1 and/or -dir2 are set, default is empty)\n"
 "             add file name suffix to files listed by chain1_list or chain2_list\n"
@@ -61,7 +59,7 @@ void print_help(bool h_opt=false)
 {
     cout <<
 "\n"
-"Usage: NWalign seq1.fasta seq2.fasta [Options]\n"
+"Usage: NWalign PDB1.pdb PDB2.pdb [Options]\n"
 "\n"
 "Options:\n"
 "    -h       Print the full help message\n"
@@ -255,7 +253,7 @@ int main(int argc, char *argv[])
             for (l=0;l<xlen;l++)
                 seqx[l]=AAmap(PDB_lines1[chain_i][l].substr(17,3));
             seqx[xlen]=0;
-            aa2int(seqx,xlen,seq2int1,mol_vec1[chain_i]);
+            aa2int(seqx,xlen,seq2int1);
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -288,14 +286,15 @@ int main(int argc, char *argv[])
                     for (l=0;l<ylen;l++)
                         seqy[l]=AAmap(PDB_lines2[chain_j][l].substr(17,3));
                     seqy[ylen]=0;
-                    aa2int(seqy,ylen,seq2int2,mol_vec2[chain_j]);
+                    aa2int(seqy,ylen,seq2int2);
 
                     int L_ali;                // Aligned length
                     double Liden=0;
                     string seqM, seqxA, seqyA;// for output alignment
                     
-                    NWalign(seqx, seqy, seq2int1, seq2int2, xlen, ylen, seqxA,
-                        seqyA, mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
+                    int aln_score=NWalign(seqx, seqy, seq2int1, seq2int2,
+                        xlen, ylen, seqxA, seqyA, 
+                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
                     
                     get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
 
@@ -304,9 +303,8 @@ int main(int argc, char *argv[])
                         yname.substr(dir2_opt.size()),
                         chainID_list1[chain_i].c_str(),
                         chainID_list2[chain_j].c_str(),
-                        xlen, ylen, 
-                        seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-                        L_ali, outfmt_opt);
+                        xlen, ylen, seqM.c_str(), seqxA.c_str(),
+                        seqyA.c_str(), Liden, L_ali, aln_score, outfmt_opt);
 
                     /* Done! Free memory */
                     seqM.clear();

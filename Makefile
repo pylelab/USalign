@@ -17,6 +17,9 @@ se: se.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 pdb2ss: pdb2ss.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
+NWalign: NWalign.cpp NWalign.h pstream.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
 pdb2xyz: pdb2xyz.cpp basic_fun.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 

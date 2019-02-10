@@ -39,19 +39,17 @@ const int BLOSUM62[24][24]={
 {-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4, 1},//*
 };
 
-const string aa_list="ARNDCQEGHILKMFPSTWYVBZX*";
-
 const int gapopen_blastn=-5;
 const int gapext_blastn=-2;
 
 const int BLASTN[24][24]={
-//a  c  g  t  u  *
-{ 2,-3,-3,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//a
-{-3, 2,-3,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//c
-{-3,-3, 2,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//g
-{-3,-3,-3, 2, 2,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//t
-{-3,-3,-3, 2, 2,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//u
-{-3,-3,-3,-3,-3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//*
+//a  c  g  t  u
+{ 2,-3,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//a
+{-3, 2,-3,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//c
+{-3,-3, 2,-3,-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//g
+{-3,-3,-3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//t
+{-3,-3,-3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//u
+{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -72,31 +70,45 @@ const int BLASTN[24][24]={
 { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
 
-const string na_list="acgtu*";
+const int aa_ascii2int[128]={
+    23, /*0   '\0'*/ 23, /*1   SOH */ 23, /*2   STX */ 23, /*3   ETX */
+    23, /*4   EOT */ 23, /*5   ENQ */ 23, /*6   ACK */ 23, /*7   '\a'*/
+    23, /*8   '\b'*/ 23, /*9   '\t'*/ 23, /*10  '\n'*/ 23, /*11  '\v'*/
+    23, /*12  '\f'*/ 23, /*13  '\r'*/ 23, /*14  SO  */ 23, /*15  SI  */
+    23, /*16  DLE */ 23, /*17  DC1 */ 23, /*18  DC2 */ 23, /*19  DC3 */
+    23, /*20  DC4 */ 23, /*21  NAK */ 23, /*22  SYN */ 23, /*23  ETB */
+    23, /*24  CAN */ 23, /*25  EM  */ 23, /*26  SUB */ 23, /*27  ESC */
+    23, /*28  FS  */ 23, /*29  GS  */ 23, /*30  RS  */ 23, /*31  US  */
+    23, /*32  ' ' */ 23, /*33  !   */ 23, /*34  "   */ 23, /*35  #   */
+    23, /*36  $   */ 23, /*37  %   */ 23, /*38  &   */ 23, /*39  '   */
+    23, /*40  (   */ 23, /*41  )   */ 23, /*42  *   */ 23, /*43  +   */
+    23, /*44  ,   */ 23, /*45  -   */ 23, /*46  .   */ 23, /*47  /   */
+    23, /*48  0   */ 23, /*49  1   */ 23, /*50  2   */ 23, /*51  3   */
+    23, /*52  4   */ 23, /*53  5   */ 23, /*54  6   */ 23, /*55  7   */
+    23, /*56  8   */ 23, /*57  9   */ 23, /*58  :   */ 23, /*59  ;   */
+    23, /*60  <   */ 23, /*61  =   */ 23, /*62  >   */ 23, /*63  ?   */
+    23, /*64  @   */  0, /*65  A   */ 20, /*66  B   */  4, /*67  C   */
+     3, /*68  D   */  6, /*69  E   */ 13, /*70  F   */  7, /*71  G   */
+     8, /*72  H   */  9, /*73  I   */ 23, /*74  J   */ 11, /*75  K   */
+    10, /*76  L   */ 12, /*77  M   */  2, /*78  N   */ 23, /*79  O   */
+    14, /*80  P   */  5, /*81  Q   */  1, /*82  R   */ 15, /*83  S   */
+    16, /*84  T   */ 23, /*85  U   */ 19, /*86  V   */ 17, /*87  W   */
+    22, /*88  X   */ 18, /*89  Y   */ 21, /*90  Z   */ 23, /*91  [   */
+    23, /*92  \   */ 23, /*93  ]   */ 23, /*94  ^   */ 23, /*95  _   */
+    23, /*96  `   */  0, /*97  a   */ 23, /*98  b   */  1, /*99  c   */
+    23, /*100 d   */ 23, /*101 e   */ 23, /*102 f   */  2, /*103 g   */
+    23, /*104 h   */ 23, /*105 i   */ 23, /*106 j   */ 23, /*107 k   */
+    23, /*108 l   */ 23, /*109 m   */ 23, /*110 n   */ 23, /*111 o   */
+    23, /*112 p   */ 23, /*113 q   */ 23, /*114 r   */ 23, /*115 s   */
+     3, /*116 t   */  4, /*117 u   */ 23, /*118 v   */ 23, /*119 w   */
+    23, /*120 x   */ 23, /*121 y   */ 23, /*122 z   */ 23, /*123 {   */
+    23, /*124 |   */ 23, /*125 }   */ 23, /*126 ~   */ 23, /*127 DEL */
+};
 
 /* convert amino acid to int */
-inline int aa2int(char aa)
+void aa2int(const char *sequence, const int xlen, int *seq2int)
 {
-    for (int i=0;i<aa_list.size();i++) if (aa_list[i]==aa) return i;
-    if (aa!=toupper(aa)) return aa2int(toupper(aa));
-    return aa_list.size();
-}
-
-inline int na2int(char na)
-{
-    for (int i=0;i<na_list.size();i++) if (na_list[i]==na) return i;
-    if (na!=tolower(na)) return na2int(tolower(na));
-    return na_list.size();
-}
-
-void aa2int(const char *sequence, const int xlen, int *seq2int,
-    const int mol_type)
-{
-    if (mol_type>0) // RNA
-        for (int l=0;l<xlen;l++) seq2int[l]=na2int(sequence[l]);
-    else // protein
-        for (int l=0;l<xlen;l++) seq2int[l]=aa2int(sequence[l]);
-    return;
+    for (int l=0;l<xlen;l++) seq2int[l]=aa_ascii2int[sequence[l]];
 }
 
 /* initialize matrix in gotoh algorithm */
@@ -108,6 +120,9 @@ void init_gotoh_mat(int **JumpH, int **JumpV,
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
     for (i=0;i<xlen+1;i++)
+        for (j=0;j<ylen+1;j++)
+            S[i][j]=H[i][j]=V[i][j]=P[i][j]=JumpH[i][j]=JumpV[i][j]=0;
+    for (i=0;i<xlen+1;i++)
     {
         if (glocal<2) P[i][0]=4; // -
         JumpV[i][0]=i;
@@ -117,9 +132,6 @@ void init_gotoh_mat(int **JumpH, int **JumpV,
         if (glocal<1) P[0][j]=2; // |
         JumpH[0][j]=j;
     }
-    for (i=1;i<xlen+1;i++)
-        for (j=1;j<ylen+1;j++)
-            P[i][j]=0;
     if (glocal<2) for (i=1;i<xlen+1;i++) S[i][0]=gapopen+gapext*(i-1);
     if (glocal<1) for (j=1;j<ylen+1;j++) S[0][j]=gapopen+gapext*(j-1);
     if (alt_init==0)
@@ -488,9 +500,9 @@ double get_seqID(const string& seqxA, const string& seqyA,
 void output_NWalign_results(
     const string xname, const string yname,
     const char *chainID1, const char *chainID2,
-    const int xlen, const int ylen,
-    const char *seqM, const char *seqxA, const char *seqyA,
-    const double Liden, const int L_ali, const int outfmt_opt)
+    const int xlen, const int ylen, const char *seqM, 
+    const char *seqxA, const char *seqyA, const double Liden,
+    const int L_ali, const int aln_score, const int outfmt_opt)
 {
     if (outfmt_opt<=0)
     {
@@ -499,7 +511,8 @@ void output_NWalign_results(
         printf("Length of Chain_1: %d residues\n", xlen);
         printf("Length of Chain_2: %d residues\n\n", ylen);
 
-        printf("Aligned length= %d, Seq_ID=n_identical/n_aligned= %4.3f\n", L_ali, Liden/L_ali);
+        printf("Aligned length= %d, Alignment score= %d, Seq_ID=n_identical/n_aligned= %4.3f\n",
+            L_ali, aln_score, Liden/L_ali);
         printf("Seq_ID= %6.5f (if normalized by length of Chain_1\n", Liden/xlen);
         printf("Seq_ID= %6.5f (if normalized by length of Chain_2\n", Liden/ylen);
         printf("(You should use Seq_ID normalized by length of the reference structure)\n");
