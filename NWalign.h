@@ -2,14 +2,7 @@
 #ifndef NWalign_H
 #define NWalign_H 1
 
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <string>
-#include <string.h>
-#include <iomanip>
-#include <stdlib.h>
-#include <ctype.h>
+#include "basic_fun.h"
 
 #define MAX(A,B) ((A)>(B)?(A):(B))
 
@@ -84,77 +77,77 @@ const string na_list="acgtu*";
 /* convert amino acid to int */
 inline int aa2int(char aa)
 {
-    for (int i=0;i<aa_list.length();i++) if (aa_list[i]==aa) return i;
+    for (int i=0;i<aa_list.size();i++) if (aa_list[i]==aa) return i;
     if (aa!=toupper(aa)) return aa2int(toupper(aa));
-    return aa_list.length();
+    return aa_list.size();
 }
 
 inline int na2int(char na)
 {
-    for (int i=0;i<na_list.length();i++) if (na_list[i]==na) return i;
+    for (int i=0;i<na_list.size();i++) if (na_list[i]==na) return i;
     if (na!=tolower(na)) return na2int(tolower(na));
-    return na_list.length();
+    return na_list.size();
 }
 
-void aa2int(const char *sequence, const int xlen, vector<int>&seqyint,
+void aa2int(const char *sequence, const int xlen, int *seq2int,
     const int mol_type)
 {
-    seqyint.assign(xlen,0);
     if (mol_type>0) // RNA
-        for (int l=0;l<xlen;l++) seqyint[l]=na2int(sequence[l]);
+        for (int l=0;l<xlen;l++) seq2int[l]=na2int(sequence[l]);
     else // protein
-        for (int l=0;l<xlen;l++) seqyint[l]=aa2int(sequence[l]);
+        for (int l=0;l<xlen;l++) seq2int[l]=aa2int(sequence[l]);
     return;
 }
 
 /* initialize matrix in gotoh algorithm */
-void init_gotoh_mat(vector<vector<int> >&JumpH, vector<vector<int> >&JumpV,
-    vector<vector<int> >& P,vector<vector<int> >& S, 
-    vector<vector<int> >& H, vector<vector<int> >& V,
-    const int len1, const int len2, const int gapopen,const int gapext,
+void init_gotoh_mat(int **JumpH, int **JumpV,
+    int **P, int **S, int **H, int **V,
+    const int xlen, const int ylen, const int gapopen,const int gapext,
     const int glocal=0, const int alt_init=1)
 {
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
-    for (i=0;i<len1+1;i++)
+    for (i=0;i<xlen+1;i++)
     {
         if (glocal<2) P[i][0]=4; // -
         JumpV[i][0]=i;
     }
-    for (j=0;j<len2+1;j++)
+    for (j=0;j<ylen+1;j++)
     {
         if (glocal<1) P[0][j]=2; // |
         JumpH[0][j]=j;
     }
-    if (glocal<2) for (i=1;i<len1+1;i++) S[i][0]=gapopen+gapext*(i-1);
-    if (glocal<1) for (j=1;j<len2+1;j++) S[0][j]=gapopen+gapext*(j-1);
+    for (i=1;i<xlen+1;i++)
+        for (j=1;j<ylen+1;j++)
+            P[i][j]=0;
+    if (glocal<2) for (i=1;i<xlen+1;i++) S[i][0]=gapopen+gapext*(i-1);
+    if (glocal<1) for (j=1;j<ylen+1;j++) S[0][j]=gapopen+gapext*(j-1);
     if (alt_init==0)
     {
-        for (i=1;i<len1+1;i++) H[i][0]=gapopen+gapext*(i-1);
-        for (j=1;j<len2+1;j++) V[0][j]=gapopen+gapext*(j-1);
+        for (i=1;i<xlen+1;i++) H[i][0]=gapopen+gapext*(i-1);
+        for (j=1;j<ylen+1;j++) V[0][j]=gapopen+gapext*(j-1);
     }
     else
     {
-        if (glocal<2) for (i=1;i<len1+1;i++) V[i][0]=gapopen+gapext*(i-1);
-        if (glocal<1) for (j=1;j<len2+1;j++) H[0][j]=gapopen+gapext*(j-1);
-        for (i=0;i<len1+1;i++) H[i][0]=-99999; // INT_MIN cause bug on ubuntu
-        for (j=0;j<len2+1;j++) V[0][j]=-99999; // INT_MIN;
+        if (glocal<2) for (i=1;i<xlen+1;i++) V[i][0]=gapopen+gapext*(i-1);
+        if (glocal<1) for (j=1;j<ylen+1;j++) H[0][j]=gapopen+gapext*(j-1);
+        for (i=0;i<xlen+1;i++) H[i][0]=-99999; // INT_MIN cause bug on ubuntu
+        for (j=0;j<ylen+1;j++) V[0][j]=-99999; // INT_MIN;
     }
 }
 
 /* locate the cell with highest alignment score. reset path after
  * the cell to zero */
-void find_highest_align_score(
-    const vector<vector<int> >& S, vector<vector<int> >& P,
-    int &aln_score, const int len1,const int len2)
+void find_highest_align_score( int **S, int **P,
+    int &aln_score, const int xlen,const int ylen)
 {
     // locate the cell with highest alignment score
-    int max_aln_i=len1;
-    int max_aln_j=len2;
+    int max_aln_i=xlen;
+    int max_aln_j=ylen;
     int i,j;
-    for (i=0;i<len1+1;i++)
+    for (i=0;i<xlen+1;i++)
     {
-        for (j=0;j<len2+1;j++)
+        for (j=0;j<ylen+1;j++)
         {
             if (S[i][j]>=aln_score)
             {
@@ -166,8 +159,8 @@ void find_highest_align_score(
     }
 
     // reset all path after [max_aln_i][max_aln_j]
-    for (i=max_aln_i+1;i<len1+1;i++) for (j=0;j<len2+1;j++) P[i][j]=0;
-    for (i=0;i<len1+1;i++) for (j=max_aln_j+1;j<len2+1;j++) P[i][j]=0;
+    for (i=max_aln_i+1;i<xlen+1;i++) for (j=0;j<ylen+1;j++) P[i][j]=0;
+    for (i=0;i<xlen+1;i++) for (j=max_aln_j+1;j<ylen+1;j++) P[i][j]=0;
 }
 
 /* calculate dynamic programming matrix using gotoh algorithm
@@ -192,36 +185,31 @@ void find_highest_align_score(
  *         0 : use yang zhang's matrix initialization, does NOT work
  *             for glocal alignment
  */
-int calculate_score_gotoh(
-    const vector<int>& seqyint1, const vector<int>& seqyint2,
-    vector<vector<int> >& JumpH, vector<vector<int> >& JumpV,
-    vector<vector<int> >& P,const int ScoringMatrix[24][24],
-    const int gapopen,const int gapext,const int glocal=0,
-    const int alt_init=1)
+int calculate_score_gotoh(const int *seq2int1, const int *seq2int2,
+    const int xlen,const int ylen, int** JumpH, int** JumpV, int **P,
+    const int ScoringMatrix[24][24], const int gapopen,const int gapext,
+    const int glocal=0, const int alt_init=1)
 {
-    int len1=seqyint1.size();
-    int len2=seqyint2.size();
-
-    vector<int> temp_int(len2+1,0);
-    vector<vector<int> > S(len1+1,temp_int);
-    // penalty score for horizontal long gap
-    vector<vector<int> > H(len1+1,temp_int);
-    // penalty score for vertical long gap
-    vector<vector<int> > V(len1+1,temp_int);
+    int **S;
+    int **H;
+    int **V;
+    NewArray(&S,xlen+1,ylen+1);
+    NewArray(&H,xlen+1,ylen+1); // penalty score for horizontal long gap
+    NewArray(&V,xlen+1,ylen+1); // penalty score for vertical long gap
     
     // fill first row/colum of JumpH,jumpV and path matrix P
     int i,j;
-    init_gotoh_mat(JumpH, JumpV, P, S, H, V, len1, len2,
+    init_gotoh_mat(JumpH, JumpV, P, S, H, V, xlen, ylen,
         gapopen, gapext, glocal, alt_init);
 
     // fill S and P
     int diag_score,left_score,up_score;
-    for (i=1;i<len1+1;i++)
+    for (i=1;i<xlen+1;i++)
     {
-        for (j=1;j<len2+1;j++)
+        for (j=1;j<ylen+1;j++)
         {
             // penalty of consective deletion
-            if (glocal<1 || i<len1 || glocal>=3)
+            if (glocal<1 || i<xlen || glocal>=3)
             {
                 H[i][j]=MAX(S[i][j-1]+gapopen,H[i][j-1]+gapext);
                 JumpH[i][j]=(H[i][j]==H[i][j-1]+gapext)?(JumpH[i][j-1]+1):1;
@@ -232,7 +220,7 @@ int calculate_score_gotoh(
                 JumpH[i][j]=(H[i][j]==H[i][j-1])?(JumpH[i][j-1]+1):1;
             }
             // penalty of consective insertion
-            if (glocal<2 || j<len2 || glocal>=3)
+            if (glocal<2 || j<ylen || glocal>=3)
             {
                 V[i][j]=MAX(S[i-1][j]+gapopen,V[i-1][j]+gapext);
                 JumpV[i][j]=(V[i][j]==V[i-1][j]+gapext)?(JumpV[i-1][j]+1):1;
@@ -244,8 +232,8 @@ int calculate_score_gotoh(
             }
 
             diag_score=S[i-1][j-1]; // match-mismatch '\'
-            if (seqyint1[i-1]<24 && seqyint2[j-1]<24)
-                diag_score+=ScoringMatrix[seqyint1[i-1]][seqyint2[j-1]];
+            if (seq2int1[i-1]<24 && seq2int2[j-1]<24)
+                diag_score+=ScoringMatrix[seq2int1[i-1]][seq2int2[j-1]];
             left_score=H[i][j];     // deletion       '-'
             up_score  =V[i][j];     // insertion      '|'
 
@@ -275,34 +263,32 @@ int calculate_score_gotoh(
             }
         }
     }
-    int aln_score=S[len1][len2];
+    int aln_score=S[xlen][ylen];
 
     // re-fill first row/column of path matrix P for back-tracing
-    for (i=1;i<len1+1;i++) if (glocal<3 || P[i][0]>0) P[i][0]=2; // |
-    for (j=1;j<len2+1;j++) if (glocal<3 || P[0][j]>0) P[0][j]=4; // -
+    for (i=1;i<xlen+1;i++) if (glocal<3 || P[i][0]>0) P[i][0]=2; // |
+    for (j=1;j<ylen+1;j++) if (glocal<3 || P[0][j]>0) P[0][j]=4; // -
 
     // calculate alignment score and alignment path for swalign
     if (glocal>=3)
-        find_highest_align_score(S,P,aln_score,len1,len2);
+        find_highest_align_score(S,P,aln_score,xlen,ylen);
 
     // release memory
-    S.clear();
-    H.clear();
-    V.clear();
+    DeleteArray(&S,xlen+1);
+    DeleteArray(&H,xlen+1);
+    DeleteArray(&V,xlen+1);
     return aln_score; // final alignment score
 }
 
 /* trace back dynamic programming path to diciper pairwise alignment */
-void trace_back_gotoh(string seqx, string seqy,
-    const vector<vector<int> >& JumpH, const vector<vector<int> >& JumpV,
-    const vector<vector<int> >& P, string& seqxA, string& seqyA)
+void trace_back_gotoh(const char *seqx, const char *seqy,
+    int ** JumpH, int ** JumpV, int ** P,
+    string& seqxA, string& seqyA, const int xlen, const int ylen)
 {
-    int len1=seqx.length();
-    int len2=seqy.length();
-    
-    int i=len1;
-    int j=len2;
+    int i=xlen;
+    int j=ylen;
     int gaplen,p;
+    char *buf=new char [MAX(xlen,ylen)+1];
 
     while(i+j)
     {
@@ -310,60 +296,71 @@ void trace_back_gotoh(string seqx, string seqy,
         if (P[i][j]>=4)
         {
             gaplen=JumpH[i][j];
-            for (p=0;p<gaplen;p++) seqxA='-'+seqxA;
-            seqyA=seqy.substr(seqy.length()-gaplen,gaplen)+seqyA;
-            seqy=seqy.substr(0,seqy.length()-gaplen);
             j-=gaplen;
+            strncpy(buf,seqy+j,gaplen);
+            buf[gaplen]=0;
+            seqyA=buf+seqyA;
+
+            for (p=0;p<gaplen;p++) buf[p]='-';
+            seqxA=buf+seqxA;
         }
         else if (P[i][j] % 4 >= 2)
         {
             gaplen=JumpV[i][j];
-            seqxA=seqx.substr(seqx.length()-gaplen,gaplen)+seqxA;
-            for (p=0;p<gaplen;p++) seqyA='-'+seqyA;
-            seqx=seqx.substr(0,seqx.length()-gaplen);
             i-=gaplen;
+            strncpy(buf,seqx+i,gaplen);
+            buf[gaplen]=0;
+            seqxA=buf+seqxA;
+
+            for (p=0;p<gaplen;p++) buf[p]='-';
+            seqyA=buf+seqyA;
         }
         else
         {
             if (i==0 && j!=0) // only in glocal alignment
             {
-                seqyA=seqy+seqyA;
-                for (p=0;p<seqy.length();p++) seqxA='-'+seqxA;
+                strncpy(buf,seqy,j);
+                buf[j]=0;
+                seqyA=buf+seqyA;
+                for (p=0;p<j;p++) buf[p]='-';
+                seqxA=buf+seqxA;
                 break;
             }
             if (i!=0 && j==0) // only in glocal alignment
             {
-                seqxA=seqx+seqxA;
-                for (p=0;p<seqx.length();p++) seqyA='-'+seqyA;
+                strncpy(buf,seqx,i);
+                buf[i]=0;
+                seqxA=buf+seqxA;
+                for (p=0;p<i;p++) buf[p]='-';
+                seqyA=buf+seqyA;
                 break;
             }
-            seqxA=seqx[seqx.length()-1]+seqxA;
-            seqyA=seqy[seqy.length()-1]+seqyA;
-            seqx=seqx.substr(0,seqx.length()-1);
-            seqy=seqy.substr(0,seqy.length()-1);
             i--;
             j--;
+            seqxA=seqx[i]+seqxA;
+            seqyA=seqy[j]+seqyA;
         }
     }   
+    delete [] buf;
 }
 
 
 /* trace back Smith-Waterman dynamic programming path to diciper 
  * pairwise local alignment */
-void trace_back_sw(string seqx, string seqy,
-    const vector<vector<int> >& JumpH, const vector<vector<int> >& JumpV,
-    const vector<vector<int> >& P, string& seqxA, string& seqyA)
+void trace_back_sw(const char *seqx, const char *seqy,
+    int **JumpH, int **JumpV, int **P,
+    string& seqxA, string& seqyA, const int xlen, const int ylen)
 {
-    int len1=seqx.length();
-    int len2=seqy.length();
-    
-    int i=len1;
-    int j=len2;
+    int i=xlen;
+    int j=ylen;
+    int gaplen,p;
+    char *buf=new char [xlen+ylen+1];
+
     // find the first non-zero cell in P
     bool found_start_cell=false;
-    for (i=len1;i>=0;i--)
+    for (i=xlen;i>=0;i--)
     {
-        for (j=len2;j>=0;j--)
+        for (j=ylen;j>=0;j--)
         {
             if (P[i][j]!=0)
             {
@@ -373,66 +370,99 @@ void trace_back_sw(string seqx, string seqy,
         }
         if (found_start_cell) break;
     }
-    if (i<0||j<0) return;
-    seqx=seqx.substr(0,i);
-    seqy=seqy.substr(0,j);
 
-    int gaplen,p;
+    /* copy C terminal sequence */
+    for (p=0;p<ylen-j;p++) buf[p]='-';
+    buf[ylen-j]=0;
+    seqxA=buf;
+    strncpy(buf,seqx+i,xlen-i);
+    buf[xlen-i]=0;
+    seqxA+=buf;
+
+    strncpy(buf,seqy+j,ylen-j);
+    buf[ylen-j]=0;
+    seqyA+=buf;
+    for (p=0;p<xlen-i;p++) buf[p]='-';
+    buf[xlen-i]=0;
+    seqyA+=buf;
+
+    if (i<0||j<0)
+    {
+        delete [] buf;
+        return;
+    }
+
+    /* traceback aligned sequences */
     while(P[i][j]!=0)
     {
         gaplen=0;
         if (P[i][j]>=4)
         {
             gaplen=JumpH[i][j];
-            for (p=0;p<gaplen;p++) seqxA='-'+seqxA;
-            seqyA=seqy.substr(seqy.length()-gaplen,gaplen)+seqyA;
-            seqy=seqy.substr(0,seqy.length()-gaplen);
             j-=gaplen;
+            strncpy(buf,seqy+j,gaplen);
+            buf[gaplen]=0;
+            seqyA=buf+seqyA;
+
+            for (p=0;p<gaplen;p++) buf[p]='-';
+            seqxA=buf+seqxA;
         }
         else if (P[i][j] % 4 >= 2)
         {
             gaplen=JumpV[i][j];
-            seqxA=seqx.substr(seqx.length()-gaplen,gaplen)+seqxA;
-            for (p=0;p<gaplen;p++) seqyA='-'+seqyA;
-            seqx=seqx.substr(0,seqx.length()-gaplen);
             i-=gaplen;
+            strncpy(buf,seqx+i,gaplen);
+            buf[gaplen]=0;
+            seqxA=buf+seqxA;
+
+            for (p=0;p<gaplen;p++) buf[p]='-';
+            seqyA=buf+seqyA;
         }
         else
         {
-            seqxA=seqx[seqx.length()-1]+seqxA;
-            seqyA=seqy[seqy.length()-1]+seqyA;
-            seqx=seqx.substr(0,seqx.length()-1);
-            seqy=seqy.substr(0,seqy.length()-1);
             i--;
             j--;
+            seqxA=seqx[i]+seqxA;
+            seqyA=seqy[j]+seqyA;
         }
     }
+    /* copy N terminal sequence */
+    for (p=0;p<j;p++) buf[p]='-';
+    strncpy(buf+j,seqx,i);
+    buf[i+j]=0;
+    seqxA=buf+seqxA;
+
+    strncpy(buf,seqy,j);
+    for (p=j;p<j+i;p++) buf[p]='-';
+    buf[i+j]=0;
+    seqyA=buf+seqyA;
+    delete [] buf;
 }
 
 /* entry function for NWalign */
 int NWalign(const char *seqx, const char *seqy, 
-    const vector<int>& seqyint1, const vector<int>& seqyint2, // aa2int
+    const int* seq2int1, const int* seq2int2, const int xlen, const int ylen,
     string & seqxA,string & seqyA, const int mol_type, const int glocal=0)
 {
-    int len1=seqyint1.size();
-    int len2=seqyint2.size();
-    vector<int> temp_int(len2+1,0);
-    vector<vector<int> > JumpH(len1+1,temp_int);
-    vector<vector<int> > JumpV(len1+1,temp_int);
-    vector<vector<int> > P(len1+1,temp_int);
+    int **JumpH;
+    int **JumpV;
+    int **P;
+    NewArray(&JumpH,xlen+1,ylen+1);
+    NewArray(&JumpV,xlen+1,ylen+1);
+    NewArray(&P,xlen+1,ylen+1);
     
     int aln_score;
-    if (mol_type>0) aln_score=calculate_score_gotoh(seqyint1,seqyint2,
-            JumpH,JumpV,P, BLASTN,gapopen_blastn,gapext_blastn,glocal);
-    else            aln_score=calculate_score_gotoh(seqyint1,seqyint2,
-            JumpH,JumpV,P, BLOSUM62,gapopen_blosum62,gapext_blosum62,glocal);
+    if (mol_type>0) aln_score=calculate_score_gotoh(seq2int1,seq2int2,xlen,
+        ylen,JumpH,JumpV,P, BLASTN,gapopen_blastn,gapext_blastn,glocal);
+    else            aln_score=calculate_score_gotoh(seq2int1,seq2int2,xlen,
+        ylen,JumpH,JumpV,P, BLOSUM62,gapopen_blosum62,gapext_blosum62,glocal);
 
-    if (glocal<3) trace_back_gotoh(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA);
-    else trace_back_sw(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA);
-
-    JumpH.clear();
-    JumpV.clear();
-    P.clear();
+    if (glocal<3) trace_back_gotoh(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
+    else trace_back_sw(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
+    
+    DeleteArray(&JumpH, xlen+1);
+    DeleteArray(&JumpV, xlen+1);
+    DeleteArray(&P, xlen+1);
     return aln_score; // aligment score
 }
 
@@ -441,7 +471,7 @@ double get_seqID(const string& seqxA, const string& seqyA,
 {
     Liden=0;
     L_ali=0;
-    for (int i=0;i<seqxA.length();i++)
+    for (int i=0;i<seqxA.size();i++)
     {
         if (seqxA[i]==seqyA[i] && seqxA[i]!='-')
         {

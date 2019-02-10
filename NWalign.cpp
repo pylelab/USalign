@@ -1,6 +1,5 @@
 /* command line argument parsing and document of TMalign main program */
 
-#include "basic_fun.h"
 #include "NWalign.h"
 
 using namespace std;
@@ -72,7 +71,6 @@ void print_help(bool h_opt=false)
 "             1: glocal-query alignment\n"
 "             2: glocal-both alignment\n"
 "             3: local alignment\n"
-"\n"
     <<endl;
 
     if (h_opt) print_extra_help();
@@ -225,8 +223,8 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    vector<int> seq2int1,seq2int2; // aa2int
-    int l; // residue index
+    int    *seq2int1,*seq2int2; // aa2int
+    int    l; // residue index
 
     /* loop over file names */
     for (i=0;i<chain1_list.size();i++)
@@ -253,6 +251,7 @@ int main(int argc, char *argv[])
                 continue;
             }
             seqx = new char[xlen + 1];
+            seq2int1 = new int[xlen];
             for (l=0;l<xlen;l++)
                 seqx[l]=AAmap(PDB_lines1[chain_i][l].substr(17,3));
             seqx[xlen]=0;
@@ -285,6 +284,7 @@ int main(int argc, char *argv[])
                         continue;
                     }
                     seqy = new char[ylen + 1];
+                    seq2int2 = new int[ylen];
                     for (l=0;l<ylen;l++)
                         seqy[l]=AAmap(PDB_lines2[chain_j][l].substr(17,3));
                     seqy[ylen]=0;
@@ -294,8 +294,8 @@ int main(int argc, char *argv[])
                     double Liden=0;
                     string seqM, seqxA, seqyA;// for output alignment
                     
-                    NWalign(seqx, seqy, seq2int1, seq2int2, seqxA,seqyA,
-                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
+                    NWalign(seqx, seqy, seq2int1, seq2int2, xlen, ylen, seqxA,
+                        seqyA, mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
                     
                     get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
-                    seq2int2.clear();
+                    delete [] seq2int2;
                     delete [] seqy;
                 } // chain_j
                 if (chain2_list.size()>1)
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
             } // j
             PDB_lines1[chain_i].clear();
             delete [] seqx;
-            seq2int1.clear();
+            delete [] seq2int1;
         } // chain_i
         xname.clear();
         PDB_lines1.clear();
