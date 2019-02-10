@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
     vector<string> resi_vec2;  // residue index for chain2
 
     /* loop over file names */
-    for (int i=0;i<chain1_list.size();i++)
+    for (i=0;i<chain1_list.size();i++)
     {
         /* parse chain 1 */
         xname=chain1_list[i];
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
                 <<". Chain number 0."<<endl;
             continue;
         }
-        for (int chain_i=0;chain_i<xchainnum;chain_i++)
+        for (chain_i=0;chain_i<xchainnum;chain_i++)
         {
             xlen=PDB_lines1[chain_i].size();
             if (mol_opt=="RNA") mol_vec1[chain_i]=1;
@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
 
-            for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
+            for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
                         continue;
                     }
                 }
-                for (int chain_j=0;chain_j<ychainnum;chain_j++)
+                for (chain_j=0;chain_j<ychainnum;chain_j++)
                 {
                     ylen=PDB_lines2[chain_j].size();
                     if (mol_opt=="RNA") mol_vec2[chain_j]=1;
@@ -529,7 +529,7 @@ int main(int argc, char *argv[])
                 if (chain2_list.size()>1)
                 {
                     yname.clear();
-                    for (int chain_j=0;chain_j<ychainnum;chain_j++)
+                    for (chain_j=0;chain_j<ychainnum;chain_j++)
                         PDB_lines2[chain_j].clear();
                     PDB_lines2.clear();
                     chainID_list2.clear();
@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
     if (chain2_list.size()==1)
     {
         yname.clear();
-        for (int chain_j=0;chain_j<ychainnum;chain_j++)
+        for (chain_j=0;chain_j<ychainnum;chain_j++)
             PDB_lines2[chain_j].clear();
         PDB_lines2.clear();
         resi_vec2.clear();
