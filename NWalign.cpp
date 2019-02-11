@@ -35,23 +35,22 @@ void print_extra_help()
 "             1: ENDMDL or END\n"
 "             0: (default in the first C++ TMalign) end of file\n"
 "\n"
+"             For FASTA intput (-infmt1/-infmt2 4), -ter 0 means read all\n"
+"             sequences; -ter >=1 means read the first sequence only."
+"\n"
 "    -split   Whether to split PDB file into multiple chains\n"
 "             0: (default) treat the whole structure as one single chain\n"
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
+"             For FASTA intput, -split 0 means concatenate all sequences into\n"
+"             one read all sequence; -split >=1 means each sequence is an\n"
+"             individual entry."
+"\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
 "             1: fasta format compact output\n"
 "             2: tabular format very compact output\n"
-"\n"
-"    -infmt1  Input format for chain1\n"
-"    -infmt2  Input format for chain2\n"
-"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
-"             0: PDB format\n"
-"             1: SPICKER format\n"
-"             2: xyz format\n"
-"             3: PDBx/mmCIF format\n"
     <<endl;
 }
 
@@ -69,6 +68,14 @@ void print_help(bool h_opt=false)
 "             1: glocal-query alignment\n"
 "             2: glocal-both alignment\n"
 "             3: local alignment\n"
+"\n"
+"    -infmt1  Input format for chain1\n"
+"    -infmt2  Input format for chain2\n"
+"            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
+"             0: PDB format\n"
+"             2: xyz format\n"
+"             3: PDBx/mmCIF format\n"
+"             4: FASTA format sequence\n"
     <<endl;
 
     if (h_opt) print_extra_help();
@@ -228,8 +235,10 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt);
+        if (infmt1_opt>=4) xchainnum=get_FASTA_lines(xname, PDB_lines1, 
+                chainID_list1, mol_vec1, ter_opt, split_opt);
+        else xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
+                mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -238,7 +247,8 @@ int main(int argc, char *argv[])
         }
         for (chain_i=0;chain_i<xchainnum;chain_i++)
         {
-            xlen=PDB_lines1[chain_i].size();
+            if (infmt1_opt>=4) xlen=PDB_lines1[chain_i][0].size();
+            else xlen=PDB_lines1[chain_i].size();
             if (mol_opt=="RNA") mol_vec1[chain_i]=1;
             else if (mol_opt=="protein") mol_vec1[chain_i]=-1;
             if (!xlen)
@@ -248,18 +258,23 @@ int main(int argc, char *argv[])
                 continue;
             }
             seqx = new char[xlen + 1];
-            for (l=0;l<xlen;l++)
+            if (infmt1_opt>=4) strcpy(seqx,PDB_lines1[chain_i][0].c_str());
+            else for (l=0;l<xlen;l++)
                 seqx[l]=AAmap(PDB_lines1[chain_i][l].substr(17,3));
             seqx[xlen]=0;
-
+            
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
                 {
                     yname=chain2_list[j];
-                    ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt);
+                    if (infmt2_opt>=4)
+                         ychainnum=get_FASTA_lines(yname, PDB_lines2,
+                            chainID_list2, mol_vec2, ter_opt, split_opt);
+                    else ychainnum=get_PDB_lines(yname, PDB_lines2,
+                            chainID_list2, mol_vec2, ter_opt,
+                            infmt2_opt, atom_opt, split_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -269,7 +284,8 @@ int main(int argc, char *argv[])
                 }
                 for (chain_j=0;chain_j<ychainnum;chain_j++)
                 {
-                    ylen=PDB_lines2[chain_j].size();
+                    if (infmt2_opt>=4) ylen=PDB_lines2[chain_j][0].size();
+                    else ylen=PDB_lines2[chain_j].size();
                     if (mol_opt=="RNA") mol_vec2[chain_j]=1;
                     else if (mol_opt=="protein") mol_vec2[chain_j]=-1;
                     if (!ylen)
@@ -279,7 +295,9 @@ int main(int argc, char *argv[])
                         continue;
                     }
                     seqy = new char[ylen + 1];
-                    for (l=0;l<ylen;l++)
+                    if (infmt2_opt>=4) 
+                        strcpy(seqy,PDB_lines2[chain_j][0].c_str());
+                    else for (l=0;l<ylen;l++)
                         seqy[l]=AAmap(PDB_lines2[chain_j][l].substr(17,3));
                     seqy[ylen]=0;
 

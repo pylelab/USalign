@@ -495,6 +495,75 @@ int get_PDB_lines(const string filename,
     return PDB_lines.size();
 }
 
+/* read fasta file from filename. sequence is stored into FASTA_lines
+ * while sequence name is stored into chainID_list.
+ * if ter_opt >=1, only read the first sequence.
+ * if ter_opt ==0, read all sequences.
+ * if split_opt >=1 and ter_opt ==0, each sequence is a separate entry.
+ * if split_opt ==0 and ter_opt ==0, all sequences are combined into one */
+int get_FASTA_lines(const string filename,
+    vector<vector<string> >&FASTA_lines, vector<string> &chainID_list,
+    vector<int> &mol_vec, const int ter_opt=3, const int split_opt=0)
+{
+    string line;
+    vector<string> tmp_str_vec;
+    int l;
+    
+    int compress_type=0; // uncompressed file
+    ifstream fin;
+    redi::ipstream fin_gz; // if file is compressed
+    if (filename.size()>=3 && 
+        filename.substr(filename.size()-3,3)==".gz")
+    {
+        fin_gz.open("zcat "+filename);
+        compress_type=1;
+    }
+    else if (filename.size()>=4 && 
+        filename.substr(filename.size()-4,4)==".bz2")
+    {
+        fin_gz.open("bzcat "+filename);
+        compress_type=2;
+    }
+    else fin.open(filename.c_str());
+
+    while (compress_type?fin_gz.good():fin.good())
+    {
+        if (compress_type) getline(fin_gz, line);
+        else               getline(fin, line);
+        if (line.size()==0 || line[0]=='#') continue;
+
+        if (line[0]=='>')
+        {
+            if (FASTA_lines.size())
+            {
+                if (ter_opt) break;
+                if (split_opt==0) continue;
+            }
+            FASTA_lines.push_back(tmp_str_vec);
+            FASTA_lines.back().push_back("");
+            mol_vec.push_back(0);
+            if (ter_opt==0 && split_opt)
+            {
+                line[0]=':';
+                chainID_list.push_back(line);
+            }
+            else chainID_list.push_back("");
+        }
+        else
+        {
+            FASTA_lines.back()[0]+=line;
+            for (l=0;l<line.size();l++) mol_vec.back()+=
+                ('a'<=line[l] && line[l]<='z')-('A'<=line[l] && line[l]<='Z');
+        }
+    }
+
+    line.clear();
+    if (compress_type) fin_gz.close();
+    else               fin.close();
+    return FASTA_lines.size();
+}
+
+
 /* extract pairwise sequence alignment from residue index vectors,
  * assuming that "sequence" contains two empty strings.
  * return length of alignment, including gap. */
