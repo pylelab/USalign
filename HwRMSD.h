@@ -68,22 +68,21 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
                 mol_type, glocal);
     }
 
-    double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
-    double **xt;          //for saving the superposed version of r_1 or xtm
-    double **r1, **r2;    // for Kabsch rotation
-
     /***********************/
     /* allocate memory     */
     /***********************/
+    double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
+    double **xt;          //for saving the superposed version of r_1 or xtm
+    double **r1, **r2;    // for Kabsch rotation
     int minlen = min(xlen, ylen);
     NewArray(&xt, xlen, 3);
     NewArray(&r1, minlen, 3);
     NewArray(&r2, minlen, 3);
+    int *invmap = new int[ylen+1];
 
     /*****************************/
     /*    get initial alignment  */
     /*****************************/
-    int *invmap = new int[ylen+1];
     for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
         invmap[j] = -1;
 
@@ -111,6 +110,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         Lnorm_ass, d0_scale, I_opt, a_opt, u_opt, d_opt, mol_type);
 
     /* clean up */
+    delete [] invmap;
     DeleteArray(&xt, xlen);
     DeleteArray(&r1, minlen);
     DeleteArray(&r2, minlen);
