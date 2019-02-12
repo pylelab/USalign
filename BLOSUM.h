@@ -1,5 +1,5 @@
-#ifndef BLOSUM_H
-#define BLOSUM_H 1
+#ifndef TMalign_BLOSUM_H
+#define TMalign_BLOSUM_H 1
 
 /* This matrix contains two scoring matrices: 
  * [1] BLOSUM62 for protein is defined for upper case letters:

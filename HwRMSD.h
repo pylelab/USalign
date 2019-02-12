@@ -1,3 +1,5 @@
+#ifndef TMalign_HwRMSD_h
+#define TMalign_HwRMSD_h 1
 #include "NWalign.h"
 #include "se.h"
 
@@ -48,20 +50,16 @@ double Kabsch_Superpose(double **r1, double **r2, double **xt,
 }
 
 int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
-    double t0[3], double u0[3][3],
-    double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
-    double &d0_0, double &TM_0,
+    double t0[3], double u0[3][3], double &TM1, double &TM2,
+    double &TM3, double &TM4, double &TM5, double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA,
-    double &rmsd0, int &L_ali, double &Liden,
-    double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
-    const int xlen, const int ylen,
-    vector<string> sequence, const double Lnorm_ass,
-    const double d0_scale,
-    const bool i_opt, const bool I_opt, const int a_opt,
-    const bool u_opt, const bool d_opt, const int mol_type)
+    string &seqM, string &seqxA, string &seqyA, double &rmsd0, int &L_ali,
+    double &Liden, double &TM_ali, double &rmsd_ali, int &n_ali, 
+    int &n_ali8, const int xlen, const int ylen, vector<string> sequence,
+    const double Lnorm_ass, const double d0_scale, const bool i_opt,
+    const bool I_opt, const int a_opt, const bool u_opt, const bool d_opt,
+    const int mol_type, const int glocal=0)
 {
-    int    glocal    =0; // global alignment
     if (!I_opt && !i_opt)
     {
         sequence.push_back("");
@@ -113,3 +111,4 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         Lnorm_ass, d0_scale, I_opt, a_opt, u_opt, d_opt, mol_type);
     return 0;
 }
+#endif

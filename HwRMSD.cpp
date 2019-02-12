@@ -56,6 +56,12 @@ void print_extra_help()
 "             3: (similar to TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and order of chain\n"
 "\n"
+"    -glocal  Global or local alignment\n"
+"             0: (default) global alignment\n"
+"             1: glocal-query alignment\n"
+"             2: glocal-both alignment\n"
+"             3: local alignment\n"
+"\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -147,6 +153,7 @@ int main(int argc, char *argv[])
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
+    int    glocal    =0;
 
     for(int i = 1; i < argc; i++)
     {
@@ -233,6 +240,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-byresi") && i < (argc-1) )
         {
             byresi_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-glocal") && i < (argc-1) )
+        {
+            glocal=atoi(argv[i + 1]); i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
@@ -407,7 +418,7 @@ int main(int argc, char *argv[])
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
 
-                    /* declare variable specific to this pair of TMalign */
+                    /* declare variable specific to this pair of HwRMSD */
                     double t0[3], u0[3][3];
                     double TM1, TM2;
                     double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
@@ -431,7 +442,7 @@ int main(int argc, char *argv[])
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, I_opt, a_opt, u_opt, d_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j]);
+                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
 
                     /* print result */
                     output_results(
