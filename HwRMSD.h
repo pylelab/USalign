@@ -109,6 +109,11 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         seqM, seqxA, seqyA, rmsd0, L_ali, Liden,
         TM_ali, rmsd_ali, n_ali, n_ali8, xlen, ylen, sequence,
         Lnorm_ass, d0_scale, I_opt, a_opt, u_opt, d_opt, mol_type);
+
+    /* clean up */
+    DeleteArray(&xt, xlen);
+    DeleteArray(&r1, minlen);
+    DeleteArray(&r2, minlen);
     return 0;
 }
 #endif
