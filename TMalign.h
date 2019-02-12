@@ -1216,7 +1216,7 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
 
         int L1=L_fr;
         min_len=getmin(L1, ylen);    
-        min_ali= (int) (min_len/2.5);              //minimum size of considered fragment 
+        min_ali= (int) (min_len/2.5); //minimum size of considered fragment 
         if(min_ali<=fra_min1)  min_ali=fra_min1;    
         n1 = -ylen+min_ali; 
         n2 = L1-min_ali;
@@ -1245,20 +1245,24 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
         /* part 2, normalized by ylen */
         L_fr=Ly;
         for(i=0; i<L_fr; i++) ifr[i]=ystart+i;
-        n1= (int)(L0*0.1); //my index starts from 0
-        n2= (int)(L0*0.89);
 
-        j=0;
-        for(i=n1; i<= n2; i++)
+        if (L_fr==L0)
         {
-            ifr[j]=ifr[i];
-            j++;
+            n1= (int)(L0*0.1); //my index starts from 0
+            n2= (int)(L0*0.89);
+
+            j=0;
+            for(i=n1; i<= n2; i++)
+            {
+                ifr[j]=ifr[i];
+                j++;
+            }
+            L_fr=j;
         }
-        L_fr=j;
 
         int L2=L_fr;
         min_len=getmin(xlen, L2);    
-        min_ali= (int) (min_len/2.5);              //minimum size of considered fragment 
+        min_ali= (int) (min_len/2.5); //minimum size of considered fragment 
         if(min_ali<=fra_min1)  min_ali=fra_min1;    
         n1 = -L2+min_ali; 
         n2 = xlen-min_ali;
