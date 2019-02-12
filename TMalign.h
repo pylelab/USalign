@@ -1201,15 +1201,18 @@ double get_initial_fgt(double **r1, double **r2, double **xtm, double **ytm,
         /* part 1, normalized by xlen */
         for(i=0; i<L_fr; i++) ifr[i]=xstart+i;
 
-        n1= (int)(L0*0.1); //my index starts from 0
-        n2= (int)(L0*0.89);
-        j=0;
-        for(i=n1; i<= n2; i++)
+        if(L_fr==L0)
         {
-            ifr[j]=ifr[i];
-            j++;
+            n1= (int)(L0*0.1); //my index starts from 0
+            n2= (int)(L0*0.89);
+            j=0;
+            for(i=n1; i<= n2; i++)
+            {
+                ifr[j]=ifr[i];
+                j++;
+            }
+            L_fr=j;
         }
-        L_fr=j;
 
         int L1=L_fr;
         min_len=getmin(L1, ylen);    
