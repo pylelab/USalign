@@ -11,7 +11,7 @@ void print_help()
     cout <<
 "Converting PDB file(s) into FASTA format secondary structure sequence.\n"
 "Proteins have four states: H E C T (helix, strand, coil, turn)\n"
-"RNA ave three states: < > . (paired with 3', paired with 5', unpaired)\n"
+"RNA have three states: < > . (paired with 3', paired with 5', unpaired)\n"
 "\n"
 "Usage: pdb2ss pdb.pdb > seq.ss\n"
 "\n"

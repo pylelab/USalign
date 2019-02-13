@@ -57,6 +57,7 @@ void print_extra_help()
 void print_help(bool h_opt=false)
 {
     cout <<
+"Pairwise sequence alignment between two sequences\n"
 "\n"
 "Usage: NWalign PDB1.pdb PDB2.pdb [Options]\n"
 "\n"
@@ -64,10 +65,10 @@ void print_help(bool h_opt=false)
 "    -h       Print the full help message\n"
 "\n"
 "    -glocal  Global or local alignment\n"
-"             0: (default) global alignment\n"
+"             0: (default) Needleman-Wunsch algorithm for global alignment\n"
 "             1: glocal-query alignment\n"
 "             2: glocal-both alignment\n"
-"             3: local alignment\n"
+"             3: Smith-Waterman algorithm for local alignment\n"
 "\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
