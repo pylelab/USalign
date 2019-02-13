@@ -57,7 +57,7 @@ void print_extra_help()
 void print_help(bool h_opt=false)
 {
     cout <<
-"Pairwise sequence alignment between two sequences\n"
+"Pairwise sequence alignment between two sequences.\n"
 "\n"
 "Usage: NWalign PDB1.pdb PDB2.pdb [Options]\n"
 "\n"
