@@ -136,17 +136,17 @@ void split(const string &line, vector<string> &line_vec,
     }
 }
 
-int get_PDB_lines(const string filename,
+size_t get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
     vector<int> &mol_vec, const int ter_opt=3, const int infmt_opt=-1,
     const string atom_opt="auto", const int split_opt=0)
 {
-    int i=0; // resi i.e. atom index
+    size_t i=0; // resi i.e. atom index
     string line;
     char chainID=0;
     string resi="";
     bool select_atom=false;
-    int model_idx=0;
+    size_t model_idx=0;
     vector<string> tmp_str_vec;
     
     int compress_type=0; // uncompressed file
@@ -501,7 +501,7 @@ int get_PDB_lines(const string filename,
  * if ter_opt ==0, read all sequences.
  * if split_opt >=1 and ter_opt ==0, each sequence is a separate entry.
  * if split_opt ==0 and ter_opt ==0, all sequences are combined into one */
-int get_FASTA_lines(const string filename,
+size_t get_FASTA_lines(const string filename,
     vector<vector<string> >&FASTA_lines, vector<string> &chainID_list,
     vector<int> &mol_vec, const int ter_opt=3, const int split_opt=0)
 {

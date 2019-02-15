@@ -62,6 +62,8 @@ void print_extra_help()
 "             2: glocal-both alignment\n"
 "             3: Smith-Waterman algorithm for local alignment\n"
 "\n"
+"    -iter    ALignment-superposition iterations. Default is 1\n"
+"\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -155,6 +157,7 @@ int main(int argc, char *argv[])
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
     int    glocal    =0;
+    int    iter_opt  =1;
 
     for(int i = 1; i < argc; i++)
     {
@@ -246,6 +249,10 @@ int main(int argc, char *argv[])
         {
             glocal=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-iter") && i < (argc-1) )
+        {
+            iter_opt=atoi(argv[i + 1]); i++;
+        }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -304,6 +311,7 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-split 2 should be used with -ter 0 or 1");
     if (split_opt<0 || split_opt>2)
         PrintErrorAndQuit("-split can only be 0, 1 or 2");
+    if (iter_opt<=0) PrintErrorAndQuit("-iter must be >0");
 
     /* read initial alignment file from 'align.txt' */
     if (i_opt || I_opt) read_user_alignment(sequence, fname_lign, I_opt);
@@ -339,6 +347,7 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
+    int    *secx, *secy;       // for the secondary structure 
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -379,6 +388,13 @@ int main(int argc, char *argv[])
             seqx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
                 resi_vec1, byresi_opt);
+            if (iter_opt>=2)  // secondary structure assignment
+            {
+                secx = new int[xlen];
+                if (mol_vec1[chain_i]>0) 
+                     make_sec(seqx, xa, xlen, secx,atom_opt);
+                else make_sec(xa, xlen, secx);
+            }
 
             for (int j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -415,6 +431,13 @@ int main(int argc, char *argv[])
                     seqy = new char[ylen + 1];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
                         resi_vec2, byresi_opt);
+                    if (iter_opt>=2)
+                    {
+                        secy = new int[ylen];
+                        if (mol_vec2[chain_j]>0)
+                             make_sec(seqy, ya, ylen, secy, atom_opt);
+                        else make_sec(ya, ylen, secy);
+                    }
 
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -435,15 +458,13 @@ int main(int argc, char *argv[])
                     int n_ali8=0;
 
                     /* entry function for structure alignment */
-                    HwRMSD_main(
-                        xa, ya, seqx, seqy, 
-                        t0, u0, TM1, TM2, TM3, TM4, TM5,
-                        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
-                        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                        xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, I_opt, a_opt, u_opt, d_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
+                    HwRMSD_main(xa, ya, seqx, seqy, secx, secy, t0, u0,
+                        TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
+                        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+                        rmsd0, L_ali, Liden, TM_ali,
+                        rmsd_ali, n_ali, n_ali8, xlen, ylen, sequence,
+                        Lnorm_ass, d0_scale, i_opt, I_opt, a_opt, u_opt, d_opt,
+                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal, iter_opt);
 
                     /* print result */
                     output_results(
@@ -468,6 +489,7 @@ int main(int argc, char *argv[])
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
+                    if (iter_opt>=2) delete [] secy;
                     resi_vec2.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
@@ -483,6 +505,7 @@ int main(int argc, char *argv[])
             PDB_lines1[chain_i].clear();
             DeleteArray(&xa, xlen);
             delete [] seqx;
+            if (iter_opt>=2) delete [] secx;
             resi_vec1.clear();
         } // chain_i
         xname.clear();
