@@ -3,8 +3,8 @@
 using namespace std;
 
 // secondary structure    01234
-const char* SSmapProtein=" CHTE";
-const char* SSmapRNA    =" .<>";
+//const char* SSmapProtein=" CHTE";
+//const char* SSmapRNA    =" .<>";
 
 void print_help()
 {
@@ -153,10 +153,9 @@ int main(int argc, char *argv[])
     int    xlen;                      // chain length
     int    xchainnum;                 // number of chains in a PDB file
     char   *seqx;                     // for the protein sequence 
-    int    *secx;                     // for the secondary structure 
+    char   *secx;                     // for the secondary structure 
     double **xa;                      // for input vectors xa[0...xlen-1][0..2] and
     vector<string> resi_vec;          // residue index for chain
-    string sequence;                  // secondary structure sequence
 
     /* loop over file names */
     for (i=0;i<chain_list.size();i++)
@@ -183,26 +182,15 @@ int main(int argc, char *argv[])
             }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
-            secx = new int[xlen];
+            secx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines[chain_i], xa, seqx, resi_vec, 0);
-            if (mol_vec[chain_i]>0) // RNA
-            {
-                make_sec(seqx,xa, xlen, secx,atom_opt);
-                for (l=0;l<PDB_lines[chain_i].size();l++)
-                    sequence+=SSmapRNA[secx[l]];
-            }
-            else //protein
-            {
-                make_sec(xa, xlen, secx);
-                for (l=0;l<PDB_lines[chain_i].size();l++)
-                    sequence+=SSmapProtein[secx[l]];
-            }
+            if (mol_vec[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
+            else make_sec(xa, xlen, secx); // protein
             
             cout<<'>'<<xname.substr(dir_opt.size(),
                 xname.size()-dir_opt.size()-suffix_opt.size())
-                <<chainID_list[chain_i]<<'\t'<<xlen<<'\n'<<sequence<<endl;
+                <<chainID_list[chain_i]<<'\t'<<xlen<<'\n'<<secx<<endl;
 
-            sequence.clear();
             PDB_lines[chain_i].clear();
             DeleteArray(&xa, xlen);
             delete [] seqx;

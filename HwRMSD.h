@@ -3,9 +3,6 @@
 #include "NWalign.h"
 #include "se.h"
 
-const char* HwRMSD_SSmapProtein=" CHTE";
-const char* HwRMSD_SSmapRNA    =" .<> ";
-
 double Kabsch_Superpose(double **r1, double **r2, double **xt,
     double **xa, double **ya, int xlen, int ylen, int invmap[],
     int& L_ali, double t[3], double u[3][3], const int mol_type)
@@ -45,7 +42,7 @@ double Kabsch_Superpose(double **r1, double **r2, double **xt,
 }
 
 int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
-    const int *secx, const int *secy, double t0[3], double u0[3][3],
+    const char *secx, const char *secy, double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0, double &d0A, double &d0B, double &d0u,
     double &d0a, double &d0_out, string &seqM, string &seqxA, string &seqyA,
@@ -67,8 +64,6 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     NewArray(&r1, minlen, 3);
     NewArray(&r2, minlen, 3);
     int *invmap = new int[ylen+1];
-    char *ssx;
-    char *ssy;
 
     int i, j, i1, i2, L;
     double TM1_tmp,TM2_tmp,TM3_tmp,TM4_tmp,TM5_tmp,TM_ali_tmp;
@@ -86,8 +81,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         seqxA_tmp=sequence[0];
         seqyA_tmp=sequence[1];
     }
-    else
-        NWalign(seqx, seqy, xlen, ylen, seqxA_tmp, seqyA_tmp, mol_type, glocal);
+    else NWalign(seqx,seqy, xlen,ylen, seqxA_tmp,seqyA_tmp, mol_type, glocal);
     int total_iter=(I_opt || iter_opt<1)?1:iter_opt;
 
     /*******************************/
@@ -97,27 +91,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     {
         n_ali_tmp=n_ali8_tmp=0;
         /* get ss alignment for the second iteration */
-        if (iter==1 && !i_opt)
-        {
-            ssx=new char[xlen+1];
-            ssy=new char[ylen+1];
-            for (i=0;i<xlen;i++)
-            {
-                if (mol_type>0) ssx[i]=HwRMSD_SSmapRNA[secx[i]];
-                else ssx[i]=HwRMSD_SSmapProtein[secx[i]];
-            }
-            for (i=0;i<ylen;i++)
-            {
-                if (mol_type>0) ssy[i]=HwRMSD_SSmapRNA[secy[i]];
-                else ssy[i]=HwRMSD_SSmapProtein[secy[i]];
-            }
-            ssx[xlen]=0;
-            ssy[ylen]=0;
-            NWalign(ssx, ssy, xlen, ylen, seqxA_tmp, seqyA_tmp,
-                mol_type, glocal);
-            delete [] ssx;
-            delete [] ssy;
-        }
+        if (iter==1 && !i_opt) NWalign(secx, secy,
+            xlen, ylen, seqxA_tmp, seqyA_tmp, mol_type, glocal);
 
         /* parse initial alignment */
         for (j = 0; j < ylen; j++) invmap[j] = -1;

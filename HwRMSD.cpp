@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    int    *secx, *secy;       // for the secondary structure 
+    char    *secx, *secy;       // for the secondary structure 
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
                 resi_vec1, byresi_opt);
             if (iter_opt>=2)  // secondary structure assignment
             {
-                secx = new int[xlen];
+                secx = new char[xlen+1];
                 if (mol_vec1[chain_i]>0) 
                      make_sec(seqx, xa, xlen, secx,atom_opt);
                 else make_sec(xa, xlen, secx);
@@ -433,7 +433,7 @@ int main(int argc, char *argv[])
                         resi_vec2, byresi_opt);
                     if (iter_opt>=2)
                     {
-                        secy = new int[ylen];
+                        secy = new char[ylen+1];
                         if (mol_vec2[chain_j]>0)
                              make_sec(seqy, ya, ylen, secy, atom_opt);
                         else make_sec(ya, ylen, secy);

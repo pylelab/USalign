@@ -724,17 +724,17 @@ void smooth(int *sec, int len)
 
 }
 
-int sec_str(double dis13, double dis14, double dis15,
+char sec_str(double dis13, double dis14, double dis15,
             double dis24, double dis25, double dis35)
 {
-    int s=1;
+    char s='C';
     
     double delta=2.1;
     if (fabs(dis15-6.37)<delta && fabs(dis14-5.18)<delta && 
         fabs(dis25-5.18)<delta && fabs(dis13-5.45)<delta &&
         fabs(dis24-5.45)<delta && fabs(dis35-5.45)<delta)
     {
-        s=2; //helix                        
+        s='H'; //helix                        
         return s;
     }
 
@@ -743,24 +743,24 @@ int sec_str(double dis13, double dis14, double dis15,
         fabs(dis25-10.4)<delta && fabs(dis13-6.1 )<delta &&
         fabs(dis24-6.1 )<delta && fabs(dis35-6.1 )<delta)
     {
-        s=4; //strand
+        s='E'; //strand
         return s;
     }
 
-    if (dis15 < 8) s=3; //turn
+    if (dis15 < 8) s='T'; //turn
     return s;
 }
 
 
 /* secondary stucture assignment for protein:
  * 1->coil, 2->helix, 3->turn, 4->strand */
-void make_sec(double **x, int len, int *sec)
+void make_sec(double **x, int len, char *sec)
 {
     int j1, j2, j3, j4, j5;
     double d13, d14, d15, d24, d25, d35;
     for(int i=0; i<len; i++)
     {     
-        sec[i]=1;
+        sec[i]='C';
         j1=i-2;
         j2=i-1;
         j3=i;
@@ -778,6 +778,7 @@ void make_sec(double **x, int len, int *sec)
             sec[i]=sec_str(d13, d14, d15, d24, d25, d35);            
         }    
     } 
+    sec[len]=0;
 }
 
 /* a c d b: a paired to b, c paired to d */
@@ -809,7 +810,7 @@ void sec_str(int len,char *seq, const vector<vector<bool> >&bp,
 
 /* secondary structure assignment for RNA:
  * 1->unpair, 2->paired with upstream, 3->paired with downstream */
-void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
+void make_sec(char *seq, double **x, int len, char *sec,const string atom_opt)
 {
     int ii,jj,i,j;
 
@@ -827,7 +828,7 @@ void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
     bp_tmp.clear();
     for (i=0; i<len; i++)
     {
-        sec[i]=1;
+        sec[i]='.';
         for (j=i+1; j<len; j++)
         {
             if (((seq[i]=='u'||seq[i]=='t')&&(seq[j]=='a'             ))||
@@ -858,7 +859,7 @@ void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
         }
     }
     
-    int sign;
+    //int sign;
     for (i=0;i<A0.size();i++)
     {
         /*
@@ -889,10 +890,11 @@ void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
         for (j=0;;j++)
         {
             if(A0[i]+j>C0[i]) break;
-            sec[A0[i]+j]=2;
-            sec[D0[i]+j]=3;
+            sec[A0[i]+j]='<';
+            sec[D0[i]+j]='>';
         }
     }
+    sec[len]=0;
 
     /* clean up */
     A0.clear();
@@ -909,7 +911,7 @@ void make_sec(char *seq, double **x, int len, int *sec,const string atom_opt)
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ss(bool **path, double **val,
-    const int *secx, const int *secy, int xlen, int ylen, int *y2x)
+    const char *secx, const char *secy, int xlen, int ylen, int *y2x)
 {
     double gap_open=-1.0;
     NWDP_TM(path, val, secx, secy, xlen, ylen, gap_open, y2x);
@@ -1022,10 +1024,9 @@ bool get_initial5( double **r1, double **r2, double **xtm, double **ytm,
     return flag;
 }
 
-void score_matrix_rmsd_sec( double **r1, double **r2,
-    double **score, const int *secx, const int *secy,
-    double **x, double **y, int xlen, int ylen,
-    int *y2x, const double D0_MIN, double d0)
+void score_matrix_rmsd_sec( double **r1, double **r2, double **score,
+    const char *secx, const char *secy, double **x, double **y,
+    int xlen, int ylen, int *y2x, const double D0_MIN, double d0)
 {
     double t[3], u[3][3];
     double rmsd, dij;
@@ -1076,7 +1077,7 @@ void score_matrix_rmsd_sec( double **r1, double **r2,
 //the jth element in y is aligned to the ith element in x if i>=0 
 //the jth element in y is aligned to a gap in x if i==-1
 void get_initial_ssplus(double **r1, double **r2, double **score, bool **path,
-    double **val, const int *secx, const int *secy, double **x, double **y,
+    double **val, const char *secx, const char *secy, double **x, double **y,
     int xlen, int ylen, int *y2x0, int *y2x, const double D0_MIN, double d0)
 {
     //create score matrix for DP
@@ -1836,7 +1837,7 @@ void clean_up_after_approx_TM(int *invmap0, int *invmap,
  * 1   - terminated due to exception
  * 2-7 - pre-terminated due to low TM-score */
 int TMalign_main(double **xa, double **ya,
-    const char *seqx, const char *seqy, const int *secx, const int *secy,
+    const char *seqx, const char *seqy, const char *secx, const char *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
