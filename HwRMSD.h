@@ -80,6 +80,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
 
     /* initialize alignment */
     TM1=TM2=TM1_tmp=TM2_tmp=L_ali=-1;
+
     if (I_opt || i_opt)
     {
         seqxA_tmp=sequence[0];
@@ -94,6 +95,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     /*******************************/
     for (int iter=0;iter<total_iter;iter++)
     {
+        n_ali_tmp=n_ali8_tmp=0;
         /* get ss alignment for the second iteration */
         if (iter==1 && !i_opt)
         {
@@ -184,8 +186,12 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         else
         {
             if (iter>=2) break;
-            seqxA_tmp = seqxA;
-            seqyA_tmp = seqyA;
+            seqxA_tmp  = seqxA;
+            seqyA_tmp  = seqyA;
+            rmsd0_tmp  = 0;
+            Liden_tmp  = 0;
+            n_ali_tmp  = 0;
+            n_ali8_tmp = 0;
         }
     }
 

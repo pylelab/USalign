@@ -78,6 +78,8 @@ int se_main(
 
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
     int k=0;
+    n_ali=0;
+    n_ali8=0;
     for(int i=0,j=0; j<ylen; j++)
     {
         i=invmap[j];
@@ -115,6 +117,7 @@ int se_main(
     
     int kk=0, i_old=0, j_old=0;
     d=0;
+    Liden=0;
     for(int k=0; k<n_ali8; k++)
     {
         for(int i=i_old; i<m1[k]; i++)
