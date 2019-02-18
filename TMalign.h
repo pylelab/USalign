@@ -1620,7 +1620,7 @@ void output_results(
     const double TM3, const double TM4, const double TM5,
     const double rmsd, const double d0_out,
     const char *seqM, const char *seqxA, const char *seqyA, const double Liden,
-    const int n_ali8, const int n_ali, const int L_ali,
+    const int n_ali8, const int L_ali,
     const double TM_ali, const double rmsd_ali, const double TM_0,
     const double d0_0, const double d0A, const double d0B,
     const double Lnorm_ass, const double d0_scale, 
@@ -1640,7 +1640,7 @@ void output_results(
         if (i_opt || I_opt)
             printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
 
-        printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, Liden/(n_ali8+0.00000001));
+        printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
         printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
         printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
@@ -1669,7 +1669,7 @@ void output_results(
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
-            n_ali8, rmsd, Liden/(n_ali8+0.00000001));
+            n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
 
         if (i_opt || I_opt)
             printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
@@ -1689,7 +1689,7 @@ void output_results(
     {
         printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
             xname.c_str(), chainID1, yname.c_str(), chainID2, TM2, TM1, rmsd,
-            Liden/xlen, Liden/ylen, Liden/(n_ali8+0.00000001),
+            Liden/xlen, Liden/ylen, (n_ali8>0)?Liden/n_ali8:0,
             xlen, ylen, n_ali8);
     }
     cout << endl;

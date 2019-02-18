@@ -510,7 +510,7 @@ int main(int argc, char *argv[])
                         xlen, ylen, t0, u0, TM1, TM2, 
                         TM3, TM4, TM5, rmsd0, d0_out,
                         seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-                        n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+                        n_ali8, L_ali, TM_ali, rmsd_ali,
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),

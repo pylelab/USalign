@@ -224,12 +224,12 @@ int main(int argc, char *argv[])
     vector<int> mol_vec2;              // molecule type of chain2, RNA if >0
     vector<string> chainID_list1;      // list of chainID1
     vector<string> chainID_list2;      // list of chainID2
-    int    i,j;                // file index
-    int    chain_i,chain_j;    // chain index
-    int    xlen, ylen;         // chain length
-    int    xchainnum,ychainnum;// number of chains in a PDB file
-    char   *seqx, *seqy;       // for the protein sequence 
-    int    l; // residue index
+    int  i,j;                // file index
+    int  chain_i,chain_j;    // chain index
+    int  xlen, ylen;         // chain length
+    int  xchainnum,ychainnum;// number of chains in a PDB file
+    char *seqx, *seqy;       // for the protein sequence 
+    int  l;                  // residue index
 
     /* loop over file names */
     for (i=0;i<chain1_list.size();i++)
@@ -305,11 +305,15 @@ int main(int argc, char *argv[])
                     int L_ali;                // Aligned length
                     double Liden=0;
                     string seqM, seqxA, seqyA;// for output alignment
+                    int *invmap = new int[ylen+1];
                     
-                    int aln_score=NWalign(seqx, seqy, xlen, ylen, seqxA, seqyA, 
-                        mol_vec1[chain_i]+mol_vec2[chain_j], glocal);
+                    int aln_score=NWalign_main(seqx, seqy, xlen, ylen,
+                        seqxA, seqyA, mol_vec1[chain_i]+mol_vec2[chain_j],
+                        invmap, (outfmt_opt>=2)?1:0, glocal);
                     
-                    get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
+                    if (outfmt_opt>=2) get_seqID(invmap, seqx, seqy, 
+                        ylen, Liden, L_ali);
+                    else get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
 
                     output_NWalign_results(
                         xname.substr(dir1_opt.size()),
@@ -324,6 +328,7 @@ int main(int argc, char *argv[])
                     seqxA.clear();
                     seqyA.clear();
                     delete [] seqy;
+                    delete [] invmap;
                 } // chain_j
                 if (chain2_list.size()>1)
                 {

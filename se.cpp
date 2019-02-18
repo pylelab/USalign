@@ -1,4 +1,5 @@
 #include "se.h"
+#include "NWalign.h"
 
 using namespace std;
 
@@ -373,6 +374,7 @@ int main(int argc, char *argv[])
                     double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
                     int n_ali=0;
                     int n_ali8=0;
+                    int *invmap = new int[ylen+1];
 
                     /* entry function for structure alignment */
                     se_main(
@@ -382,7 +384,11 @@ int main(int argc, char *argv[])
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j]);
+                        mol_vec1[chain_i]+mol_vec2[chain_j], 
+                        outfmt_opt, invmap);
+
+                    if (outfmt_opt>=2) 
+                        get_seqID(invmap, seqx, seqy, ylen, Liden, n_ali8);
 
                     /* print result */
                     output_results(
@@ -393,13 +399,14 @@ int main(int argc, char *argv[])
                         xlen, ylen, t0, u0, TM1, TM2, 
                         TM3, TM4, TM5, rmsd0, d0_out,
                         seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-                        n_ali8, n_ali, L_ali, TM_ali, rmsd_ali,
+                        n_ali8, L_ali, TM_ali, rmsd_ali,
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
                         "", outfmt_opt, ter_opt, "",
                         false, false, a_opt, u_opt, d_opt);
 
                     /* Done! Free memory */
+                    delete [] invmap;
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();

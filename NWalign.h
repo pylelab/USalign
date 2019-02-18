@@ -191,14 +191,18 @@ int calculate_score_gotoh(const int xlen,const int ylen, int **S,
 
 /* trace back dynamic programming path to diciper pairwise alignment */
 void trace_back_gotoh(const char *seqx, const char *seqy,
-    int ** JumpH, int ** JumpV, int ** P,
-    string& seqxA, string& seqyA, const int xlen, const int ylen)
+    int ** JumpH, int ** JumpV, int ** P, string& seqxA, string& seqyA,
+    const int xlen, const int ylen, int *invmap, const int invmap_only=1)
 {
-    int i=xlen;
-    int j=ylen;
+    int i,j;
     int gaplen,p;
-    char *buf=new char [MAX(xlen,ylen)+1];
+    char *buf=NULL;
 
+    if (invmap_only) for (j = 0; j < ylen; j++) invmap[j] = -1;
+    if (invmap_only!=1) buf=new char [MAX(xlen,ylen)+1];
+
+    i=xlen;
+    j=ylen;
     while(i+j)
     {
         gaplen=0;
@@ -206,6 +210,7 @@ void trace_back_gotoh(const char *seqx, const char *seqy,
         {
             gaplen=JumpH[i][j];
             j-=gaplen;
+            if (invmap_only==1) continue;
             strncpy(buf,seqy+j,gaplen);
             buf[gaplen]=0;
             seqyA=buf+seqyA;
@@ -217,6 +222,7 @@ void trace_back_gotoh(const char *seqx, const char *seqy,
         {
             gaplen=JumpV[i][j];
             i-=gaplen;
+            if (invmap_only==1) continue;
             strncpy(buf,seqx+i,gaplen);
             buf[gaplen]=0;
             seqxA=buf+seqxA;
@@ -246,10 +252,14 @@ void trace_back_gotoh(const char *seqx, const char *seqy,
             }
             i--;
             j--;
-            seqxA=seqx[i]+seqxA;
-            seqyA=seqy[j]+seqyA;
+            if (invmap_only) invmap[j]=i;
+            if (invmap_only!=1)
+            {
+                seqxA=seqx[i]+seqxA;
+                seqyA=seqy[j]+seqyA;
+            }
         }
-    }   
+    }
     delete [] buf;
 }
 
@@ -257,16 +267,20 @@ void trace_back_gotoh(const char *seqx, const char *seqy,
 /* trace back Smith-Waterman dynamic programming path to diciper 
  * pairwise local alignment */
 void trace_back_sw(const char *seqx, const char *seqy,
-    int **JumpH, int **JumpV, int **P,
-    string& seqxA, string& seqyA, const int xlen, const int ylen)
+    int **JumpH, int **JumpV, int **P, string& seqxA, string& seqyA,
+    const int xlen, const int ylen, int *invmap, const int invmap_only=1)
 {
-    int i=xlen;
-    int j=ylen;
+    int i;
+    int j;
     int gaplen,p;
-    char *buf=new char [xlen+ylen+1];
+    bool found_start_cell=false; // find the first non-zero cell in P
+    char *buf=NULL;
 
-    // find the first non-zero cell in P
-    bool found_start_cell=false;
+    if (invmap_only) for (j = 0; j < ylen; j++) invmap[j] = -1;
+    if (invmap_only!=1) buf=new char [MAX(xlen,ylen)+1];
+
+    i=xlen;
+    j=ylen;
     for (i=xlen;i>=0;i--)
     {
         for (j=ylen;j>=0;j--)
@@ -281,19 +295,22 @@ void trace_back_sw(const char *seqx, const char *seqy,
     }
 
     /* copy C terminal sequence */
-    for (p=0;p<ylen-j;p++) buf[p]='-';
-    buf[ylen-j]=0;
-    seqxA=buf;
-    strncpy(buf,seqx+i,xlen-i);
-    buf[xlen-i]=0;
-    seqxA+=buf;
+    if (invmap_only!=1)
+    {
+        for (p=0;p<ylen-j;p++) buf[p]='-';
+        buf[ylen-j]=0;
+        seqxA=buf;
+        strncpy(buf,seqx+i,xlen-i);
+        buf[xlen-i]=0;
+        seqxA+=buf;
 
-    strncpy(buf,seqy+j,ylen-j);
-    buf[ylen-j]=0;
-    seqyA+=buf;
-    for (p=0;p<xlen-i;p++) buf[p]='-';
-    buf[xlen-i]=0;
-    seqyA+=buf;
+        strncpy(buf,seqy+j,ylen-j);
+        buf[ylen-j]=0;
+        seqyA+=buf;
+        for (p=0;p<xlen-i;p++) buf[p]='-';
+        buf[xlen-i]=0;
+        seqyA+=buf;
+    }
 
     if (i<0||j<0)
     {
@@ -309,6 +326,7 @@ void trace_back_sw(const char *seqx, const char *seqy,
         {
             gaplen=JumpH[i][j];
             j-=gaplen;
+            if (invmap_only==1) continue;
             strncpy(buf,seqy+j,gaplen);
             buf[gaplen]=0;
             seqyA=buf+seqyA;
@@ -320,6 +338,7 @@ void trace_back_sw(const char *seqx, const char *seqy,
         {
             gaplen=JumpV[i][j];
             i-=gaplen;
+            if (invmap_only==1) continue;
             strncpy(buf,seqx+i,gaplen);
             buf[gaplen]=0;
             seqxA=buf+seqxA;
@@ -331,26 +350,38 @@ void trace_back_sw(const char *seqx, const char *seqy,
         {
             i--;
             j--;
-            seqxA=seqx[i]+seqxA;
-            seqyA=seqy[j]+seqyA;
+            if (invmap_only) invmap[j]=i;
+            if (invmap_only!=1)
+            {
+                seqxA=seqx[i]+seqxA;
+                seqyA=seqy[j]+seqyA;
+            }
         }
     }
     /* copy N terminal sequence */
-    for (p=0;p<j;p++) buf[p]='-';
-    strncpy(buf+j,seqx,i);
-    buf[i+j]=0;
-    seqxA=buf+seqxA;
+    if (invmap_only!=1)
+    {
+        for (p=0;p<j;p++) buf[p]='-';
+        strncpy(buf+j,seqx,i);
+        buf[i+j]=0;
+        seqxA=buf+seqxA;
 
-    strncpy(buf,seqy,j);
-    for (p=j;p<j+i;p++) buf[p]='-';
-    buf[i+j]=0;
-    seqyA=buf+seqyA;
+        strncpy(buf,seqy,j);
+        for (p=j;p<j+i;p++) buf[p]='-';
+        buf[i+j]=0;
+        seqyA=buf+seqyA;
+    }
     delete [] buf;
 }
 
-/* entry function for NWalign */
-int NWalign(const char *seqx, const char *seqy, const int xlen, const int ylen,
-    string & seqxA,string & seqyA, const int mol_type, const int glocal=0)
+/* entry function for NWalign
+ * invmap_only - whether to return seqxA and seqyA or to return invmap
+ *               0: only return seqxA and seqyA
+ *               1: only return invmap
+ *               2: return seqxA, seqyA and invmap */
+int NWalign_main(const char *seqx, const char *seqy, const int xlen,
+    const int ylen, string & seqxA, string & seqyA, const int mol_type,
+    int *invmap, const int invmap_only=0, const int glocal=0)
 {
     int **JumpH;
     int **JumpV;
@@ -383,9 +414,14 @@ int NWalign(const char *seqx, const char *seqy, const int xlen, const int ylen,
     aln_score=calculate_score_gotoh(xlen, ylen, S, JumpH, JumpV, P,
         gapopen, gapext, glocal);
 
-    if (glocal<3) trace_back_gotoh(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
-    else trace_back_sw(seqx,seqy,JumpH,JumpV,P,seqxA,seqyA,xlen,ylen);
-    
+    seqxA.clear();
+    seqyA.clear();
+
+    if (glocal<3) trace_back_gotoh(seqx, seqy, JumpH, JumpV, P,
+            seqxA, seqyA, xlen, ylen, invmap, invmap_only);
+    else trace_back_sw(seqx, seqy, JumpH, JumpV, P, seqxA, seqyA,
+            xlen, ylen, invmap, invmap_only);
+
     DeleteArray(&JumpH, xlen+1);
     DeleteArray(&JumpV, xlen+1);
     DeleteArray(&P, xlen+1);
@@ -393,7 +429,23 @@ int NWalign(const char *seqx, const char *seqy, const int xlen, const int ylen,
     return aln_score; // aligment score
 }
 
-double get_seqID(const string& seqxA, const string& seqyA,
+void get_seqID(int *invmap, const char *seqx, const char *seqy, 
+    const int ylen, double &Liden,int &L_ali)
+{
+    Liden=0;
+    L_ali=0;
+    int i,j;
+    for (j=0;j<ylen;j++)
+    {
+        i=invmap[j];
+        if (i<0) continue;
+        L_ali+=1;
+        Liden+=(seqx[i]==seqy[j]);
+    }
+    //return L_ali?1.*Liden/L_ali:0;
+}
+
+void get_seqID(const string& seqxA, const string& seqyA,
     string &seqM,double &Liden,int &L_ali)
 {
     Liden=0;
@@ -408,9 +460,8 @@ double get_seqID(const string& seqxA, const string& seqyA,
         else seqM+=' ';
         L_ali+=(seqxA[i]!='-' && seqyA[i]!='-');
     }
-    return 1.*Liden/L_ali;
+    //return L_ali?1.*Liden/L_ali:0;
 }
-
 
 void output_NWalign_results(
     const string xname, const string yname,
