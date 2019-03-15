@@ -418,9 +418,9 @@ int main(int argc, char *argv[])
                     <<". Chain length 0."<<endl;
                 continue;
             }
-            else if (xlen<=5)
+            else if (xlen<3)
             {
-                cerr<<"Sequence is too short <=5!: "<<xname<<endl;
+                cerr<<"Sequence is too short <3!: "<<xname<<endl;
                 continue;
             }
             NewArray(&xa, xlen, 3);
@@ -457,9 +457,9 @@ int main(int argc, char *argv[])
                             <<". Chain length 0."<<endl;
                         continue;
                     }
-                    else if (ylen<=5)
+                    else if (ylen<3)
                     {
-                        cerr<<"Sequence is too short <=5!: "<<yname<<endl;
+                        cerr<<"Sequence is too short <3!: "<<yname<<endl;
                         continue;
                     }
                     NewArray(&ya, ylen, 3);

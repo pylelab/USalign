@@ -635,7 +635,7 @@ double get_initial(double **r1, double **r2, double **xtm, double **ytm,
     double t[3], double u[3][3])
 {
     int min_len=getmin(xlen, ylen);
-    if(min_len<=5) PrintErrorAndQuit("Sequence is too short <=5!\n");
+    if(min_len<3) PrintErrorAndQuit("Sequence is too short <3!\n");
     
     int min_ali= min_len/2;              //minimum size of considered fragment 
     if(min_ali<=5)  min_ali=5;    
