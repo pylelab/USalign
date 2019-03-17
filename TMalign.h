@@ -2484,7 +2484,7 @@ int CPalign_main(double **xa, double **ya,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen*2, ylen, sequence, Lnorm_ass, d0_scale,
-        i_opt, a_opt, u_opt, d_opt, true, mol_type, TMcut);
+        0, false, false, false, true, mol_type, -1);
 
     /* delete gap in seqxA_cp */
     r=0;

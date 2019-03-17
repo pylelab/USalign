@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " *********************************************************************\n"
-" * TM-align (Version 20190209): protein and RNA structure alignment  *\n"
+" * TM-align (Version 20190317): protein and RNA structure alignment  *\n"
 " * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005) *\n"
 " *             S Gong, C Zhang, Y Zhang. Bioinformatics (2019)       *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu   *\n"
@@ -363,6 +363,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-split can only be 0, 1 or 2");
     if (cp_opt!=0 && cp_opt!=1)
         PrintErrorAndQuit("-cp can only be 0 or 1");
+    if (cp_opt && i_opt)
+        PrintErrorAndQuit("-cp cannot be used with -i or -I");
 
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
