@@ -2516,11 +2516,6 @@ int CPalign_main(double **xa, double **ya,
             cp_point=r;
         }
     }
-    cout<<seqxA_cp<<endl;
-    cout<<seqyA_cp<<endl;
-    cout<<seqxA<<endl;
-    cout<<seqyA<<endl;
-    cout<<"cp_point="<<cp_point<<endl;
 
     /* prepare structure for final alignment */
     seqM.clear();
@@ -2565,7 +2560,6 @@ int CPalign_main(double **xa, double **ya,
                 break;
             }
         }
-        cout<<"i="<<i<<"\tr="<<r<<"\tcp_point="<<cp_point<<endl;
         seqxA=seqxA_cp.substr(0,i)+'*'+seqxA_cp.substr(i);
         seqM =seqM.substr(0,i)    +' '+seqM.substr(i);
         seqyA=seqyA_cp.substr(0,i)+'-'+seqyA_cp.substr(i);
