@@ -50,7 +50,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     double &rmsd0, int &L_ali, double &Liden, double &TM_ali,
     double &rmsd_ali, int &n_ali, int &n_ali8, const int xlen, const int ylen,
     const vector<string>&sequence, const double Lnorm_ass,
-    const double d0_scale, const bool i_opt, const bool I_opt,
+    const double d0_scale, const int i_opt,
     const int a_opt, const bool u_opt, const bool d_opt, const int mol_type,
     const int outfmt_opt, int *invmap, const int glocal=0, const int iter_opt=1)
 {
@@ -77,14 +77,14 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     /* initialize alignment */
     TM1=TM2=TM1_tmp=TM2_tmp=L_ali=-1;
 
-    if (I_opt || i_opt)
+    if (i_opt)
     {
         seqxA_tmp=sequence[0];
         seqyA_tmp=sequence[1];
     }
     else NWalign_main(seqx, seqy, xlen, ylen, seqxA_tmp, seqyA_tmp,
             mol_type, invmap_tmp, 1, glocal);
-    int total_iter=(I_opt || iter_opt<1)?1:iter_opt;
+    int total_iter=(i_opt==3 || iter_opt<1)?1:iter_opt;
 
     /*******************************/
     /* perform iterative alignment */
@@ -124,7 +124,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             TM5_tmp, d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
             seqM_tmp, seqxA_tmp, seqyA_tmp, rmsd0_tmp, L_ali_tmp, Liden_tmp,
             TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
-            sequence, Lnorm_ass, d0_scale, I_opt, a_opt, u_opt, d_opt,
+            sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
             mol_type, outfmt_opt, invmap_tmp);
 
         /* accept new alignment */
@@ -161,7 +161,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             n_ali8=n_ali8_tmp;
 
             /* user specified initial alignment parameters */
-            if ((i_opt || I_opt) && L_ali==-1)
+            if (i_opt && L_ali==-1)
             {
                 L_ali=L_ali_tmp;
                 TM_ali=TM_ali_tmp;

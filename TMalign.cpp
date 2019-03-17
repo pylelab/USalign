@@ -82,6 +82,10 @@ void print_extra_help()
 "                  0: (default, same as F) normalized by second structure\n"
 "                  1: same as T, normalized by average structure length\n"
 "\n"
+"    -cp      Whether to check circular permutation\n"
+"             0: (default) sequence order dependent alignment\n"
+"             1: circularly permuted alignment\n"
+"\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -161,8 +165,7 @@ int main(int argc, char *argv[])
     bool h_opt = false; // print full help message
     bool v_opt = false; // print version
     bool m_opt = false; // flag for -m, output rotation matrix
-    bool i_opt = false; // flag for -i, with user given initial alignment
-    bool I_opt = false; // flag for -I, stick to user given alignment
+    int  i_opt = 0;     // 1 for -i, 3 for -I
     bool o_opt = false; // flag for -o, output superposed structure
     int  a_opt = 0;     // flag for -a, do not normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
@@ -175,6 +178,7 @@ int main(int argc, char *argv[])
     int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
+    int    cp_opt    =0;     // do not check circular permutation
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
@@ -222,16 +226,20 @@ int main(int argc, char *argv[])
         }
         else if ( !strcmp(argv[i],"-i") && i < (argc-1) )
         {
-            fname_lign = argv[i + 1];      i_opt = true; i++;
+            if (i_opt==3)
+                PrintErrorAndQuit("ERROR! -i and -I cannot be used together");
+            fname_lign = argv[i + 1];      i_opt = 1; i++;
+        }
+        else if (!strcmp(argv[i], "-I") && i < (argc-1) )
+        {
+            if (i_opt==1)
+                PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
+            fname_lign = argv[i + 1];      i_opt = 3; i++;
         }
         else if (!strcmp(argv[i], "-m") && i < (argc-1) )
         {
             fname_matrix = argv[i + 1];    m_opt = true; i++;
         }// get filename for rotation matrix
-        else if (!strcmp(argv[i], "-I") && i < (argc-1) )
-        {
-            fname_lign = argv[i + 1];      I_opt = true; i++;
-        }
         else if (!strcmp(argv[i], "-fast"))
         {
             fast_opt = true;
@@ -288,6 +296,10 @@ int main(int argc, char *argv[])
         {
             byresi_opt=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-cp") && i < (argc-1) )
+        {
+            cp_opt=atoi(argv[i + 1]); i++;
+        }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -328,8 +340,6 @@ int main(int argc, char *argv[])
     else if (mol_opt=="RNA" && atom_opt=="auto")
         atom_opt=" C3'";
 
-    if (i_opt && I_opt)
-        PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
     if (u_opt && Lnorm_ass<=0)
         PrintErrorAndQuit("Wrong value for option -u!  It should be >0");
     if (d_opt && d0_scale<=0)
@@ -338,7 +348,7 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
     if (byresi_opt!=0)
     {
-        if (i_opt || I_opt)
+        if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
         if (byresi_opt<0 || byresi_opt>3)
             PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
@@ -351,11 +361,13 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-split 2 should be used with -ter 0 or 1");
     if (split_opt<0 || split_opt>2)
         PrintErrorAndQuit("-split can only be 0, 1 or 2");
+    if (cp_opt!=0 && cp_opt!=1)
+        PrintErrorAndQuit("-cp can only be 0 or 1");
 
     /* read initial alignment file from 'align.txt' */
-    if (i_opt || I_opt) read_user_alignment(sequence, fname_lign, I_opt);
+    if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
 
-    if (byresi_opt) I_opt=true;
+    if (byresi_opt) i_opt=3;
 
     if (m_opt && fname_matrix == "") // Output rotation matrix: matrix.txt
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
@@ -490,14 +502,23 @@ int main(int argc, char *argv[])
                     int n_ali8=0;
 
                     /* entry function for structure alignment */
-                    TMalign_main(
+                    if (cp_opt) CPalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, I_opt, a_opt, u_opt, d_opt, fast_opt,
+                        i_opt, a_opt, u_opt, d_opt, fast_opt,
+                        mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
+                    else TMalign_main(
+                        xa, ya, seqx, seqy, secx, secy,
+                        t0, u0, TM1, TM2, TM3, TM4, TM5,
+                        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                        seqM, seqxA, seqyA,
+                        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                        i_opt, a_opt, u_opt, d_opt, fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
 
                     /* print result */
@@ -516,7 +537,7 @@ int main(int argc, char *argv[])
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
                         outfmt_opt, ter_opt, 
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        i_opt, I_opt, a_opt, u_opt, d_opt);
+                        i_opt, a_opt, u_opt, d_opt);
 
                     /* Done! Free memory */
                     seqM.clear();

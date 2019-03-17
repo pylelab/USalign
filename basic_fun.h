@@ -696,7 +696,7 @@ string Trim(const string &inputString)
  * This function should only be called by main function, as it will
  * terminate a program if wrong alignment is given */
 void read_user_alignment(vector<string>&sequence, const string &fname_lign,
-    const bool I_opt)
+    const int i_opt)
 {
     if (fname_lign == "")
         PrintErrorAndQuit("Please provide a file name for option -i!");
@@ -726,7 +726,7 @@ void read_user_alignment(vector<string>&sequence, const string &fname_lign,
         PrintErrorAndQuit("ERROR: Fasta format is wrong, two proteins should be included.");
     if (sequence[0].size() != sequence[1].size())
         PrintErrorAndQuit("ERROR! FASTA file is wrong. The length in alignment should be equal for the two aligned proteins.");
-    if (I_opt)
+    if (i_opt==3)
     {
         int aligned_resNum=0;
         for (int i=0;i<sequence[0].size();i++) 

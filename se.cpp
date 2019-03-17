@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
                         "", outfmt_opt, ter_opt, "",
-                        false, false, a_opt, u_opt, d_opt);
+                        false, a_opt, u_opt, d_opt);
 
                     /* Done! Free memory */
                     delete [] invmap;

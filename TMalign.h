@@ -1626,8 +1626,7 @@ void output_results(
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
     const int outfmt_opt, const int ter_opt, const char *fname_super,
-    const bool i_opt, const bool I_opt, const int a_opt,
-    const bool u_opt, const bool d_opt)
+    const int i_opt, const int a_opt, const bool u_opt, const bool d_opt)
 {
     if (outfmt_opt<=0)
     {
@@ -1637,7 +1636,7 @@ void output_results(
         printf("Length of Chain_1: %d residues\n", xlen);
         printf("Length of Chain_2: %d residues\n\n", ylen);
 
-        if (i_opt || I_opt)
+        if (i_opt)
             printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
@@ -1671,7 +1670,7 @@ void output_results(
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
             n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
 
-        if (i_opt || I_opt)
+        if (i_opt)
             printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         if(a_opt)
@@ -1847,8 +1846,7 @@ int TMalign_main(double **xa, double **ya,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
     const vector<string> sequence, const double Lnorm_ass,
-    const double d0_scale,
-    const bool i_opt, const bool I_opt, const int a_opt,
+    const double d0_scale, const int i_opt, const int a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt,
     const int mol_type, const double TMcut=-1)
 {
@@ -1899,7 +1897,7 @@ int TMalign_main(double **xa, double **ya,
     //    Stick to the initial alignment              //
     //************************************************//
     bool bAlignStick = false;
-    if (I_opt)// if input has set parameter for "-I"
+    if (i_opt==3)// if input has set parameter for "-I"
     {
         // In the original code, this loop starts from 1, which is
         // incorrect. Fortran starts from 1 but C++ should starts from 0.
@@ -2152,7 +2150,7 @@ int TMalign_main(double **xa, double **ya,
         //************************************************//
         //    get initial alignment from user's input:    //
         //************************************************//
-        if (i_opt)// if input has set parameter for "-i"
+        if (i_opt==1)// if input has set parameter for "-i"
         {
             for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
                 invmap[j] = -1;
@@ -2269,7 +2267,7 @@ int TMalign_main(double **xa, double **ya,
         {
             n_ali++;
             d=sqrt(dist(&xt[i][0], &ya[j][0]));
-            if (d <= score_d8 || (I_opt == true))
+            if (d <= score_d8 || (i_opt == 3))
             {
                 m1[k]=i;
                 m2[k]=j;
@@ -2437,4 +2435,152 @@ int TMalign_main(double **xa, double **ya,
     delete [] m1;
     delete [] m2;
     return 0; // zero for no exception
+}
+
+/* entry function for TM-align with circular permutation
+ * i_opt, a_opt, u_opt, d_opt, TMcut are not implemented yet */
+int CPalign_main(double **xa, double **ya,
+    const char *seqx, const char *seqy, const char *secx, const char *secy,
+    double t0[3], double u0[3][3],
+    double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
+    double &d0_0, double &TM_0,
+    double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
+    string &seqM, string &seqxA, string &seqyA,
+    double &rmsd0, int &L_ali, double &Liden,
+    double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
+    const int xlen, const int ylen,
+    const vector<string> sequence, const double Lnorm_ass,
+    const double d0_scale, const int i_opt, const int a_opt,
+    const bool u_opt, const bool d_opt, const bool fast_opt,
+    const int mol_type, const double TMcut=-1)
+{
+    char   *seqx_cp, *seqy_cp; // for the protein sequence 
+    char   *secx_cp, *secy_cp; // for the secondary structure 
+    double **xa_cp, **ya_cp;   // coordinates
+    string seqxA_cp,seqyA_cp;  // alignment
+    int    i,r;
+    int    cp_point=0;    // position of circular permutation
+    int    cp_aln_best=0; // amount of aligned residue in sliding window
+    int    cp_aln_current;// amount of aligned residue in sliding window
+
+    /* duplicate structure */
+    NewArray(&xa_cp, xlen*2, 3);
+    seqx_cp = new char[xlen*2 + 1];
+    secx_cp = new char[xlen*2 + 1];
+    for (r=0;r<xlen;r++)
+    {
+        xa_cp[r+xlen][0]=xa_cp[r][0]=xa[r][0];
+        xa_cp[r+xlen][1]=xa_cp[r][1]=xa[r][1];
+        xa_cp[r+xlen][2]=xa_cp[r][2]=xa[r][2];
+        seqx_cp[r+xlen]=seqx_cp[r]=seqx[r];
+        secx_cp[r+xlen]=secx_cp[r]=secx[r];
+    }
+    seqx_cp[2*xlen]=0;
+    secx_cp[2*xlen]=0;
+    
+    /* fTM-align alignment */
+    TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
+        t0, u0, TM1, TM2, TM3, TM4, TM5,
+        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
+        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        xlen*2, ylen, sequence, Lnorm_ass, d0_scale,
+        i_opt, a_opt, u_opt, d_opt, true, mol_type, TMcut);
+
+    /* delete gap in seqxA_cp */
+    r=0;
+    seqxA=seqxA_cp;
+    seqyA=seqyA_cp;
+    for (i=0;i<seqxA_cp.size();i++)
+    {
+        if (seqxA_cp[i]!='-')
+        {
+            seqxA[r]=seqxA_cp[i];
+            seqyA[r]=seqyA_cp[i];
+            r++;
+        }
+    }
+    seqxA=seqxA.substr(0,r);
+    seqyA=seqyA.substr(0,r);
+
+    /* count the number of aligned residues in each window
+     * r - residue index in the original unaligned sequence 
+     * i - position in the alignment */
+    for (r=0;r<xlen-1;r++)
+    {
+        cp_aln_current=0;
+        for (i=r;i<r+xlen;i++) cp_aln_current+=(seqyA[i]!='-');
+
+        if (cp_aln_current>cp_aln_best)
+        {
+            cp_aln_best=cp_aln_current;
+            cp_point=r;
+        }
+    }
+    cout<<seqxA_cp<<endl;
+    cout<<seqyA_cp<<endl;
+    cout<<seqxA<<endl;
+    cout<<seqyA<<endl;
+    cout<<"cp_point="<<cp_point<<endl;
+
+    /* prepare structure for final alignment */
+    seqM.clear();
+    seqxA.clear();
+    seqyA.clear();
+    seqxA_cp.clear();
+    seqyA_cp.clear();
+    if (cp_point!=0)
+    {
+        for (r=0;r<xlen;r++)
+        {
+            xa_cp[r][0]=xa_cp[r+cp_point][0];
+            xa_cp[r][1]=xa_cp[r+cp_point][1];
+            xa_cp[r][2]=xa_cp[r+cp_point][2];
+            seqx_cp[r]=seqx_cp[r+cp_point];
+            secx_cp[r]=secx_cp[r+cp_point];
+        }
+    }
+    seqx_cp[xlen]=0;
+    secx_cp[xlen]=0;
+
+    /* full TM-align */
+    TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
+        t0, u0, TM1, TM2, TM3, TM4, TM5,
+        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
+        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+        i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, TMcut);
+
+    /* correct alignment
+     * r - residue index in the original unaligned sequence 
+     * i - position in the alignment */
+    if (cp_point>0)
+    {
+        r=0;
+        for (i=0;i<seqxA_cp.size();i++)
+        {
+            r+=(seqxA_cp[i]!='-');
+            if (r>=(xlen-cp_point)) 
+            {
+                i++;
+                break;
+            }
+        }
+        cout<<"i="<<i<<"\tr="<<r<<"\tcp_point="<<cp_point<<endl;
+        seqxA=seqxA_cp.substr(0,i)+'*'+seqxA_cp.substr(i);
+        seqM =seqM.substr(0,i)    +' '+seqM.substr(i);
+        seqyA=seqyA_cp.substr(0,i)+'-'+seqyA_cp.substr(i);
+    }
+    else
+    {
+        seqxA=seqxA_cp;
+        seqyA=seqyA_cp;
+    }
+
+    /* clean up */
+    delete[]seqx_cp;
+    delete[]secx_cp;
+    DeleteArray(&xa_cp,xlen*2);
+    seqxA_cp.clear();
+    seqyA_cp.clear();
+    return cp_point;
 }
