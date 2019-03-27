@@ -1459,7 +1459,7 @@ double DP_iter(double **r1, double **r2, double **xtm, double **ytm,
 
 
 void output_superpose(const string filename, const char *fname_super,
-    double t[3], double u[3][3], const int ter_opt=3)
+    double t[3], double u[3][3], const int ter_opt, const int mirror_opt)
 {
     int compress_type=0; // uncompressed file
     ifstream fin;
@@ -1498,6 +1498,7 @@ void output_superpose(const string filename, const char *fname_super,
             x[0]=atof(line.substr(30,8).c_str());
             x[1]=atof(line.substr(38,8).c_str());
             x[2]=atof(line.substr(46,8).c_str());
+            if (mirror_opt) x[2]=-x[2];
             transform(t, u, x, x1);
             buf<<line.substr(0,30)<<setiosflags(ios::fixed)
                 <<setprecision(3)
@@ -1543,6 +1544,7 @@ void output_superpose(const string filename, const char *fname_super,
                 x[0]=atof(line_vec[_atom_site["Cartn_x"]].c_str());
                 x[1]=atof(line_vec[_atom_site["Cartn_y"]].c_str());
                 x[2]=atof(line_vec[_atom_site["Cartn_z"]].c_str());
+                if (mirror_opt) x[2]=-x[2];
                 transform(t, u, x, x1);
 
                 for (atom_site_pos=0; atom_site_pos<_atom_site.size(); atom_site_pos++)
@@ -1626,7 +1628,8 @@ void output_results(
     const double Lnorm_ass, const double d0_scale, 
     const double d0a, const double d0u, const char* fname_matrix,
     const int outfmt_opt, const int ter_opt, const char *fname_super,
-    const int i_opt, const int a_opt, const bool u_opt, const bool d_opt)
+    const int i_opt, const int a_opt, const bool u_opt, const bool d_opt,
+    const int mirror_opt)
 {
     if (outfmt_opt<=0)
     {
@@ -1696,7 +1699,7 @@ void output_results(
     if (strlen(fname_matrix)) 
         output_rotation_matrix(fname_matrix, t, u);
     if (strlen(fname_super))
-        output_superpose(xname, fname_super, t, u, ter_opt);
+        output_superpose(xname, fname_super, t, u, ter_opt, mirror_opt);
 }
 
 double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,

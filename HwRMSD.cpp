@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
                         outfmt_opt, ter_opt, 
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        false, a_opt, u_opt, d_opt);
+                        false, a_opt, u_opt, d_opt, 0);
 
                     /* Done! Free memory */
                     seqM.clear();

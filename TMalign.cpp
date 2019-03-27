@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " *********************************************************************\n"
-" * TM-align (Version 20190317): protein and RNA structure alignment  *\n"
+" * TM-align (Version 20190327): protein and RNA structure alignment  *\n"
 " * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005) *\n"
 " *             S Gong, C Zhang, Y Zhang. Bioinformatics (2019)       *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu   *\n"
@@ -85,6 +85,10 @@ void print_extra_help()
 "    -cp      Whether to check circular permutation\n"
 "             0: (default) sequence order dependent alignment\n"
 "             1: circularly permuted alignment\n"
+"\n"
+"    -mirror  Whether to align the mirror image of input structure\n"
+"             0: (default) do not align mirrored structure\n"
+"             1: align mirror of chain1 to origin chain2\n"
 "\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
@@ -179,6 +183,7 @@ int main(int argc, char *argv[])
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
+    int    mirror_opt=0;     // do not align mirror
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
@@ -300,6 +305,10 @@ int main(int argc, char *argv[])
         {
             cp_opt=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-mirror") && i < (argc-1) )
+        {
+            mirror_opt=atoi(argv[i + 1]); i++;
+        }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -397,6 +406,7 @@ int main(int argc, char *argv[])
     vector<string> chainID_list2;      // list of chainID2
     int    i,j;                // file index
     int    chain_i,chain_j;    // chain index
+    int    r;                  // residue index
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
@@ -442,6 +452,7 @@ int main(int argc, char *argv[])
             secx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
                 resi_vec1, byresi_opt);
+            if (mirror_opt) for (r=0;r<xlen;r++) xa[r][2]=-xa[r][2];
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
 
@@ -539,7 +550,7 @@ int main(int argc, char *argv[])
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
                         outfmt_opt, ter_opt, 
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        i_opt, a_opt, u_opt, d_opt);
+                        i_opt, a_opt, u_opt, d_opt,mirror_opt);
 
                     /* Done! Free memory */
                     seqM.clear();

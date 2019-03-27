@@ -51,6 +51,7 @@
    2019/01/07: C Zhang added support for PDBx/mmCIF format.
    2019/02/09: Fixed asymmetric alignment bug.
    2019/03/17: Added the -cp option for circular permutation
+   2019/03/27: Added the -mirror option for mirror structure alignment
 ===============================================================================
 
 =========================
@@ -85,4 +86,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-03/17/2019
+03/27/2019
