@@ -47,6 +47,10 @@ void print_extra_help()
 "             one read all sequence; -split >=1 means each sequence is an\n"
 "             individual entry."
 "\n"
+"    -het     Whether to align residues marked as 'HETATM' instead of 'ATOM  '\n"
+"             0: (default) only align 'ATOM  ' residues\n"
+"             1: align both 'ATOM  ' and 'HETATM' residues\n"
+"\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
 "             1: fasta format compact output\n"
@@ -103,6 +107,7 @@ int main(int argc, char *argv[])
     int    ter_opt   =3;     // TER, END, or different chainID
     int    split_opt =0;     // do not split chain
     int    outfmt_opt=0;     // set -outfmt to full output
+    int    het_opt=0;        // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
@@ -166,6 +171,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-glocal") && i < (argc-1) )
         {
             glocal=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
+        {
+            het_opt=atoi(argv[i + 1]); i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
@@ -239,7 +248,7 @@ int main(int argc, char *argv[])
         if (infmt1_opt>=4) xchainnum=get_FASTA_lines(xname, PDB_lines1, 
                 chainID_list1, mol_vec1, ter_opt, split_opt);
         else xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-                mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt);
+                mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -274,8 +283,8 @@ int main(int argc, char *argv[])
                          ychainnum=get_FASTA_lines(yname, PDB_lines2,
                             chainID_list2, mol_vec2, ter_opt, split_opt);
                     else ychainnum=get_PDB_lines(yname, PDB_lines2,
-                            chainID_list2, mol_vec2, ter_opt,
-                            infmt2_opt, atom_opt, split_opt);
+                            chainID_list2, mol_vec2, ter_opt, infmt2_opt,
+                            atom_opt, split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname

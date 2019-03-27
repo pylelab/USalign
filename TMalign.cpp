@@ -90,6 +90,10 @@ void print_extra_help()
 "             0: (default) do not align mirrored structure\n"
 "             1: align mirror of chain1 to origin chain2\n"
 "\n"
+"    -het     Whether to align residues marked as 'HETATM' instead of 'ATOM  '\n"
+"             0: (default) only align 'ATOM  ' residues\n"
+"             1: align both 'ATOM  ' and 'HETATM' residues\n"
+"\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -184,6 +188,7 @@ int main(int argc, char *argv[])
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
     int    mirror_opt=0;     // do not align mirror
+    int    het_opt=0;        // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
@@ -309,6 +314,10 @@ int main(int argc, char *argv[])
         {
             mirror_opt=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
+        {
+            het_opt=atoi(argv[i + 1]); i++;
+        }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -424,7 +433,7 @@ int main(int argc, char *argv[])
         /* parse chain 1 */
         xname=chain1_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt);
+            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -463,7 +472,8 @@ int main(int argc, char *argv[])
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt,
+                        het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname

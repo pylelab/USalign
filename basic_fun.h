@@ -82,29 +82,30 @@ string AAmap(char A)
 
 char AAmap(const string &AA)
 {
-    if (AA.compare("ALA")==0) return 'A';
+    if (AA.compare("ALA")==0 || AA.compare("DAL")==0) return 'A';
     if (AA.compare("ASX")==0) return 'B';
-    if (AA.compare("CYS")==0) return 'C';
-    if (AA.compare("ASP")==0) return 'D';
-    if (AA.compare("GLU")==0) return 'E';
-    if (AA.compare("PHE")==0) return 'F';
+    if (AA.compare("CYS")==0 || AA.compare("DCY")==0) return 'C';
+    if (AA.compare("ASP")==0 || AA.compare("DAS")==0) return 'D';
+    if (AA.compare("GLU")==0 || AA.compare("DGL")==0) return 'E';
+    if (AA.compare("PHE")==0 || AA.compare("DPN")==0) return 'F';
     if (AA.compare("GLY")==0) return 'G';
-    if (AA.compare("HIS")==0) return 'H';
-    if (AA.compare("ILE")==0) return 'I';
-    if (AA.compare("LYS")==0) return 'K';
-    if (AA.compare("LEU")==0) return 'L';
-    if (AA.compare("MET")==0 || AA.compare("MSE")==0) return 'M';
-    if (AA.compare("ASN")==0) return 'N';
+    if (AA.compare("HIS")==0 || AA.compare("DHI")==0) return 'H';
+    if (AA.compare("ILE")==0 || AA.compare("DIL")==0) return 'I';
+    if (AA.compare("LYS")==0 || AA.compare("DLY")==0) return 'K';
+    if (AA.compare("LEU")==0 || AA.compare("DLE")==0) return 'L';
+    if (AA.compare("MET")==0 || AA.compare("MED")==0 ||
+        AA.compare("MSE")==0) return 'M';
+    if (AA.compare("ASN")==0 || AA.compare("DSG")==0) return 'N';
     if (AA.compare("PYL")==0) return 'O';
-    if (AA.compare("PRO")==0) return 'P';
-    if (AA.compare("GLN")==0) return 'Q';
-    if (AA.compare("ARG")==0) return 'R';
-    if (AA.compare("SER")==0) return 'S';
-    if (AA.compare("THR")==0) return 'T';
+    if (AA.compare("PRO")==0 || AA.compare("DPR")==0) return 'P';
+    if (AA.compare("GLN")==0 || AA.compare("DGN")==0) return 'Q';
+    if (AA.compare("ARG")==0 || AA.compare("DAR")==0) return 'R';
+    if (AA.compare("SER")==0 || AA.compare("DSN")==0) return 'S';
+    if (AA.compare("THR")==0 || AA.compare("DTH")==0) return 'T';
     if (AA.compare("SEC")==0) return 'U';
-    if (AA.compare("VAL")==0) return 'V';
-    if (AA.compare("TRP")==0) return 'W';    
-    if (AA.compare("TYR")==0) return 'Y';
+    if (AA.compare("VAL")==0 || AA.compare("DVA")==0) return 'V';
+    if (AA.compare("TRP")==0 || AA.compare("DTR")==0) return 'W';    
+    if (AA.compare("TYR")==0 || AA.compare("DTY")==0) return 'Y';
     if (AA.compare("GLX")==0) return 'Z';
 
     if (AA.compare(0,2," D")==0) return tolower(AA[2]);
@@ -138,8 +139,8 @@ void split(const string &line, vector<string> &line_vec,
 
 size_t get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
-    vector<int> &mol_vec, const int ter_opt=3, const int infmt_opt=-1,
-    const string atom_opt="auto", const int split_opt=0)
+    vector<int> &mol_vec, const int ter_opt, const int infmt_opt,
+    const string atom_opt, const int split_opt, const int het_opt)
 {
     size_t i=0; // resi i.e. atom index
     string line;
@@ -174,15 +175,16 @@ size_t get_PDB_lines(const string filename,
             else               getline(fin, line);
             if (infmt_opt==-1 && line.compare(0,5,"loop_")==0) // PDBx/mmCIF
                 return get_PDB_lines(filename,PDB_lines,chainID_list,
-                    mol_vec, ter_opt, 3, atom_opt, split_opt);
+                    mol_vec, ter_opt, 3, atom_opt, split_opt,het_opt);
             if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
                 else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
             if (split_opt && line.compare(0,3,"END")==0) chainID=0;
-            if (line.compare(0, 6, "ATOM  ")==0 && line.size()>=54 &&
-               (line[16]==' ' || line[16]=='A'))
+            if ((line.compare(0, 6, "ATOM  ")==0 || 
+                (line.compare(0, 6, "HETATM")==0 && het_opt))
+                && line.size()>=54 && (line[16]==' ' || line[16]=='A'))
             {
                 if (atom_opt=="auto")
                 {
@@ -381,7 +383,8 @@ size_t get_PDB_lines(const string filename,
 
             line_vec.clear();
             split(line,line_vec);
-            if (line_vec[_atom_site["group_PDB"]]!="ATOM") continue;
+            if (line_vec[_atom_site["group_PDB"]]!="ATOM" && (het_opt==0 ||
+                line_vec[_atom_site["group_PDB"]]!="HETATM")) continue;
             
             alt_id=".";
             if (_atom_site.count("label_alt_id")) // in 39.4 % of entries

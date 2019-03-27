@@ -31,6 +31,10 @@ void print_help()
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
+"    -het     Whether to read residues marked as 'HETATM' instead of 'ATOM  '\n"
+"             0: (default) only align 'ATOM  ' residues\n"
+"             1: align both 'ATOM  ' and 'HETATM' residues\n"
+"\n"
 "    -infmt   Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
 "             3: PDBx/mmCIF format\n"
@@ -50,6 +54,7 @@ int main(int argc, char *argv[])
     int    ter_opt   =3;     // TER, END, or different chainID
     int    infmt_opt =-1;    // PDB or PDBx/mmCIF format
     int    split_opt =0;     // do not split chain
+    int    het_opt=0;        // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string suffix_opt="";    // set -suffix to empty
     string dir_opt   ="";    // set -dir to empty
@@ -81,6 +86,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-infmt") && i < (argc-1) )
         {
             infmt_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
+        {
+            het_opt=atoi(argv[i + 1]); i++;
         }
         else xname=argv[i];
     }
@@ -135,7 +144,7 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            mol_vec, ter_opt, infmt_opt, atom_opt, split_opt);
+            mol_vec, ter_opt, infmt_opt, atom_opt, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
