@@ -38,7 +38,7 @@ qTMclust: qTMclust.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 Contactlib: Contactlib.cpp Contactlib.h TMalign.h basic_fun.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 clean:

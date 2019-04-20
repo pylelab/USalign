@@ -87,7 +87,7 @@ int se_main(
         {
             n_ali++;
             d=sqrt(dist(&xa[i][0], &ya[j][0]));
-            if (d <= score_d8)
+            if (d <= score_d8 || i_opt)
             {
                 if (outfmt_opt<2)
                 {
