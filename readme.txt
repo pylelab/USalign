@@ -8,7 +8,7 @@
    Please report issues to yangzhanglab@umich.edu
 
    References to cite:
-   S Gong, C Zhang, Y Zhang. Bioinformatics (2019)
+   S Gong, C Zhang, Y Zhang. Bioinformatics, btz282 (2019)
    Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
 
    DISCLAIMER:
