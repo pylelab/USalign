@@ -52,6 +52,7 @@
    2019/02/09: Fixed asymmetric alignment bug.
    2019/03/17: Added the -cp option for circular permutation
    2019/03/27: Added the -mirror option for mirror structure alignment
+   2019/04/25: The RNA-align algorithm was published by Bioinformatics
 ===============================================================================
 
 =========================
@@ -86,4 +87,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-03/27/2019
+04/26/2019
