@@ -342,6 +342,7 @@ size_t get_PDB_lines(const string filename,
         {
             if (compress_type) getline(fin_gz, line);
             else               getline(fin, line);
+            if (line.size()==0) continue;
             if (loop_) loop_ = line.compare(0,2,"# ");
             if (!loop_)
             {
@@ -359,6 +360,7 @@ size_t get_PDB_lines(const string filename,
                 {
                     if (compress_type) getline(fin_gz, line);
                     else               getline(fin, line);
+                    if (line.size()==0) continue;
                     if (line.compare(0,11,"_atom_site.")) break;
                     _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
                 }
