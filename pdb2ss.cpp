@@ -45,7 +45,7 @@ void print_help()
 "             0: PDB format\n"
 "             2: xyz format\n"
 "             3: PDBx/mmCIF format\n"
-"    -het     Whether to read residues marked as 'HETATM' instead of 'ATOM  '\n"
+"    -het     Whether to read residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
 "\n"
@@ -115,9 +115,9 @@ int main(int argc, char *argv[])
     if (suffix_opt.size() && dir_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir is set");
     if (atom_opt.size()!=4)
-        PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+        PrintErrorAndQuit("ERROR! Atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
-        PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+        PrintErrorAndQuit("ERROR! Molecule type must be either RNA or protein.");
     else if (mol_opt=="protein" && atom_opt=="auto")
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")

@@ -75,7 +75,7 @@ void print_extra_help()
 "             0: (default) do not align mirrored structure\n"
 "             1: align mirror of chain1 to origin chain2\n"
 "\n"
-"    -het     Whether to align residues marked as 'HETATM' instead of 'ATOM  '\n"
+"    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
 "\n"
@@ -294,9 +294,9 @@ int main(int argc, char *argv[])
             PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
     }
     if (atom_opt.size()!=4)
-        PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+        PrintErrorAndQuit("ERROR! Atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
-        PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+        PrintErrorAndQuit("ERROR! Molecule type must be either RNA or protein.");
     else if (mol_opt=="protein" && atom_opt=="auto")
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")

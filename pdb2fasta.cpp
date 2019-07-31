@@ -31,7 +31,7 @@ void print_help()
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
-"    -het     Whether to read residues marked as 'HETATM' instead of 'ATOM  '\n"
+"    -het     Whether to read residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
 "\n"
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     if (suffix_opt.size() && dir_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir is set");
     if (atom_opt.size()!=4)
-        PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+        PrintErrorAndQuit("ERROR! Atom name must have 4 characters, including space.");
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");
     else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)

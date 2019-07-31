@@ -36,7 +36,7 @@ int score_fun8( double **xa, double **ya, int n_ali, double d, int i_ali[],
             }
             else score_sum += 1/(1+di/d02);
         }
-        //there are not enough feasible pairs, reliefe the threshold         
+        //there are not enough feasible pairs, relieve the threshold         
         if(n_cut<3 && n_ali>3)
         {
             inc++;
@@ -81,7 +81,7 @@ int score_fun8_standard(double **xa, double **ya, int n_ali, double d,
                 score_sum += 1 / (1 + di / d02);
             }
         }
-        //there are not enough feasible pairs, reliefe the threshold         
+        //there are not enough feasible pairs, relieve the threshold         
         if (n_cut<3 && n_ali>3)
         {
             inc++;
@@ -137,7 +137,7 @@ double TMscore8_search(double **r1, double **r2, double **xtm, double **ytm,
     //find the maximum score starting from local structures superposition
     int i_ali[kmax], n_cut;
     int L_frag; //fragment length
-    int iL_max; //maximum starting postion for the fragment
+    int iL_max; //maximum starting position for the fragment
     
     for(i_init=0; i_init<n_init; i_init++)
     {
@@ -291,7 +291,7 @@ double TMscore8_search_standard( double **r1, double **r2,
     //find the maximum score starting from local structures superposition
     int i_ali[kmax], n_cut;
     int L_frag; //fragment length
-    int iL_max; //maximum starting postion for the fragment
+    int iL_max; //maximum starting position for the fragment
 
     for (i_init = 0; i_init<n_init; i_init++)
     {
@@ -752,7 +752,7 @@ char sec_str(double dis13, double dis14, double dis15,
 }
 
 
-/* secondary stucture assignment for protein:
+/* secondary structure assignment for protein:
  * 1->coil, 2->helix, 3->turn, 4->strand */
 void make_sec(double **x, int len, char *sec)
 {
@@ -1882,7 +1882,7 @@ int TMalign_main(double **xa, double **ya,
     /***********************/
     parameter_set4search(xlen, ylen, D0_MIN, Lnorm, 
         score_d8, d0, d0_search, dcu0);
-    int simplify_step    = 40; //for similified search engine
+    int simplify_step    = 40; //for simplified search engine
     int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
 
     int i;
@@ -2211,7 +2211,7 @@ int TMalign_main(double **xa, double **ya,
     //*******************************************************************//
     //    The alignment will not be changed any more in the following    //
     //*******************************************************************//
-    //check if the initial alignment is generated approriately
+    //check if the initial alignment is generated appropriately
     bool flag=false;
     for(i=0; i<ylen; i++)
     {
@@ -2247,7 +2247,7 @@ int TMalign_main(double **xa, double **ya,
     //    Detailed TMscore search engine --> prepare for final TMscore    //
     //********************************************************************//
     //run detailed TMscore search engine for the best alignment, and
-    //extract the best rotation matrix (t, u) for the best alginment
+    //extract the best rotation matrix (t, u) for the best alignment
     simplify_step=1;
     if (fast_opt) simplify_step=40;
     score_sum_method=8;
@@ -2376,7 +2376,8 @@ int TMalign_main(double **xa, double **ya,
     seqM.assign( ali_len,' ');
     seqyA.assign(ali_len,'-');
     
-    do_rotation(xa, xt, xlen, t, u);
+    //do_rotation(xa, xt, xlen, t, u);
+    do_rotation(xa, xt, xlen, t0, u0);
 
     int kk=0, i_old=0, j_old=0;
     d=0;

@@ -82,15 +82,13 @@ void print_extra_help()
 "                  0: (default, same as F) normalized by second structure\n"
 "                  1: same as T, normalized by average structure length\n"
 "\n"
-"    -cp      Whether to check circular permutation\n"
-"             0: (default) sequence order dependent alignment\n"
-"             1: circularly permuted alignment\n"
+"    -cp      ALignment with circular permutation\n"
 "\n"
 "    -mirror  Whether to align the mirror image of input structure\n"
 "             0: (default) do not align mirrored structure\n"
 "             1: align mirror of chain1 to origin chain2\n"
 "\n"
-"    -het     Whether to align residues marked as 'HETATM' instead of 'ATOM  '\n"
+"    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
 "\n"
@@ -121,7 +119,7 @@ void print_help(bool h_opt=false)
 "\n"
 "    -i    Start with an alignment specified in fasta file 'align.txt'\n"
 "\n"
-"    -I    Stick to the alignment 'align.txt'\n"
+"    -I    Stick to the alignment specified in 'align.txt'\n"
 "\n"
 "    -m    Output TM-align rotation matrix\n"
 "\n"
@@ -306,9 +304,9 @@ int main(int argc, char *argv[])
         {
             byresi_opt=atoi(argv[i + 1]); i++;
         }
-        else if ( !strcmp(argv[i],"-cp") && i < (argc-1) )
+        else if ( !strcmp(argv[i],"-cp") )
         {
-            cp_opt=atoi(argv[i + 1]); i++;
+            cp_opt=1;
         }
         else if ( !strcmp(argv[i],"-mirror") && i < (argc-1) )
         {
@@ -350,9 +348,9 @@ int main(int argc, char *argv[])
             PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
     }
     if (atom_opt.size()!=4)
-        PrintErrorAndQuit("ERROR! atom name must have 4 characters, including space.");
+        PrintErrorAndQuit("ERROR! Atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
-        PrintErrorAndQuit("ERROR! molecule type must be either RNA or protein.");
+        PrintErrorAndQuit("ERROR! Molecule type must be either RNA or protein.");
     else if (mol_opt=="protein" && atom_opt=="auto")
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")

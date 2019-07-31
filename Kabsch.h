@@ -26,7 +26,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
     int a_failed = 0, b_failed = 0;
     double epsilon = 0.00000001;
 
-    //initializtation
+    //initialization
     *rms = 0;
     rms1 = 0;
     e0 = 0;
@@ -99,7 +99,7 @@ bool Kabsch(double **x, double **y, int n, int mode, double *rms,
         r[j][2] = sz[j] - s1[2] * s2[j] / n;
     }
 
-    //compute determinat of matrix r
+    //compute determinant of matrix r
     det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1])\
         - r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0])\
         + r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
