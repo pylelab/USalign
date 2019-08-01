@@ -98,21 +98,21 @@ void print_help(bool h_opt=false)
 " (For detail: Zhang & Skolnick, Proteins, 2004 57:702-10)\n"
 "\n"
 " 1. Run TM-score to compare 'model' and 'native':\n"
-"    >TMscore model native\n"
+"     $ TMscore model.pdb native.pdb\n"
 "\n"
 " 2. Run TM-score to compare two complex structures with multiple chains\n"
-"    >TMscore -c model native\n"
+"     $ TMscore -c model.pdb native.pdb\n"
 "\n"
 " 2. TM-score normalized with an assigned scale d0 e.g. 5 A:\n"
-"    >TMscore model native -d 5\n"
+"     $ TMscore model.pdb native.pdb -d 5\n"
 "\n"
 " 3. TM-score normalized by a specific length, e.g. 120 AA:\n"
-"    >TMscore model native -l 120\n"
+"     $ TMscore model.pdb native.pdv -l 120\n"
 "\n"
-" 4. TM-score with superposition output, e.g. 'TM.sup':\n"
-"    >TMscore model native -o TM.sup\n"
-"    To view superimposed atomic models by pymol:\n"
-"    >pymol TM.sup native\n"
+" 4. TM-score with superposition output, e.g. 'TM_sup.pdb':\n"
+"     $ TMscore model.pdb native.pdb -o TM_sup.pdb\n"
+"    To view superimposed atomic model by PyMOL:\n"
+"     $ pymol TM_sup.pdb native.pdb\n"
     <<endl;
 
     if (h_opt) print_extra_help();
@@ -138,7 +138,6 @@ int main(int argc, char *argv[])
     bool h_opt = false; // print full help message
     bool v_opt = false; // print version
     bool m_opt = false; // flag for -m, output rotation matrix
-    int  i_opt = 3;     // 1 for -i, 3 for -I
     bool o_opt = false; // flag for -o, output superposed structure
     int  a_opt = 0;     // flag for -a, do not normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
@@ -347,7 +346,6 @@ int main(int argc, char *argv[])
     int    xlen, ylen;         // chain length
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
-    char   *secx, *secy;       // for the secondary structure 
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -386,12 +384,9 @@ int main(int argc, char *argv[])
             }
             NewArray(&xa, xlen, 3);
             seqx = new char[xlen + 1];
-            secx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
                 resi_vec1, byresi_opt);
             if (mirror_opt) for (r=0;r<xlen;r++) xa[r][2]=-xa[r][2];
-            if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
-            else make_sec(xa, xlen, secx); // secondary structure assignment
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -427,12 +422,8 @@ int main(int argc, char *argv[])
                     }
                     NewArray(&ya, ylen, 3);
                     seqy = new char[ylen + 1];
-                    secy = new char[ylen + 1];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
                         resi_vec2, byresi_opt);
-                    if (mol_vec2[chain_j]>0)
-                         make_sec(seqy, ya, ylen, secy, atom_opt);
-                    else make_sec(ya, ylen, secy);
 
                     if (byresi_opt) extract_aln_from_resi(sequence,
                         seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -444,7 +435,7 @@ int main(int argc, char *argv[])
                     double d0_0, TM_0;
                     double d0A, d0B, d0u, d0a;
                     double d0_out=5.0;
-                    string seqM, seqxA, seqyA, seq_scale;// for output alignment
+                    string seqM, seqxA, seqyA;// for output alignment
                     double rmsd0 = 0.0;
                     int L_ali;                // Aligned length in standard_TMscore
                     double Liden=0;
@@ -454,29 +445,23 @@ int main(int argc, char *argv[])
 
                     double rmsd_d0_out=0;
                     int L_lt_d=0;
-                    double GDT_TS_list[4]={0,0,0,0}; // 1 2 4 8
-                    double GDT_HA_list[4]={0,0,0,0}; // 0.5, 1, 2, 4
+                    double GDT_list[5]={0,0,0,0,0}; // 0.5, 1, 2, 4, 8
+                    double maxsub=0;
 
                     /* entry function for structure alignment */
-                    TMalign_main(
-                        xa, ya, seqx, seqy, secx, secy,
+                    TMscore_main(
+                        xa, ya, seqx, seqy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, a_opt, u_opt, d_opt, fast_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
+                        a_opt, u_opt, d_opt, fast_opt,
+                        mol_vec1[chain_i]+mol_vec2[chain_j],
+                        GDT_list,maxsub,TMcut);
 
                     /* print result */
-                    if (outfmt_opt<=0)
-                    {
-                        if (outfmt_opt==0) print_version();
-                        GDT_from_TMscore(xa, ya, xlen, ylen,
-                            seqM, seqxA, seqyA,
-                            seq_scale, L_lt_d, rmsd_d0_out,
-                            GDT_TS_list, GDT_HA_list, t0, u0, d0_out);
-                    }
+                    if (outfmt_opt==0) print_version();
                     output_TMscore_results(
                         xname.substr(dir1_opt.size()),
                         yname.substr(dir2_opt.size()),
@@ -491,18 +476,15 @@ int main(int argc, char *argv[])
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
                         outfmt_opt, ter_opt, 
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        a_opt, u_opt, d_opt,mirror_opt,
-                        seq_scale.c_str(), L_lt_d, rmsd_d0_out,
-                        GDT_TS_list, GDT_HA_list);
+                        a_opt, u_opt, d_opt, mirror_opt,
+                        L_lt_d, rmsd_d0_out, GDT_list, maxsub);
 
                     /* Done! Free memory */
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
-                    seq_scale.clear();
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
-                    delete [] secy;
                     resi_vec2.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
@@ -518,7 +500,6 @@ int main(int argc, char *argv[])
             PDB_lines1[chain_i].clear();
             DeleteArray(&xa, xlen);
             delete [] seqx;
-            delete [] secx;
             resi_vec1.clear();
         } // chain_i
         xname.clear();
