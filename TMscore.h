@@ -879,10 +879,10 @@ void output_TMscore_results(
         }
         gdt_ts_score/=(4*ylen);
         gdt_ha_score/=(4*ylen);
-        printf("GDT-TS-score= %6.4f %(d<1)=%6.4f %(d<2)=%6.4f %(d<4)=%6.4f %(d<8)=%6.4f\n",
+        printf("GDT-TS-score= %6.4f %%(d<1)=%6.4f %%(d<2)=%6.4f %%(d<4)=%6.4f %%(d<8)=%6.4f\n",
             gdt_ts_score, GDT_list[1]/ylen, GDT_list[2]/ylen,
                           GDT_list[3]/ylen, GDT_list[4]/ylen);
-        printf("GDT-HA-score= %6.4f %(d<0.5)=%6.4f %(d<1)=%6.4f %(d<2)=%6.4f %(d<4)=%6.4f\n",
+        printf("GDT-HA-score= %6.4f %%(d<0.5)=%6.4f %%(d<1)=%6.4f %%(d<2)=%6.4f %%(d<4)=%6.4f\n",
             gdt_ha_score, GDT_list[0]/ylen, GDT_list[1]/ylen,
                           GDT_list[2]/ylen, GDT_list[3]/ylen);
 

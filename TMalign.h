@@ -1603,9 +1603,9 @@ void output_rotation_matrix(const char* fname_matrix,
         fout << "\nCode for rotating Structure A from (x,y,z) to (X,Y,Z):\n"
                 "for(i=0; i<L; i++)\n"
                 "{\n"
-                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i]\n"
-                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i]\n"
-                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i]\n"
+                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
+                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
+                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
                 "}\n";
         fout.close();
     }
@@ -2483,8 +2483,9 @@ int CPalign_main(double **xa, double **ya,
     secx_cp[2*xlen]=0;
     
     /* fTM-align alignment */
+    double TM1_cp,TM2_cp;
     TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
-        t0, u0, TM1, TM2, TM3, TM4, TM5,
+        t0, u0, TM1_cp, TM2_cp, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen*2, ylen, sequence, Lnorm_ass, d0_scale,
@@ -2520,13 +2521,30 @@ int CPalign_main(double **xa, double **ya,
             cp_point=r;
         }
     }
-
-    /* prepare structure for final alignment */
     seqM.clear();
     seqxA.clear();
     seqyA.clear();
     seqxA_cp.clear();
     seqyA_cp.clear();
+    rmsd0=Liden=n_ali=n_ali8=0;
+
+    /* fTM-align alignment */
+    TMalign_main(xa, ya, seqx, seqy, secx, secy,
+        t0, u0, TM1, TM2, TM3, TM4, TM5,
+        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+        0, false, false, false, true, mol_type, -1);
+
+    /* do not use cricular permutation of number of aligned residues is not
+     * larger than sequence-order dependent alignment */
+    if (n_ali8>cp_aln_best) cp_point=0;
+
+    /* prepare structure for final alignment */
+    seqM.clear();
+    seqxA.clear();
+    seqyA.clear();
+    rmsd0=Liden=n_ali=n_ali8=0;
     if (cp_point!=0)
     {
         for (r=0;r<xlen;r++)

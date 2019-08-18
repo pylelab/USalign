@@ -53,8 +53,9 @@
    2019/03/17: Added the -cp option for circular permutation
    2019/03/27: Added the -mirror option for mirror structure alignment
    2019/04/25: The RNA-align algorithm was published by Bioinformatics
-   2019/07/24: Fix bug in displaying matching residues.
-               Add GDT and MaxSub to TMscore program
+   2019/07/24: Fixed bug in displaying matching residues.
+               Added GDT and MaxSub to TMscore program.
+   2019/08/18: Prevent excessive circular permutation alignment by -cp.
 ===============================================================================
 
 =========================
@@ -89,4 +90,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-07/24/2019
+08/18/2019
