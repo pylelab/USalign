@@ -347,8 +347,20 @@ size_t get_PDB_lines(const string filename,
             if (!loop_)
             {
                 if (line.compare(0,5,"loop_")) continue;
-                if (compress_type) getline(fin_gz, line);
-                else               getline(fin, line);
+                while(1)
+                {
+                    if (compress_type)
+                    {
+                        if (fin_gz.good()) getline(fin_gz, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    else
+                    {
+                        if (fin.good()) getline(fin, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    if (line.size()) break;
+                }
                 if (line.compare(0,11,"_atom_site.")) continue;
 
                 loop_=true;

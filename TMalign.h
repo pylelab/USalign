@@ -1508,8 +1508,20 @@ void output_superpose(const string filename, const char *fname_super,
         else if (line.compare(0,5,"loop_")==0) // PDBx/mmCIF
         {
             buf<<line<<'\n';
-            if (compress_type) getline(fin_gz, line);
-            else               getline(fin, line);
+            while(1)
+            {
+                if (compress_type) 
+                {
+                    if (fin_gz.good()) getline(fin_gz, line);
+                    else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                }
+                else
+                {
+                    if (fin.good()) getline(fin, line);
+                    else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                }
+                if (line.size()) break;
+            }
             buf<<line<<'\n';
             if (line.compare(0,11,"_atom_site.")) continue;
             _atom_site.clear();
@@ -1517,8 +1529,20 @@ void output_superpose(const string filename, const char *fname_super,
             _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
             while(1)
             {
-                if (compress_type) getline(fin_gz, line);
-                else               getline(fin, line);
+                while(1)
+                {
+                    if (compress_type) 
+                    {
+                        if (fin_gz.good()) getline(fin_gz, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    else
+                    {
+                        if (fin.good()) getline(fin, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    if (line.size()) break;
+                }
                 if (line.compare(0,11,"_atom_site.")) break;
                 _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
                 buf<<line<<'\n';
