@@ -432,12 +432,8 @@ double MMalign_final(
     int i,j;
     int xlen=0;
     int ylen=0;
-    for (i=0;i<chain1_num;i++)
-    {
-        if (assign1_list[i]<0) continue;
-        xlen+=xlen_vec[i];
-        ylen+=ylen_vec[assign1_list[i]];
-    }
+    for (i=0;i<chain1_num;i++) xlen+=xlen_vec[i];
+    for (j=0;j<chain2_num;j++) ylen+=ylen_vec[j];
     if (xlen<=3 || ylen<=3) return total_score;
 
     seqx = new char[xlen+1];
@@ -501,6 +497,31 @@ double MMalign_final(
         aln_start=aln_end;
     }
 
+    /* prepare unaligned region */
+    for (i=0;i<chain1_num;i++)
+    {
+        if (assign1_list[i]>=0) continue;
+        chainID1+=chainID_list1[i];
+        chainID2+=':';
+        string s(seqx_vec[i].begin(),seqx_vec[i].end());
+        sequence[0]+=s.substr(0,xlen_vec[i])+'*';
+        sequence[1]+=string(xlen_vec[i],'-')+'*';
+        s.clear();
+        sequence[2]+=string(xlen_vec[i],' ')+'*';
+    }
+    for (j=0;j<chain2_num;j++)
+    {
+        if (assign2_list[j]>=0) continue;
+        chainID1+=':';
+        chainID2+=chainID_list2[j];
+        string s(seqy_vec[j].begin(),seqy_vec[j].end());
+        sequence[0]+=string(ylen_vec[j],'-')+'*';
+        sequence[1]+=s.substr(0,ylen_vec[j])+'*';
+        s.clear();
+        sequence[2]+=string(ylen_vec[j],' ')+'*';
+    }
+
+    /* print alignment */
     output_results(xname, yname, chainID1.c_str(), chainID2.c_str(),
         xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5, rmsd0, d0_out,
         sequence[2].c_str(), sequence[0].c_str(), sequence[1].c_str(),
