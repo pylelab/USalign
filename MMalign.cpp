@@ -310,15 +310,106 @@ int main(int argc, char *argv[])
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
         atom_opt, het_opt, xlen_aa, xlen_na);
+    if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
         atom_opt, het_opt, ylen_aa, ylen_na);
+    if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);
     if (a_opt)
     {
         len_aa=(xlen_aa+ylen_aa)/2;
         len_na=(xlen_na+ylen_na)/2;
+    }
+
+    /* perform monomer alignment if there is only one chain */
+    if (xa_vec.size()==1 && ya_vec.size()==1)
+    {
+        xlen = xlen_vec[0];
+        ylen = ylen_vec[0];
+        seqx = new char[xlen+1];
+        seqy = new char[ylen+1];
+        secx = new char[xlen+1];
+        secy = new char[ylen+1];
+        NewArray(&xa, xlen, 3);
+        NewArray(&ya, ylen, 3);
+        copy_chain_data(xa_vec[0],seqx_vec[0],secx_vec[0], xlen,xa,seqx,secx);
+        copy_chain_data(ya_vec[0],seqy_vec[0],secy_vec[0], ylen,ya,seqy,secy);
+        
+        /* declare variable specific to this pair of TMalign */
+        double t0[3], u0[3][3];
+        double TM1, TM2;
+        double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+        double d0_0, TM_0;
+        double d0A, d0B, d0u, d0a;
+        double d0_out=5.0;
+        string seqM, seqxA, seqyA;// for output alignment
+        double rmsd0 = 0.0;
+        int L_ali;                // Aligned length in standard_TMscore
+        double Liden=0;
+        double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+        int n_ali=0;
+        int n_ali8=0;
+
+        /* entry function for structure alignment */
+        TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            t0, u0, TM1, TM2, TM3, TM4, TM5,
+            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+            seqM, seqxA, seqyA,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+            xlen, ylen, sequence, 0, d0_scale,
+            0, a_opt, false, d_opt, fast_opt,
+            mol_vec1[0]+mol_vec2[0],TMcut);
+
+        /* print result */
+        output_results(
+            xname.substr(dir1_opt.size()),
+            yname.substr(dir2_opt.size()),
+            chainID_list1[0].c_str(),
+            chainID_list2[0].c_str(),
+            xlen, ylen, t0, u0, TM1, TM2, 
+            TM3, TM4, TM5, rmsd0, d0_out,
+            seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
+            n_ali8, L_ali, TM_ali, rmsd_ali,
+            TM_0, d0_0, d0A, d0B,
+            0, d0_scale, d0a, d0u, 
+            (m_opt?fname_matrix:"").c_str(),
+            outfmt_opt, ter_opt, 
+            (o_opt?fname_super:"").c_str(),
+            0, a_opt, false, d_opt, false);
+
+        /* clean up */
+        seqM.clear();
+        seqxA.clear();
+        seqyA.clear();
+        delete[]seqx;
+        delete[]seqy;
+        delete[]secx;
+        delete[]secy;
+        DeleteArray(&xa,xlen);
+        DeleteArray(&ya,ylen);
+        chain1_list.clear();
+        chain2_list.clear();
+        sequence.clear();
+
+        vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+        vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+        vector<vector<char> >().swap(seqx_vec); // sequence of complex1
+        vector<vector<char> >().swap(seqy_vec); // sequence of complex2
+        vector<vector<char> >().swap(secx_vec); // secondary structure of complex1
+        vector<vector<char> >().swap(secy_vec); // secondary structure of complex2
+        mol_vec1.clear();       // molecule type of complex1, RNA if >0
+        mol_vec2.clear();       // molecule type of complex2, RNA if >0
+        chainID_list1.clear();  // list of chainID1
+        chainID_list2.clear();  // list of chainID2
+        xlen_vec.clear();       // length of complex1
+        ylen_vec.clear();       // length of complex2
+
+        t2 = clock();
+        float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
+        printf("Total CPU time is %5.2f seconds\n", diff);
+        return 0;
     }
 
     /* declare TM-score tables */
