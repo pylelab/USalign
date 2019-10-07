@@ -82,6 +82,7 @@ void print_extra_help()
 
 void print_help(bool h_opt=false)
 {
+    print_version();
     cout <<
 "\n"
 "Usage: MMalign complex1.pdb complex2.pdb [Options]\n"
@@ -101,6 +102,8 @@ void print_help(bool h_opt=false)
 "\n"
 "    -full Whether to show full alignment result, including alignment of\n"
 "          individual chains. T or F, (default F)\n"
+"\n"
+"    -v    Print the version of MM-align\n"
 "\n"
 "    -h    Print the full help message\n"
 "\n"
@@ -137,6 +140,7 @@ int main(int argc, char *argv[])
     double d0_scale;
 
     bool h_opt = false; // print full help message
+    bool v_opt = false; // print version
     bool m_opt = false; // flag for -m, output rotation matrix
     bool o_opt = false; // flag for -o, output superposed structure
     int  a_opt = 0;     // flag for -a, do not normalized by average length
@@ -187,6 +191,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-d") && i < (argc-1) )
         {
             d0_scale = atof(argv[i + 1]); d_opt = true; i++;
+        }
+        else if ( !strcmp(argv[i],"-v") )
+        {
+            v_opt = true;
         }
         else if ( !strcmp(argv[i],"-h") )
         {
@@ -256,6 +264,11 @@ int main(int argc, char *argv[])
     if(yname.size()==0)
     {
         if (h_opt) print_help(h_opt);
+        if (v_opt)
+        {
+            print_version();
+            exit(EXIT_FAILURE);
+        }
         if (xname.size()==0)
             PrintErrorAndQuit("Please provide input structures");
         PrintErrorAndQuit("Please provide the second input structure");
