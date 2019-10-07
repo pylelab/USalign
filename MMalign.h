@@ -38,39 +38,254 @@ double enhanced_greedy_search(double **TMave_mat,int *assign1_list,
         total_score+=tmp_score;
     }
     if (total_score<=0) return total_score; // error: no assignable chain
+    //cout<<"assign1_list={";
+    //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<","; cout<<"}"<<endl;
+    //cout<<"assign2_list={";
+    //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<","; cout<<"}"<<endl;
 
     /* iterative refinemnt */
     double delta_score;
+    int *assign1_tmp=new int [chain1_num];
+    int *assign2_tmp=new int [chain2_num];
+    for (i=0;i<chain1_num;i++) assign1_tmp[i]=assign1_list[i];
+    for (j=0;j<chain2_num;j++) assign2_tmp[j]=assign2_list[j];
+    int old_i=-1;
+    int old_j=-1;
+
     for (int iter=0;iter<getmin(chain1_num,chain2_num)*5;iter++)
     {
-        delta_score=0;
+        delta_score=-1;
         for (i=0;i<chain1_num;i++)
         {
-            if (assign1_list[i]<0) continue;
+            old_j=assign1_list[i];
             for (j=0;j<chain2_num;j++)
             {
-                // attempt to swap (i,assign1_list[i]) with
-                // (assign2_list[j],j)
+                // attempt to swap (i,old_j=assign1_list[i]) with (i,j)
                 if (j==assign1_list[i] || TMave_mat[i][j]<=0) continue;
+                old_i=assign2_list[j];
 
-                delta_score=TMave_mat[i][j]-TMave_mat[i][assign1_list[i]];
-                if (assign2_list[j]>=0) delta_score+=
-                    TMave_mat[assign2_list[j]][assign1_list[i]]
-                   -TMave_mat[assign2_list[j]][j];
+                assign1_tmp[i]=j;
+                if (old_i>=0) assign1_tmp[old_i]=old_j;
+                assign2_tmp[j]=i;
+                if (old_j>=0) assign2_tmp[old_j]=old_i;
+
+                delta_score=TMave_mat[i][j];
+                if (old_j>=0) delta_score-=TMave_mat[i][old_j];
+                if (old_i>=0) delta_score-=TMave_mat[old_i][j];
+                if (old_i>=0 && old_j>=0) delta_score+=TMave_mat[old_i][old_j];
 
                 if (delta_score>0) // successful swap
                 {
                     assign1_list[i]=j;
+                    if (old_i>=0) assign1_list[old_i]=old_j;
                     assign2_list[j]=i;
+                    if (old_j>=0) assign2_list[old_j]=old_i;
                     total_score+=delta_score;
                     break;
+                }
+                else
+                {
+                    assign1_tmp[i]=assign1_list[i];
+                    if (old_i>=0) assign1_tmp[old_i]=assign1_list[old_i];
+                    assign2_tmp[j]=assign2_list[j];
+                    if (old_j>=0) assign2_tmp[old_j]=assign2_list[old_j];
                 }
             }
             if (delta_score>0) break;
         }
         if (delta_score<=0) break; // cannot swap any chain pair
     }
+
+    /* clean up */
+    delete[]assign1_tmp;
+    delete[]assign2_tmp;
     return total_score;
+}
+
+double calculate_centroids(const vector<vector<vector<double> > >&a_vec,
+    const int chain_num, double ** centroids)
+{
+    int L=0;
+    int c,r; // index of chain and residue
+    for (c=0; c<chain_num; c++)
+    {
+        centroids[c][0]=0;
+        centroids[c][1]=0;
+        centroids[c][2]=0;
+        L=a_vec[c].size();
+        for (r=0; r<L; r++)
+        {
+            centroids[c][0]+=a_vec[c][r][0];
+            centroids[c][1]+=a_vec[c][r][1];
+            centroids[c][2]+=a_vec[c][r][2];
+        }
+        centroids[c][0]/=L;
+        centroids[c][1]/=L;
+        centroids[c][2]/=L;
+        //cout<<centroids[c][0]<<'\t'
+            //<<centroids[c][1]<<'\t'
+            //<<centroids[c][2]<<endl;
+    }
+
+    vector<double> d0_vec(chain_num,-1);
+    int c2=0;
+    double d0MM=0;
+    for (c=0; c<chain_num; c++)
+    {
+        for (c2=0; c2<chain_num; c2++)
+        {
+            if (c2==c) continue;
+            d0MM=sqrt(dist(centroids[c],centroids[c2]));
+            if (d0_vec[c]<=0) d0_vec[c]=d0MM;
+            else d0_vec[c]=getmin(d0_vec[c], d0MM);
+        }
+    }
+    d0MM=0;
+    for (c=0; c<chain_num; c++) d0MM+=d0_vec[c];
+    d0MM/=chain_num;
+    d0_vec.clear();
+    //cout<<d0MM<<endl;
+    return d0MM;
+}
+
+/* calculate MMscore of aligned residues */
+double calMMscore(double **TMave_mat,int *assign1_list,
+    const int chain1_num, const int chain2_num, double **xcentroids,
+    double **ycentroids, const double d0MM, double **r1, double **r2,
+    double **xt, double t[3], double u[3][3], const int L)
+{
+    int Nali=0;
+    int i,j;
+    double MMscore=0;
+    for (i=0;i<chain1_num;i++)
+    {
+        j=assign1_list[i];
+        if (j<0) continue;
+
+        r1[Nali][0]=xcentroids[i][0];
+        r1[Nali][1]=xcentroids[i][1];
+        r1[Nali][2]=xcentroids[i][2];
+
+        r2[Nali][0]=ycentroids[j][0];
+        r2[Nali][1]=ycentroids[j][1];
+        r2[Nali][2]=ycentroids[j][2];
+
+        Nali++;
+        MMscore+=TMave_mat[i][j];
+    }
+    MMscore/=L;
+
+    /* Kabsch superposition */
+    double RMSD = 0;
+    Kabsch(r1, r2, Nali, 1, &RMSD, t, u);
+    //RMSD = sqrt( RMSD/(1.*Nali));
+    do_rotation(r1, xt, Nali, t, u);
+    
+    /* calculate pseudo-TMscore */
+    double TMscore=0;
+    double dd=0;
+    for (i=0;i<Nali;i++)
+    {
+        dd=dist(xt[i], r2[i]);
+        TMscore+=1/(1+dd/(d0MM*d0MM));
+    }
+    TMscore/=getmin(chain1_num,chain2_num);
+    MMscore*=TMscore;
+    return MMscore;
+}
+
+/* reassign chain-chain correspondence */
+double refined_greedy_search(double **TMave_mat,int *assign1_list,
+    int *assign2_list, const int chain1_num, const int chain2_num,
+    double **xcentroids, double **ycentroids, const double d0MM, const int L)
+{
+    double MMscore_old=0;
+    double MMscore=0;
+    int i,j;
+
+    double **r1;
+    double **r2;
+    double **xt;
+    int chain_num=getmin(chain1_num,chain2_num);
+    NewArray(&r1, chain_num, 3);
+    NewArray(&r2, chain_num, 3);
+    NewArray(&xt, chain_num, 3);
+    double t[3];
+    double u[3][3];
+
+    /* calculate MMscore */
+    MMscore=MMscore_old=calMMscore(TMave_mat, assign1_list, chain1_num,
+        chain2_num, xcentroids, ycentroids, d0MM, r1, r2, xt, t, u, L);
+    //cout<<"MMscore="<<MMscore<<endl;
+
+    /* iteratively refine chain assignment. in each iteration, attempt
+     * to swap (i,old_j=assign1_list[i]) with (i,j) */
+    double delta_score=-1;
+    int *assign1_tmp=new int [chain1_num];
+    int *assign2_tmp=new int [chain2_num];
+    for (i=0;i<chain1_num;i++) assign1_tmp[i]=assign1_list[i];
+    for (j=0;j<chain2_num;j++) assign2_tmp[j]=assign2_list[j];
+    int old_i=-1;
+    int old_j=-1;
+    for (int iter=0;iter<chain_num*5;iter++)
+    {
+        delta_score=-1;
+        for (i=0;i<chain1_num;i++)
+        {
+            old_j=assign1_list[i];
+            for (j=0;j<chain2_num;j++)
+            {
+                if (j==assign1_list[i] || TMave_mat[i][j]<=0) continue;
+                old_i=assign2_list[j];
+                //cout<<"(i,j,old_i,old_j)=("<<i<<","<<j<<","
+                    //<<old_i<<","<<old_j<<")"<<endl;
+
+                assign1_tmp[i]=j;
+                if (old_i>=0) assign1_tmp[old_i]=old_j;
+                assign2_tmp[j]=i;
+                if (old_j>=0) assign2_tmp[old_j]=old_i;
+                
+                MMscore=calMMscore(TMave_mat, assign1_tmp, chain1_num,
+                    chain2_num, xcentroids, ycentroids, d0MM,
+                    r1, r2, xt, t, u, L);
+
+                if (MMscore>MMscore_old) // successful swap
+                {
+                    assign1_list[i]=j;
+                    if (old_i>=0) assign1_list[old_i]=old_j;
+                    assign2_list[j]=i;
+                    if (old_j>=0) assign2_list[old_j]=old_i;
+                    delta_score=(MMscore-MMscore_old);
+                    MMscore_old=MMscore;
+                    //cout<<"MMscore="<<MMscore<<endl;
+                    break;
+                }
+                else
+                {
+                    assign1_tmp[i]=assign1_list[i];
+                    if (old_i>=0) assign1_tmp[old_i]=assign1_list[old_i];
+                    assign2_tmp[j]=assign2_list[j];
+                    if (old_j>=0) assign2_tmp[old_j]=assign2_list[old_j];
+                }
+            }
+        }
+        //cout<<"iter="<<iter<<endl;
+        //cout<<"assign1_list={";
+        //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<","; cout<<"}"<<endl;
+        //cout<<"assign2_list={";
+        //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<","; cout<<"}"<<endl;
+        if (delta_score<=0) break; // cannot swap any chain pair
+    }
+    MMscore=MMscore_old;
+    //cout<<"MMscore="<<MMscore<<endl;
+
+    /* clean up */
+    delete[]assign1_tmp;
+    delete[]assign2_tmp;
+    DeleteArray(&r1, chain_num);
+    DeleteArray(&r2, chain_num);
+    DeleteArray(&xt, chain_num);
+    return MMscore;
 }
 
 void copy_chain_data(const vector<vector<double> >&a_vec_i,

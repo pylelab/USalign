@@ -522,6 +522,34 @@ int main(int argc, char *argv[])
         assign2_list, chain1_num, chain2_num);
     if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
 
+    /* refine alignment for large oligomers */
+    if (chain1_num>=3 && chain2_num>=3)
+    {
+        /* extract centroid coordinates */
+        double **xcentroids;
+        double **ycentroids;
+        NewArray(&xcentroids, chain1_num, 3);
+        NewArray(&ycentroids, chain2_num, 3);
+        double d0MM=getmin(
+            calculate_centroids(xa_vec, chain1_num, xcentroids),
+            calculate_centroids(ya_vec, chain2_num, ycentroids));
+
+        /* refine enhanced greedy search with centroid superposition */
+        refined_greedy_search(TMave_mat, assign1_list, assign2_list,
+            chain1_num, chain2_num, xcentroids, ycentroids,
+            d0MM, len_aa+len_na);
+        
+        //cout<<"assign1_list={";
+        //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<","; cout<<"}"<<endl;
+        //cout<<"assign2_list={";
+        //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<","; cout<<"}"<<endl;
+
+        /* clean up */
+        DeleteArray(&xcentroids, chain1_num);
+        DeleteArray(&ycentroids, chain2_num);
+        fast_opt=true; //return 0;
+    }
+
     /* perform iterative alignment */
     for (int iter=0;iter<1;iter++)
     {
