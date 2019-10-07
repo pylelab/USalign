@@ -4,6 +4,18 @@
 
 using namespace std;
 
+void print_version()
+{
+    cout << 
+"\n"
+" **********************************************************************\n"
+" * MM-align (Version 20191006): complex structure alignment           *\n"
+" * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
+" * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
+" **********************************************************************"
+    << endl;
+}
+
 void print_extra_help()
 {
     cout <<
@@ -26,8 +38,10 @@ void print_extra_help()
 "             Default is \" C3'\" for RNA/DNA and \" CA \" for proteins\n"
 "             (note the spaces before and after CA).\n"
 "\n"
-"    -mol     Molecule type: RNA or protein\n"
-"             Default is detect molecule type automatically\n"
+"    -mol     Types of molecules to align\n""Molecule type: RNA or protein\n"
+"             auto   : (default) align both proteins and nucleic acids\n"
+"             protein: only align proteins\n"
+"             RNA    : only align nucleic acids (RNA and DNA)\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
 "             1: (default) ENDMDL or END\n"
@@ -523,7 +537,9 @@ int main(int argc, char *argv[])
     if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
 
     /* refine alignment for large oligomers */
-    if (chain1_num>=3 && chain2_num>=3)
+    int aln_chain_num=0;
+    for (i=0;i<chain1_num;i++) aln_chain_num+=(assign1_list[i]>=0);
+    if (aln_chain_num>=3)
     {
         /* extract centroid coordinates */
         double **xcentroids;
@@ -539,15 +555,10 @@ int main(int argc, char *argv[])
             chain1_num, chain2_num, xcentroids, ycentroids,
             d0MM, len_aa+len_na);
         
-        //cout<<"assign1_list={";
-        //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<","; cout<<"}"<<endl;
-        //cout<<"assign2_list={";
-        //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<","; cout<<"}"<<endl;
-
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
         DeleteArray(&ycentroids, chain2_num);
-        fast_opt=true; //return 0;
+        if (len_aa+len_na>1000) fast_opt=true;
     }
 
     /* perform iterative alignment */
@@ -565,6 +576,7 @@ int main(int argc, char *argv[])
     }
 
     /* final alignment */
+    if (outfmt_opt==0) print_version();
     total_score=MMalign_final(
         xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,
@@ -589,6 +601,19 @@ int main(int argc, char *argv[])
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqM_mat);
     vector<vector<string> >().swap(seqyA_mat);
+
+    vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+    vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+    vector<vector<char> >().swap(seqx_vec); // sequence of complex1
+    vector<vector<char> >().swap(seqy_vec); // sequence of complex2
+    vector<vector<char> >().swap(secx_vec); // secondary structure of complex1
+    vector<vector<char> >().swap(secy_vec); // secondary structure of complex2
+    mol_vec1.clear();       // molecule type of complex1, RNA if >0
+    mol_vec2.clear();       // molecule type of complex2, RNA if >0
+    chainID_list1.clear();  // list of chainID1
+    chainID_list2.clear();  // list of chainID2
+    xlen_vec.clear();       // length of complex1
+    ylen_vec.clear();       // length of complex2
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
