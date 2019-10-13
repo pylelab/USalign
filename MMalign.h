@@ -1,5 +1,176 @@
 #include "se.h"
 
+/* count the number of nucleic acid chains (na_chain_num) and
+ * protein chains (aa_chain_num) in a complex */
+int count_na_aa_chain_num(int &na_chain_num,int &aa_chain_num,
+    const vector<int>&mol_vec)
+{
+    na_chain_num=0;
+    aa_chain_num=0;
+    for (int i=0;i<mol_vec.size();i++)
+    {
+        if (mol_vec[i]>0) na_chain_num++;
+        else              aa_chain_num++;
+    }
+    return na_chain_num+aa_chain_num;
+}
+
+/* adjust chain assignment for dimer-dimer alignment 
+ * return true if assignment is adjusted */
+bool adjust_dimer_assignment(        
+    const vector<vector<vector<double> > >&xa_vec,
+    const vector<vector<vector<double> > >&ya_vec,
+    const vector<int>&xlen_vec, const vector<int>&ylen_vec,
+    const vector<int>&mol_vec1, const vector<int>&mol_vec2,
+    int *assign1_list, int *assign2_list,
+    const vector<vector<string> >&seqxA_mat,
+    const vector<vector<string> >&seqyA_mat)
+{
+    /* check currently assigned chains */
+    int i1,i2,j1,j2;
+    i1=i2=j1=j2=-1;    
+    int chain1_num=xa_vec.size();
+    int chain2_num=ya_vec.size();
+    int i,j;
+    for (i=0;i<chain1_num;i++)
+    {
+        if (assign1_list[i]>=0)
+        {
+            if (i1<0)
+            {
+                i1=i;
+                j1=assign1_list[i1];
+            }
+            else
+            {
+                i2=i;
+                j2=assign1_list[i2];
+            }
+        }
+    }
+
+    /* normalize d0 by L */
+    int xlen=xlen_vec[i1]+xlen_vec[i2];
+    int ylen=ylen_vec[j1]+ylen_vec[j2];
+    int mol_type=mol_vec1[i1]+mol_vec1[i2]+
+                 mol_vec2[j1]+mol_vec2[j2];
+    double D0_MIN, d0, d0_search;
+    double Lnorm=getmin(xlen,ylen);
+    parameter_set4final(getmin(xlen,ylen), D0_MIN, Lnorm, d0, 
+        d0_search, mol_type);
+
+    double **xa,**ya, **xt;
+    NewArray(&xa, xlen, 3);
+    NewArray(&ya, ylen, 3);
+    NewArray(&xt, xlen, 3);
+
+    double RMSD = 0;
+    double dd   = 0;
+    double t[3];
+    double u[3][3];
+    int L_ali=0; // index of residue in aligned region
+    int r=0;     // index of residue in full alignment
+
+    /* total score using current assignment */
+    L_ali=0;
+    i=j=-1;
+    for (r=0;r<seqxA_mat[i1][j1].size();r++)
+    {
+        i+=(seqxA_mat[i1][j1][r]!='-');
+        j+=(seqyA_mat[i1][j1][r]!='-');
+        if (seqxA_mat[i1][j1][r]=='-' || seqyA_mat[i1][j1][r]=='-') continue;
+        xa[L_ali][0]=xa_vec[i1][i][0];
+        xa[L_ali][1]=xa_vec[i1][i][1];
+        xa[L_ali][2]=xa_vec[i1][i][2];
+        ya[L_ali][0]=ya_vec[j1][j][0];
+        ya[L_ali][1]=ya_vec[j1][j][1];
+        ya[L_ali][2]=ya_vec[j1][j][2];
+        L_ali++;
+    }
+    i=j=-1;
+    for (r=0;r<seqxA_mat[i2][j2].size();r++)
+    {
+        i+=(seqxA_mat[i2][j2][r]!='-');
+        j+=(seqyA_mat[i2][j2][r]!='-');
+        if (seqxA_mat[i2][j2][r]=='-' || seqyA_mat[i2][j2][r]=='-') continue;
+        xa[L_ali][0]=xa_vec[i2][i][0];
+        xa[L_ali][1]=xa_vec[i2][i][1];
+        xa[L_ali][2]=xa_vec[i2][i][2];
+        ya[L_ali][0]=ya_vec[j2][j][0];
+        ya[L_ali][1]=ya_vec[j2][j][1];
+        ya[L_ali][2]=ya_vec[j2][j][2];
+        L_ali++;
+    }
+
+    Kabsch(xa, ya, L_ali, 1, &RMSD, t, u);
+    do_rotation(xa, xt, L_ali, t, u);
+
+    double total_score1=0;
+    for (r=0;r<L_ali;r++)
+    {
+        dd=dist(xt[r],ya[r]);
+        total_score1+=1/(1+dd/d0*d0);
+    }
+    total_score1/=Lnorm;
+
+    /* total score using reversed assignment */
+    L_ali=0;
+    i=j=-1;
+    for (r=0;r<seqxA_mat[i1][j2].size();r++)
+    {
+        i+=(seqxA_mat[i1][j2][r]!='-');
+        j+=(seqyA_mat[i1][j2][r]!='-');
+        if (seqxA_mat[i1][j2][r]=='-' || seqyA_mat[i1][j2][r]=='-') continue;
+        xa[L_ali][0]=xa_vec[i1][i][0];
+        xa[L_ali][1]=xa_vec[i1][i][1];
+        xa[L_ali][2]=xa_vec[i1][i][2];
+        ya[L_ali][0]=ya_vec[j2][j][0];
+        ya[L_ali][1]=ya_vec[j2][j][1];
+        ya[L_ali][2]=ya_vec[j2][j][2];
+        L_ali++;
+    }
+    i=j=-1;
+    for (r=0;r<seqxA_mat[i2][j1].size();r++)
+    {
+        i+=(seqxA_mat[i2][j1][r]!='-');
+        j+=(seqyA_mat[i2][j1][r]!='-');
+        if (seqxA_mat[i2][j1][r]=='-' || seqyA_mat[i2][j1][r]=='-') continue;
+        xa[L_ali][0]=xa_vec[i2][i][0];
+        xa[L_ali][1]=xa_vec[i2][i][1];
+        xa[L_ali][2]=xa_vec[i2][i][2];
+        ya[L_ali][0]=ya_vec[j1][j][0];
+        ya[L_ali][1]=ya_vec[j1][j][1];
+        ya[L_ali][2]=ya_vec[j1][j][2];
+        L_ali++;
+    }
+
+    Kabsch(xa, ya, L_ali, 1, &RMSD, t, u);
+    do_rotation(xa, xt, L_ali, t, u);
+
+    double total_score2=0;
+    for (r=0;r<L_ali;r++)
+    {
+        dd=dist(xt[r],ya[r]);
+        total_score2+=1/(1+dd/d0*d0);
+    }
+    total_score2/=Lnorm;
+
+    /* swap chain assignment */
+    if (total_score1<total_score2)
+    {
+        assign1_list[i1]=j2;
+        assign1_list[i2]=j1;
+        assign2_list[j1]=i2;
+        assign2_list[j2]=i1;
+    }
+
+    /* clean up */
+    DeleteArray(&xa, xlen);
+    DeleteArray(&ya, ylen);
+    DeleteArray(&xt, xlen);
+    return total_score1<total_score2;
+}
+
 /* assign chain-chain correspondence */
 double enhanced_greedy_search(double **TMave_mat,int *assign1_list,
     int *assign2_list, const int chain1_num, const int chain2_num)
@@ -154,7 +325,7 @@ double calMMscore(double **TMave_mat,int *assign1_list,
     double **ycentroids, const double d0MM, double **r1, double **r2,
     double **xt, double t[3], double u[3][3], const int L)
 {
-    int Nali=0;
+    int Nali=0; // number of aligned chain
     int i,j;
     double MMscore=0;
     for (i=0;i<chain1_num;i++)
@@ -175,20 +346,28 @@ double calMMscore(double **TMave_mat,int *assign1_list,
     }
     MMscore/=L;
 
-    /* Kabsch superposition */
     double RMSD = 0;
-    Kabsch(r1, r2, Nali, 1, &RMSD, t, u);
-    //RMSD = sqrt( RMSD/(1.*Nali));
-    do_rotation(r1, xt, Nali, t, u);
-    
-    /* calculate pseudo-TMscore */
     double TMscore=0;
-    double dd=0;
-    for (i=0;i<Nali;i++)
+    if (Nali>=3)
     {
-        dd=dist(xt[i], r2[i]);
-        TMscore+=1/(1+dd/(d0MM*d0MM));
+        /* Kabsch superposition */
+        Kabsch(r1, r2, Nali, 1, &RMSD, t, u);
+        do_rotation(r1, xt, Nali, t, u);
+
+        /* calculate pseudo-TMscore */
+        double dd=0;
+        for (i=0;i<Nali;i++)
+        {
+            dd=dist(xt[i], r2[i]);
+            TMscore+=1/(1+dd/(d0MM*d0MM));
+        }
     }
+    else if (Nali==2)
+    {
+        double dd=dist(r1[0],r2[0]);
+        TMscore=1/(1+dd/(d0MM*d0MM));
+    }
+    else TMscore=1; // only one aligned chain.
     TMscore/=getmin(chain1_num,chain2_num);
     MMscore*=TMscore;
     return MMscore;
@@ -623,7 +802,7 @@ double MMalign_search(
     return total_score;
 }
 
-double MMalign_final(
+void MMalign_final(
     const string xname, const string yname,
     const vector<string> chainID_list1, const vector<string> chainID_list2,
     string fname_super, string fname_lign, string fname_matrix,
@@ -643,13 +822,12 @@ double MMalign_final(
     double d0_scale, bool m_opt, bool o_opt, int outfmt_opt, int ter_opt,
     bool a_opt, bool d_opt, bool fast_opt, bool full_opt)
 {
-    double total_score=0;
     int i,j;
     int xlen=0;
     int ylen=0;
     for (i=0;i<chain1_num;i++) xlen+=xlen_vec[i];
     for (j=0;j<chain2_num;j++) ylen+=ylen_vec[j];
-    if (xlen<=3 || ylen<=3) return total_score;
+    if (xlen<=3 || ylen<=3) return;
 
     seqx = new char[xlen+1];
     secx = new char[xlen+1];
@@ -760,7 +938,7 @@ double MMalign_final(
     sequence[1].clear();
     sequence[2].clear();
 
-    if (!full_opt) return total_score;
+    if (!full_opt) return;
 
     cout<<"# End of alignment for full complex. The following blocks list alignments for individual chains."<<endl;
 
@@ -841,5 +1019,5 @@ double MMalign_final(
         DeleteArray(&xt,xlen);
     }
     sequence.clear();
-    return total_score;
+    return;
 }

@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * MM-align (Version 20191006): complex structure alignment           *\n"
+" * MM-align (Version 20191013): complex structure alignment           *\n"
 " * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
 " **********************************************************************"
@@ -552,7 +552,30 @@ int main(int argc, char *argv[])
     /* refine alignment for large oligomers */
     int aln_chain_num=0;
     for (i=0;i<chain1_num;i++) aln_chain_num+=(assign1_list[i]>=0);
-    if (aln_chain_num>=3)
+    bool is_oligomer=(aln_chain_num>=3);
+    if (aln_chain_num==2) // dimer alignment
+    {
+        int na_chain_num1,na_chain_num2,aa_chain_num1,aa_chain_num2;
+        count_na_aa_chain_num(na_chain_num1,aa_chain_num1,mol_vec1);
+        count_na_aa_chain_num(na_chain_num2,aa_chain_num2,mol_vec2);
+
+        /* align protein-RNA hybrid dimer to another hybrid dimer */
+        if (na_chain_num1==1 && na_chain_num2==1 && 
+            aa_chain_num1==1 && aa_chain_num2==1) is_oligomer=false;
+        /* align pure protein dimer or pure RNA dimer */
+        else if ((getmin(na_chain_num1,na_chain_num2)==0 && 
+                    aa_chain_num1==2 && aa_chain_num2==2) ||
+                 (getmin(aa_chain_num1,aa_chain_num2)==0 && 
+                    na_chain_num1==2 && na_chain_num2==2))
+        {
+            adjust_dimer_assignment(xa_vec,ya_vec,xlen_vec,ylen_vec,mol_vec1,
+                mol_vec2,assign1_list,assign2_list,seqxA_mat,seqyA_mat);
+            is_oligomer=false; // cannot refiner further
+        }
+        else is_oligomer=true; /* align oligomers to dimer */
+    }
+
+    if (aln_chain_num>=3 || is_oligomer) // oligomer alignment
     {
         /* extract centroid coordinates */
         double **xcentroids;
@@ -571,8 +594,8 @@ int main(int argc, char *argv[])
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
         DeleteArray(&ycentroids, chain2_num);
-        if (len_aa+len_na>1000) fast_opt=true;
     }
+    if (len_aa+len_na>1000) fast_opt=true;
 
     /* perform iterative alignment */
     for (int iter=0;iter<1;iter++)
@@ -590,8 +613,7 @@ int main(int argc, char *argv[])
 
     /* final alignment */
     if (outfmt_opt==0) print_version();
-    total_score=MMalign_final(
-        xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
+    MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,
         fname_super, fname_lign, fname_matrix,
         xa_vec, ya_vec, seqx_vec, seqy_vec,
