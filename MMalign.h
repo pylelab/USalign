@@ -374,7 +374,7 @@ double calMMscore(double **TMave_mat,int *assign1_list,
 }
 
 /* reassign chain-chain correspondence */
-double adjust_oligomer_assignment(double **TMave_mat,int *assign1_list,
+double refined_greedy_search(double **TMave_mat,int *assign1_list,
     int *assign2_list, const int chain1_num, const int chain2_num,
     double **xcentroids, double **ycentroids, const double d0MM, const int L)
 {

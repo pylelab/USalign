@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * MM-align (Version 20191013): complex structure alignment           *\n"
+" * MM-align (Version 20191016): complex structure alignment           *\n"
 " * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
 " **********************************************************************"
@@ -46,7 +46,7 @@ void print_extra_help()
 "    -split   Whether to split PDB file into multiple chains\n"
 "             2: (default) treat each chain as a seperate chain (-ter should be <=1)\n"
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
-"                and joins all chains in the MODEL into a single chain.\n"
+"                and joins all chains in a MODEL into a single chain.\n"
 "\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
@@ -551,7 +551,6 @@ int main(int argc, char *argv[])
     double total_score=enhanced_greedy_search(TMave_mat, assign1_list,
         assign2_list, chain1_num, chain2_num);
     if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
-    //cout<<"total_score="<<total_score<<endl;
 
     /* refine alignment for large oligomers */
     int aln_chain_num=0;
@@ -591,12 +590,9 @@ int main(int argc, char *argv[])
             calculate_centroids(ya_vec, chain2_num, ycentroids));
 
         /* refine enhanced greedy search with centroid superposition */
-        if (aln_chain_num>=3)
-            adjust_oligomer_assignment(TMave_mat, assign1_list, assign2_list,
-                chain1_num, chain2_num, xcentroids, ycentroids,
-                d0MM, len_aa+len_na);
-        else if (aln_chain_num==2)
-            ; // refine pseudo dimer assignment
+        refined_greedy_search(TMave_mat, assign1_list, assign2_list,
+            chain1_num, chain2_num, xcentroids, ycentroids,
+            d0MM, len_aa+len_na);
         
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
@@ -615,7 +611,6 @@ int main(int argc, char *argv[])
             d0_scale, true);
         total_score=enhanced_greedy_search(TMave_mat, assign1_list,
             assign2_list, chain1_num, chain2_num);
-        //cout<<"total_score="<<total_score<<endl;
         if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
     }
 
