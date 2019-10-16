@@ -1615,7 +1615,7 @@ void output_rotation_matrix(const char* fname_matrix,
     fout.open(fname_matrix, ios::out | ios::trunc);
     if (fout)// succeed
     {
-        fout << "------ The rotation matrix to rotate Chain_1 to Chain_2 ------\n";
+        fout << "------ The rotation matrix to rotate Structure_1 to Structure_2 ------\n";
         char dest[1000];
         sprintf(dest, "m %18s %14s %14s %14s\n", "t[m]", "u[m][0]", "u[m][1]", "u[m][2]");
         fout << string(dest);
@@ -1624,7 +1624,7 @@ void output_rotation_matrix(const char* fname_matrix,
             sprintf(dest, "%d %18.10f %14.10f %14.10f %14.10f\n", k, t[k], u[k][0], u[k][1], u[k][2]);
             fout << string(dest);
         }
-        fout << "\nCode for rotating Structure A from (x,y,z) to (X,Y,Z):\n"
+        fout << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
                 "for(i=0; i<L; i++)\n"
                 "{\n"
                 "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
@@ -1657,18 +1657,18 @@ void output_results(
 {
     if (outfmt_opt<=0)
     {
-        printf("\nName of Chain_1: %s%s (to be superimposed onto Chain_2)\n",
+        printf("\nName of Structure_1: %s%s (to be superimposed onto Chain_2)\n",
             xname.c_str(), chainID1);
         printf("Name of Chain_2: %s%s\n", yname.c_str(), chainID2);
-        printf("Length of Chain_1: %d residues\n", xlen);
-        printf("Length of Chain_2: %d residues\n\n", ylen);
+        printf("Length of Structure_1: %d residues\n", xlen);
+        printf("Length of Structure_2: %d residues\n\n", ylen);
 
         if (i_opt)
             printf("User-specified initial alignment: TM/Lali/rmsd = %7.5lf, %4d, %6.3lf\n", TM_ali, L_ali, rmsd_ali);
 
         printf("Aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
-        printf("TM-score= %6.5f (if normalized by length of Chain_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
-        printf("TM-score= %6.5f (if normalized by length of Chain_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
+        printf("TM-score= %6.5f (if normalized by length of Structure_1, i.e., LN=%d, d0=%.2f)\n", TM2, xlen, d0B);
+        printf("TM-score= %6.5f (if normalized by length of Structure_2, i.e., LN=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
         if (a_opt==1)
             printf("TM-score= %6.5f (if normalized by average length of two structures, i.e., LN= %.1f, d0= %.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
