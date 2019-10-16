@@ -43,13 +43,10 @@ void print_extra_help()
 "             protein: only align proteins\n"
 "             RNA    : only align nucleic acids (RNA and DNA)\n"
 "\n"
-"    -ter     Strings to mark the end of a chain\n"
-"             1: (default) ENDMDL or END\n"
-"             0: (default in the first C++ TMalign) end of file\n"
-"\n"
 "    -split   Whether to split PDB file into multiple chains\n"
 "             2: (default) treat each chain as a seperate chain (-ter should be <=1)\n"
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
+"                and joins all chains in the MODEL into a single chain.\n"
 "\n"
 "    -outfmt  Output format\n"
 "             0: (default) full output\n"
@@ -102,6 +99,12 @@ void print_help(bool h_opt=false)
 "\n"
 "    -full Whether to show full alignment result, including alignment of\n"
 "          individual chains. T or F, (default F)\n"
+"\n"
+"    -ter  Whether to read all MODELs in a multi-model structure file\n"
+"          1: (default) only read the first model, recommended for alignment\n"
+"             of asymetric units.\n"
+"          0: read all MODEL, recomended for alignment of biological\n"
+"             assemblies, i.e., biological units (biounits).\n"
 "\n"
 "    -v    Print the version of MM-align\n"
 "\n"
@@ -548,11 +551,34 @@ int main(int argc, char *argv[])
     double total_score=enhanced_greedy_search(TMave_mat, assign1_list,
         assign2_list, chain1_num, chain2_num);
     if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
+    //cout<<"total_score="<<total_score<<endl;
 
     /* refine alignment for large oligomers */
     int aln_chain_num=0;
     for (i=0;i<chain1_num;i++) aln_chain_num+=(assign1_list[i]>=0);
-    if (aln_chain_num>=3)
+    bool is_oligomer=(aln_chain_num>=3);
+    if (aln_chain_num==2) // dimer alignment
+    {
+        int na_chain_num1,na_chain_num2,aa_chain_num1,aa_chain_num2;
+        count_na_aa_chain_num(na_chain_num1,aa_chain_num1,mol_vec1);
+        count_na_aa_chain_num(na_chain_num2,aa_chain_num2,mol_vec2);
+
+        /* align protein-RNA hybrid dimer to another hybrid dimer */
+        if (na_chain_num1==1 && na_chain_num2==1 && 
+            aa_chain_num1==1 && aa_chain_num2==1) is_oligomer=false;
+        /* align pure protein dimer or pure RNA dimer */
+        else if ((getmin(na_chain_num1,na_chain_num2)==0 && 
+                    aa_chain_num1==2 && aa_chain_num2==2) ||
+                 (getmin(aa_chain_num1,aa_chain_num2)==0 && 
+                    na_chain_num1==2 && na_chain_num2==2))
+        {
+            adjust_dimer_assignment(xa_vec,ya_vec,xlen_vec,ylen_vec,mol_vec1,
+                mol_vec2,assign1_list,assign2_list,seqxA_mat,seqyA_mat);
+            is_oligomer=false; // cannot refiner further
+        }
+        else is_oligomer=true; /* align oligomers to dimer */
+    }
+    else if (aln_chain_num>=3 || is_oligomer) // oligomer alignment
     {
         /* extract centroid coordinates */
         double **xcentroids;
@@ -564,15 +590,18 @@ int main(int argc, char *argv[])
             calculate_centroids(ya_vec, chain2_num, ycentroids));
 
         /* refine enhanced greedy search with centroid superposition */
-        refined_greedy_search(TMave_mat, assign1_list, assign2_list,
-            chain1_num, chain2_num, xcentroids, ycentroids,
-            d0MM, len_aa+len_na);
+        if (aln_chain_num>=3)
+            adjust_oligomer_assignment(TMave_mat, assign1_list, assign2_list,
+                chain1_num, chain2_num, xcentroids, ycentroids,
+                d0MM, len_aa+len_na);
+        else if (aln_chain_num==2)
+            ; // refine pseudo dimer assignment
         
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
         DeleteArray(&ycentroids, chain2_num);
-        if (len_aa+len_na>1000) fast_opt=true;
     }
+    if (len_aa+len_na>1000) fast_opt=true;
 
     /* perform iterative alignment */
     for (int iter=0;iter<1;iter++)
@@ -585,13 +614,13 @@ int main(int argc, char *argv[])
             d0_scale, true);
         total_score=enhanced_greedy_search(TMave_mat, assign1_list,
             assign2_list, chain1_num, chain2_num);
+        //cout<<"total_score="<<total_score<<endl;
         if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
     }
 
     /* final alignment */
     if (outfmt_opt==0) print_version();
-    total_score=MMalign_final(
-        xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
+    MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,
         fname_super, fname_lign, fname_matrix,
         xa_vec, ya_vec, seqx_vec, seqy_vec,
