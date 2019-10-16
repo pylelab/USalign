@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * MM-align (Version 20191006): complex structure alignment           *\n"
+" * MM-align (Version 20191013): complex structure alignment           *\n"
 " * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
 " **********************************************************************"
@@ -578,7 +578,8 @@ int main(int argc, char *argv[])
         }
         else is_oligomer=true; /* align oligomers to dimer */
     }
-    else if (aln_chain_num>=3 || is_oligomer) // oligomer alignment
+
+    if (aln_chain_num>=3 || is_oligomer) // oligomer alignment
     {
         /* extract centroid coordinates */
         double **xcentroids;

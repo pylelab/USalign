@@ -168,14 +168,6 @@ bool adjust_dimer_assignment(
     DeleteArray(&xa, xlen);
     DeleteArray(&ya, ylen);
     DeleteArray(&xt, xlen);
-    //cout<<"total_score1="<<total_score1<<endl;
-    //cout<<"total_score2="<<total_score2<<endl;
-    //cout<<"assign1_list={";
-    //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<", ";
-    //cout<<"}"<<endl;
-    //cout<<"assign2_list={";
-    //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<", ";
-    //cout<<"}"<<endl;
     return total_score1<total_score2;
 }
 
@@ -333,7 +325,7 @@ double calMMscore(double **TMave_mat,int *assign1_list,
     double **ycentroids, const double d0MM, double **r1, double **r2,
     double **xt, double t[3], double u[3][3], const int L)
 {
-    int Nali=0;
+    int Nali=0; // number of aligned chain
     int i,j;
     double MMscore=0;
     for (i=0;i<chain1_num;i++)
@@ -354,20 +346,28 @@ double calMMscore(double **TMave_mat,int *assign1_list,
     }
     MMscore/=L;
 
-    /* Kabsch superposition */
     double RMSD = 0;
-    Kabsch(r1, r2, Nali, 1, &RMSD, t, u);
-    //RMSD = sqrt( RMSD/(1.*Nali));
-    do_rotation(r1, xt, Nali, t, u);
-    
-    /* calculate pseudo-TMscore */
     double TMscore=0;
-    double dd=0;
-    for (i=0;i<Nali;i++)
+    if (Nali>=3)
     {
-        dd=dist(xt[i], r2[i]);
-        TMscore+=1/(1+dd/(d0MM*d0MM));
+        /* Kabsch superposition */
+        Kabsch(r1, r2, Nali, 1, &RMSD, t, u);
+        do_rotation(r1, xt, Nali, t, u);
+
+        /* calculate pseudo-TMscore */
+        double dd=0;
+        for (i=0;i<Nali;i++)
+        {
+            dd=dist(xt[i], r2[i]);
+            TMscore+=1/(1+dd/(d0MM*d0MM));
+        }
     }
+    else if (Nali==2)
+    {
+        double dd=dist(r1[0],r2[0]);
+        TMscore=1/(1+dd/(d0MM*d0MM));
+    }
+    else TMscore=1; // only one aligned chain.
     TMscore/=getmin(chain1_num,chain2_num);
     MMscore*=TMscore;
     return MMscore;
@@ -802,7 +802,7 @@ double MMalign_search(
     return total_score;
 }
 
-double MMalign_final(
+void MMalign_final(
     const string xname, const string yname,
     const vector<string> chainID_list1, const vector<string> chainID_list2,
     string fname_super, string fname_lign, string fname_matrix,
@@ -822,13 +822,12 @@ double MMalign_final(
     double d0_scale, bool m_opt, bool o_opt, int outfmt_opt, int ter_opt,
     bool a_opt, bool d_opt, bool fast_opt, bool full_opt)
 {
-    double total_score=0;
     int i,j;
     int xlen=0;
     int ylen=0;
     for (i=0;i<chain1_num;i++) xlen+=xlen_vec[i];
     for (j=0;j<chain2_num;j++) ylen+=ylen_vec[j];
-    if (xlen<=3 || ylen<=3) return total_score;
+    if (xlen<=3 || ylen<=3) return;
 
     seqx = new char[xlen+1];
     secx = new char[xlen+1];
@@ -939,7 +938,7 @@ double MMalign_final(
     sequence[1].clear();
     sequence[2].clear();
 
-    if (!full_opt) return total_score;
+    if (!full_opt) return;
 
     cout<<"# End of alignment for full complex. The following blocks list alignments for individual chains."<<endl;
 
@@ -1020,5 +1019,5 @@ double MMalign_final(
         DeleteArray(&xt,xlen);
     }
     sequence.clear();
-    return total_score;
+    return;
 }
