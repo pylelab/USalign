@@ -1657,9 +1657,9 @@ void output_results(
 {
     if (outfmt_opt<=0)
     {
-        printf("\nName of Structure_1: %s%s (to be superimposed onto Chain_2)\n",
+        printf("\nName of Structure_1: %s%s (to be superimposed onto Structure_2)\n",
             xname.c_str(), chainID1);
-        printf("Name of Chain_2: %s%s\n", yname.c_str(), chainID2);
+        printf("Name of Structure_2: %s%s\n", yname.c_str(), chainID2);
         printf("Length of Structure_1: %d residues\n", xlen);
         printf("Length of Structure_2: %d residues\n\n", ylen);
 
