@@ -63,6 +63,10 @@ void print_extra_help()
 "                  0: (default, same as F) normalized by second structure\n"
 "                  1: same as T, normalized by average structure length\n"
 "\n"
+"    -mirror  Whether to align the mirror image of input structure\n"
+"             0: (default) do not align mirrored structure\n"
+"             1: align mirror of chain1 to origin chain2\n"
+"\n"
 "    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
@@ -157,6 +161,7 @@ int main(int argc, char *argv[])
     int    split_opt =2;     // split by chain
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
+    int    mirror_opt=0;     // do not align mirror
     int    het_opt   =0;     // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
@@ -339,11 +344,11 @@ int main(int argc, char *argv[])
     /* parse complex */
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
-        atom_opt, het_opt, xlen_aa, xlen_na);
+        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
-        atom_opt, het_opt, ylen_aa, ylen_na);
+        atom_opt, 0, het_opt, ylen_aa, ylen_na);
     if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);
@@ -407,7 +412,7 @@ int main(int argc, char *argv[])
             (m_opt?fname_matrix:"").c_str(),
             outfmt_opt, ter_opt, 
             (o_opt?fname_super:"").c_str(),
-            0, a_opt, false, d_opt, false);
+            0, a_opt, false, d_opt, mirror_opt);
 
         /* clean up */
         seqM.clear();
@@ -625,7 +630,7 @@ int main(int argc, char *argv[])
         chain1_num, chain2_num, TM1_mat, TM2_mat, TMave_mat,
         seqxA_mat, seqM_mat, seqyA_mat, assign1_list, assign2_list, sequence,
         d0_scale, m_opt, o_opt, outfmt_opt, ter_opt,
-        a_opt, d_opt, fast_opt, full_opt);
+        a_opt, d_opt, fast_opt, full_opt, mirror_opt);
 
     /* clean up everything */
     delete [] assign1_list;

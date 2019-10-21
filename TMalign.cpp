@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
     int    mirror_opt=0;     // do not align mirror
-    int    het_opt=0;        // do not read HETATM residues
+    int    het_opt   =0;     // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty

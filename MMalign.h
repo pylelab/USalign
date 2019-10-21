@@ -489,7 +489,7 @@ void parse_chain_list(const vector<string>&chain_list,
     vector<vector<char> >&sec_vec, vector<int>&mol_vec, vector<int>&len_vec,
     vector<string>&chainID_list, const int ter_opt, const int split_opt,
     const string mol_opt, const int infmt_opt, const string atom_opt,
-    const int het_opt, int &len_aa, int &len_na)
+    const int mirror_opt, const int het_opt, int &len_aa, int &len_na)
 {
     int i,chain_i,r;
     string name;
@@ -534,6 +534,7 @@ void parse_chain_list(const vector<string>&chain_list,
             seq = new char[len + 1];
             sec = new char[len + 1];
             len = read_PDB(PDB_lines[chain_i], xa, seq, resi_vec, 0);
+            if (mirror_opt) for (r=0;r<len;r++) xa[r][2]=-xa[r][2];
             if (mol_vec[chain_i]>0 || mol_opt=="RNA")
                 make_sec(seq, xa, len, sec,atom_opt);
             else make_sec(xa, len, sec); // secondary structure assignment
@@ -819,8 +820,9 @@ void MMalign_final(
     vector<vector<string> >&seqM_mat,
     vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool m_opt, bool o_opt, int outfmt_opt, int ter_opt,
-    bool a_opt, bool d_opt, bool fast_opt, bool full_opt)
+    const double d0_scale, const bool m_opt, const bool o_opt, const int outfmt_opt,
+    const int ter_opt, const bool a_opt, const bool d_opt, const bool fast_opt,
+    const bool full_opt, const int mirror_opt)
 {
     int i,j;
     int xlen=0;
@@ -922,7 +924,7 @@ void MMalign_final(
         TM_0, d0_0, d0A, d0B, 0, d0_scale, d0a, d0u, 
         (m_opt?fname_matrix:"").c_str(), outfmt_opt, ter_opt, 
         (o_opt?fname_super:"").c_str(),
-        false, a_opt, false, d_opt, false);
+        false, a_opt, false, d_opt, mirror_opt);
 
     /* clean up */
     seqM.clear();
