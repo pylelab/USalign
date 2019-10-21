@@ -182,9 +182,11 @@ size_t get_PDB_lines(const string filename,
                 else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
             if (split_opt && line.compare(0,3,"END")==0) chainID=0;
-            if ((line.compare(0, 6, "ATOM  ")==0 || 
-                (line.compare(0, 6, "HETATM")==0 && het_opt))
-                && line.size()>=54 && (line[16]==' ' || line[16]=='A'))
+            if (line.size()>=54 && (line[16]==' ' || line[16]=='A') && (
+                (line.compare(0, 6, "ATOM  ")==0) || 
+                (line.compare(0, 6, "HETATM")==0 && het_opt==1) ||
+                (line.compare(0, 6, "HETATM")==0 && het_opt==2 && 
+                 line.compare(17,3, "MSE")==0)))
             {
                 if (atom_opt=="auto")
                 {
@@ -206,12 +208,12 @@ size_t get_PDB_lines(const string filename,
                             if (chainID==' ')
                             {
                                 if (ter_opt>=1) i8_stream << ":_";
-                                else i8_stream<<':'<<model_idx<<":_";
+                                else i8_stream<<':'<<model_idx<<",_";
                             }
                             else
                             {
                                 if (ter_opt>=1) i8_stream << ':' << chainID;
-                                else i8_stream<<':'<<model_idx<<':'<<chainID;
+                                else i8_stream<<':'<<model_idx<<','<<chainID;
                             }
                             chainID_list.push_back(i8_stream.str());
                         }
@@ -232,12 +234,12 @@ size_t get_PDB_lines(const string filename,
                         if (chainID==' ')
                         {
                             if (ter_opt>=1) i8_stream << ":_";
-                            else i8_stream<<':'<<model_idx<<":_";
+                            else i8_stream<<':'<<model_idx<<",_";
                         }
                         else
                         {
                             if (ter_opt>=1) i8_stream << ':' << chainID;
-                            else i8_stream<<':'<<model_idx<<':'<<chainID;
+                            else i8_stream<<':'<<model_idx<<','<<chainID;
                         }
                         chainID_list.push_back(i8_stream.str());
                         PDB_lines.push_back(tmp_str_vec);
@@ -390,15 +392,19 @@ size_t get_PDB_lines(const string filename,
                     _atom_site.count("Cartn_z")==0)
                 {
                     loop_ = false;
-                    cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, label_atom_id, label_atom_id, auth_asym_id/label_asym_id, auth_seq_id/label_seq_id, Cartn_x, Cartn_y, Cartn_z"<<endl;
+                    cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, label_atom_id, label_comp_id, auth_asym_id/label_asym_id, auth_seq_id/label_seq_id, Cartn_x, Cartn_y, Cartn_z"<<endl;
                     continue;
                 }
             }
 
             line_vec.clear();
             split(line,line_vec);
-            if (line_vec[_atom_site["group_PDB"]]!="ATOM" && (het_opt==0 ||
-                line_vec[_atom_site["group_PDB"]]!="HETATM")) continue;
+            if ((line_vec[_atom_site["group_PDB"]]!="ATOM" &&
+                 line_vec[_atom_site["group_PDB"]]!="HETATM") ||
+                (line_vec[_atom_site["group_PDB"]]=="HETATM" &&
+                 (het_opt==0 || 
+                 (het_opt==2 && line_vec[_atom_site["label_comp_id"]]!="MSE")))
+                ) continue;
             
             alt_id=".";
             if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
@@ -449,9 +455,11 @@ size_t get_PDB_lines(const string filename,
                     if (split_opt==1 && ter_opt==0) chainID_list.push_back(
                         ':'+model_index);
                     else if (split_opt==2 && ter_opt==0)
-                        chainID_list.push_back(':'+model_index+':'+asym_id);
+                        chainID_list.push_back(':'+model_index+','+asym_id);
                     else if (split_opt==2 && ter_opt==1)
                         chainID_list.push_back(':'+asym_id);
+                    else
+                        chainID_list.push_back("");
                 }
             }
 
@@ -466,9 +474,11 @@ size_t get_PDB_lines(const string filename,
                     if (split_opt==1 && ter_opt==0) chainID_list.push_back(
                         ':'+model_index);
                     else if (split_opt==2 && ter_opt==0)
-                        chainID_list.push_back(':'+model_index+':'+asym_id);
+                        chainID_list.push_back(':'+model_index+','+asym_id);
                     else if (split_opt==2 && ter_opt==1)
                         chainID_list.push_back(':'+asym_id);
+                    else
+                        chainID_list.push_back("");
                 }
             }
             if (prev_asym_id!=asym_id) prev_asym_id=asym_id;
