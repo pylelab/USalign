@@ -7,7 +7,7 @@ int count_na_aa_chain_num(int &na_chain_num,int &aa_chain_num,
 {
     na_chain_num=0;
     aa_chain_num=0;
-    for (int i=0;i<mol_vec.size();i++)
+    for (size_t i=0;i<mol_vec.size();i++)
     {
         if (mol_vec[i]>0) na_chain_num++;
         else              aa_chain_num++;
@@ -30,7 +30,6 @@ bool adjust_dimer_assignment(
     int i1,i2,j1,j2;
     i1=i2=j1=j2=-1;    
     int chain1_num=xa_vec.size();
-    int chain2_num=ya_vec.size();
     int i,j;
     for (i=0;i<chain1_num;i++)
     {
@@ -68,8 +67,8 @@ bool adjust_dimer_assignment(
     double dd   = 0;
     double t[3];
     double u[3][3];
-    int L_ali=0; // index of residue in aligned region
-    int r=0;     // index of residue in full alignment
+    size_t L_ali=0; // index of residue in aligned region
+    size_t r=0;     // index of residue in full alignment
 
     /* total score using current assignment */
     L_ali=0;
@@ -178,7 +177,8 @@ double enhanced_greedy_search(double **TMave_mat,int *assign1_list,
     double total_score=0;
     double tmp_score=0;
     int i,j;
-    int maxi,maxj;
+    int maxi=0;
+    int maxj=0;
 
     /* initialize parameters */
     for (i=0;i<chain1_num;i++) assign1_list[i]=-1;
@@ -319,7 +319,12 @@ double calculate_centroids(const vector<vector<vector<double> > >&a_vec,
     return d0MM;
 }
 
-/* calculate MMscore of aligned residues */
+/* calculate MMscore of aligned chains
+ * MMscore = sum(TMave_mat[i][j]) * sum(1/(1+dij^2/d0MM^2)) 
+ *         / (L* getmin(chain1_num,chain2_num))
+ * dij is the centroid distance between chain pair i and j
+ * d0MM is scaling factor. TMave_mat[i][j] is the TM-score between
+ * chain pair i and j multiple by getmin(Li*Lj) */
 double calMMscore(double **TMave_mat,int *assign1_list,
     const int chain1_num, const int chain2_num, double **xcentroids,
     double **ycentroids, const double d0MM, double **r1, double **r2,
@@ -373,8 +378,151 @@ double calMMscore(double **TMave_mat,int *assign1_list,
     return MMscore;
 }
 
-/* reassign chain-chain correspondence */
-double refined_greedy_search(double **TMave_mat,int *assign1_list,
+/* check if this is alignment of heterooligomer or homooligomer
+ * return het_deg, which ranges from 0 to 1.
+ * The larger the value, the more "hetero"; 
+ * Tthe smaller the value, the more "homo" */
+double check_heterooligomer(double **TMave_mat, const int chain1_num,
+    const int chain2_num)
+{
+    double het_deg=0;
+    double min_TM=-1;
+    double max_TM=-1;
+    int i,j;
+    for (i=0;i<chain1_num;i++)
+    {
+        for (j=0;j<chain2_num;j++)
+        {
+            if (min_TM<0 || TMave_mat[i][j] <min_TM) min_TM=TMave_mat[i][j];
+            if (max_TM<0 || TMave_mat[i][j]>=max_TM) max_TM=TMave_mat[i][j];
+        }
+    }
+    het_deg=(max_TM-min_TM)/max_TM;
+    //cout<<"min_TM="<<min_TM<<endl;
+    //cout<<"max_TM="<<max_TM<<endl;
+    return het_deg;
+}
+
+/* reassign chain-chain correspondence, specific for homooligomer */
+double homo_refined_greedy_search(double **TMave_mat,int *assign1_list,
+    int *assign2_list, const int chain1_num, const int chain2_num,
+    double **xcentroids, double **ycentroids, const double d0MM,
+    const int L, double **ut_mat)
+{
+    double MMscore_max=0;
+    double MMscore=0;
+    int i,j;
+    int c1,c2;
+    int max_i=-1; // the chain pair whose monomer u t yields highest MMscore
+    int max_j=-1;
+
+    int chain_num=getmin(chain1_num,chain2_num);
+    int *assign1_tmp=new int [chain1_num];
+    int *assign2_tmp=new int [chain2_num];
+    double **xt;
+    NewArray(&xt, chain1_num, 3);
+    double t[3];
+    double u[3][3];
+    int ui,uj,ut_idx;
+    double TMscore=0; // pseudo TM-score
+    double TMsum  =0;
+    double TMnow  =0;
+    double TMmax  =0;
+    double dd=0;
+
+    size_t  total_pair=chain1_num*chain2_num; // total pair
+    double *ut_tmc_mat=new double [total_pair]; // chain level TM-score
+    vector<pair<double,int> > ut_tm_vec(total_pair,make_pair(0.0,0)); // product of both
+
+    for (c1=0;c1<chain1_num;c1++)
+    {
+        for (c2=0;c2<chain2_num;c2++)
+        {
+            if (TMave_mat[c1][c2]<=0) continue;
+            ut_idx=c1*chain2_num+c2;
+            for (ui=0;ui<3;ui++)
+                for (uj=0;uj<3;uj++) u[ui][uj]=ut_mat[ut_idx][ui*3+uj];
+            for (uj=0;uj<3;uj++) t[uj]=ut_mat[ut_idx][9+uj];
+            
+            do_rotation(xcentroids, xt, chain1_num, t, u);
+
+            for (i=0;i<chain1_num;i++) assign1_tmp[i]=-1;
+            for (j=0;j<chain2_num;j++) assign2_tmp[j]=-1;
+
+
+            for (i=0;i<chain1_num;i++)
+            {
+                for (j=0;j<chain2_num;j++)
+                {
+                    ut_idx=i*chain2_num+j;
+                    ut_tmc_mat[ut_idx]=0;
+                    ut_tm_vec[ut_idx].first=-1;
+                    ut_tm_vec[ut_idx].second=ut_idx;
+                    if (TMave_mat[i][j]<=0) continue;
+                    dd=dist(xt[i],ycentroids[j]);
+                    ut_tmc_mat[ut_idx]=1/(1+dd/(d0MM*d0MM));
+                    ut_tm_vec[ut_idx].first=
+                        ut_tmc_mat[ut_idx]*TMave_mat[i][j];
+                    //cout<<"TM["<<ut_idx<<"]="<<ut_tm_vec[ut_idx].first<<endl;
+                }
+            }
+            //cout<<"sorting "<<total_pair<<" chain pairs"<<endl;
+
+            /* initial assignment */
+            assign1_tmp[c1]=c2;
+            assign2_tmp[c2]=c1;
+            TMsum=TMave_mat[c1][c2];
+            TMscore=ut_tmc_mat[c1*chain2_num+c2];
+
+            /* further assignment */
+            sort(ut_tm_vec.begin(), ut_tm_vec.end()); // sort in ascending order
+            for (ut_idx=total_pair-1;ut_idx>=0;ut_idx--)
+            {
+                j=ut_tm_vec[ut_idx].second % chain2_num;
+                i=int(ut_tm_vec[ut_idx].second / chain2_num);
+                if (TMave_mat[i][j]<=0) break;
+                if (assign1_tmp[i]>=0 || assign2_tmp[j]>=0) continue;
+                assign1_tmp[i]=j;
+                assign2_tmp[j]=i;
+                TMsum+=TMave_mat[i][j];
+                TMscore+=ut_tmc_mat[i*chain2_num+j];
+                //cout<<"ut_idx="<<ut_tm_vec[ut_idx].second
+                    //<<"\ti="<<i<<"\tj="<<j<<"\ttm="<<ut_tm_vec[ut_idx].first<<endl;
+            }
+
+            /* final MMscore */
+            MMscore=(TMsum/L)*(TMscore/chain_num);
+            if (max_i<0 || max_j<0 || MMscore>MMscore_max)
+            {
+                max_i=c1;
+                max_j=c2;
+                MMscore_max=MMscore;
+                for (i=0;i<chain1_num;i++) assign1_list[i]=assign1_tmp[i];
+                for (j=0;j<chain2_num;j++) assign2_list[j]=assign2_tmp[j];
+                //cout<<"TMsum/L="<<TMsum/L<<endl;
+                //cout<<"TMscore/chain_num="<<TMscore/chain_num<<endl;
+                //cout<<"MMscore="<<MMscore<<endl;
+                //cout<<"assign1_list={";
+                //for (i=0;i<chain1_num;i++) 
+                    //cout<<assign1_list[i]<<","; cout<<"}"<<endl;
+                //cout<<"assign2_list={";
+                //for (j=0;j<chain2_num;j++)
+                    //cout<<assign2_list[j]<<","; cout<<"}"<<endl;
+            }
+        }
+    }
+
+    /* clean up */
+    delete[]assign1_tmp;
+    delete[]assign2_tmp;
+    delete[]ut_tmc_mat;
+    ut_tm_vec.clear();
+    DeleteArray(&xt, chain1_num);
+    return MMscore;
+}
+
+/* reassign chain-chain correspondence, specific for heterooligomer */
+double hetero_refined_greedy_search(double **TMave_mat,int *assign1_list,
     int *assign2_list, const int chain1_num, const int chain2_num,
     double **xcentroids, double **ycentroids, const double d0MM, const int L)
 {
@@ -396,6 +544,15 @@ double refined_greedy_search(double **TMave_mat,int *assign1_list,
     MMscore=MMscore_old=calMMscore(TMave_mat, assign1_list, chain1_num,
         chain2_num, xcentroids, ycentroids, d0MM, r1, r2, xt, t, u, L);
     //cout<<"MMscore="<<MMscore<<endl;
+    //cout<<"TMave_mat="<<endl;
+    //for (i=0;i<chain1_num;i++)
+    //{
+        //for (j=0; j<chain2_num; j++)
+        //{
+            //if (j<chain2_num-1) cout<<TMave_mat[i][j]<<'\t';
+            //else                cout<<TMave_mat[i][j]<<endl;
+        //}
+    //}
 
     /* iteratively refine chain assignment. in each iteration, attempt
      * to swap (i,old_j=assign1_list[i]) with (i,j) */
@@ -406,7 +563,13 @@ double refined_greedy_search(double **TMave_mat,int *assign1_list,
     for (j=0;j<chain2_num;j++) assign2_tmp[j]=assign2_list[j];
     int old_i=-1;
     int old_j=-1;
-    for (int iter=0;iter<chain_num*5;iter++)
+
+    //cout<<"assign1_list={";
+    //for (i=0;i<chain1_num;i++) cout<<assign1_list[i]<<","; cout<<"}"<<endl;
+    //cout<<"assign2_list={";
+    //for (j=0;j<chain2_num;j++) cout<<assign2_list[j]<<","; cout<<"}"<<endl;
+
+    for (int iter=0;iter<chain1_num*chain2_num;iter++)
     {
         delta_score=-1;
         for (i=0;i<chain1_num;i++)
@@ -416,8 +579,6 @@ double refined_greedy_search(double **TMave_mat,int *assign1_list,
             {
                 if (j==assign1_list[i] || TMave_mat[i][j]<=0) continue;
                 old_i=assign2_list[j];
-                //cout<<"(i,j,old_i,old_j)=("<<i<<","<<j<<","
-                    //<<old_i<<","<<old_j<<")"<<endl;
 
                 assign1_tmp[i]=j;
                 if (old_i>=0) assign1_tmp[old_i]=old_j;
@@ -427,6 +588,9 @@ double refined_greedy_search(double **TMave_mat,int *assign1_list,
                 MMscore=calMMscore(TMave_mat, assign1_tmp, chain1_num,
                     chain2_num, xcentroids, ycentroids, d0MM,
                     r1, r2, xt, t, u, L);
+
+                //cout<<"(i,j,old_i,old_j,MMscore)=("<<i<<","<<j<<","
+                    //<<old_i<<","<<old_j<<","<<MMscore<<")"<<endl;
 
                 if (MMscore>MMscore_old) // successful swap
                 {
@@ -489,9 +653,11 @@ void parse_chain_list(const vector<string>&chain_list,
     vector<vector<char> >&sec_vec, vector<int>&mol_vec, vector<int>&len_vec,
     vector<string>&chainID_list, const int ter_opt, const int split_opt,
     const string mol_opt, const int infmt_opt, const string atom_opt,
-    const int mirror_opt, const int het_opt, int &len_aa, int &len_na)
+    const int mirror_opt, const int het_opt, int &len_aa, int &len_na,  
+    const int o_opt, vector<string>&resi_vec)
 {
-    int i,chain_i,r;
+    size_t i;
+    int chain_i,r;
     string name;
     int chainnum;
     double **xa;
@@ -503,7 +669,9 @@ void parse_chain_list(const vector<string>&chain_list,
     vector<vector<double> > tmp_chain_array;
     vector<char>tmp_seq_array;
     vector<char>tmp_sec_array;
-    vector<string> resi_vec;
+    //vector<string> resi_vec;
+    int read_resi=0;
+    if (o_opt) read_resi=2;
 
     for (i=0;i<chain_list.size();i++)
     {
@@ -533,7 +701,7 @@ void parse_chain_list(const vector<string>&chain_list,
             NewArray(&xa, len, 3);
             seq = new char[len + 1];
             sec = new char[len + 1];
-            len = read_PDB(PDB_lines[chain_i], xa, seq, resi_vec, 0);
+            len = read_PDB(PDB_lines[chain_i], xa, seq, resi_vec, read_resi);
             if (mirror_opt) for (r=0;r<len;r++) xa[r][2]=-xa[r][2];
             if (mol_vec[chain_i]>0 || mol_opt=="RNA")
                 make_sec(seq, xa, len, sec,atom_opt);
@@ -816,13 +984,13 @@ void MMalign_final(
     double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
     int len_aa, int len_na, int chain1_num, int chain2_num,
     double **TM1_mat, double **TM2_mat, double **TMave_mat,
-    vector<vector<string> >&seqxA_mat, 
-    vector<vector<string> >&seqM_mat,
-    vector<vector<string> >&seqyA_mat,
-    int *assign1_list, int *assign2_list, vector<string>&sequence,
-    const double d0_scale, const bool m_opt, const bool o_opt, const int outfmt_opt,
-    const int ter_opt, const bool a_opt, const bool d_opt, const bool fast_opt,
-    const bool full_opt, const int mirror_opt)
+    vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqM_mat,
+    vector<vector<string> >&seqyA_mat, int *assign1_list, int *assign2_list,
+    vector<string>&sequence, const double d0_scale, const bool m_opt,
+    const int o_opt, const int outfmt_opt, const int ter_opt,
+    const int split_opt, const bool a_opt, const bool d_opt,
+    const bool fast_opt, const bool full_opt, const int mirror_opt,
+    const vector<string>&resi_vec1, const vector<string>&resi_vec2)
 {
     int i,j;
     int xlen=0;
@@ -922,9 +1090,9 @@ void MMalign_final(
         sequence[2].c_str(), sequence[0].c_str(), sequence[1].c_str(),
         Liden, n_ali8, L_ali, TM_ali, rmsd_ali,
         TM_0, d0_0, d0A, d0B, 0, d0_scale, d0a, d0u, 
-        (m_opt?fname_matrix:"").c_str(), outfmt_opt, ter_opt, 
-        (o_opt?fname_super:"").c_str(),
-        false, a_opt, false, d_opt, mirror_opt);
+        (m_opt?fname_matrix:"").c_str(), outfmt_opt, ter_opt, true,
+        split_opt, o_opt, fname_super,
+        false, a_opt, false, d_opt, mirror_opt, resi_vec1, resi_vec2);
 
     /* clean up */
     seqM.clear();
@@ -1004,7 +1172,8 @@ void MMalign_final(
             seqM_mat[i][j].c_str(), seqxA_mat[i][j].c_str(),
             seqyA_mat[i][j].c_str(), Liden, n_ali8, L_ali, TM_ali, rmsd_ali,
             TM_0, d0_0, d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
-            "", outfmt_opt, ter_opt, "", false, a_opt, false, d_opt, 0);
+            "", outfmt_opt, ter_opt, false, split_opt, 0,
+            "", false, a_opt, false, d_opt, 0, resi_vec1, resi_vec2);
 
         /* clean up */
         seqxA.clear();
