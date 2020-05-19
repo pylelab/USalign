@@ -56,6 +56,7 @@
    2019/07/24: Fixed bug in displaying matching residues.
                Added GDT and MaxSub to TMscore program.
    2019/08/18: Prevent excessive circular permutation alignment by -cp.
+   2020/05/19: Add back rasmol output
 ===============================================================================
 
 =========================
