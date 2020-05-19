@@ -76,7 +76,7 @@ string AAmap(char A)
     if (A=='W') return "TRP";    
     if (A=='Y') return "TYR";
     if (A=='Z') return "GLX";
-    if ('a'<=A && A<='z') return "  "+toupper(A);
+    if ('a'<=A && A<='z') return "  "+string(1,char(toupper(A)));
     return "UNK";
 }
 
