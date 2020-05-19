@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * MM-align (Version 20191021): complex structure alignment           *\n"
+" * MM-align (Version 20191102): complex structure alignment           *\n"
 " * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
 " **********************************************************************"
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     string fname_lign  = ""; // file name for user alignment
     string fname_matrix= ""; // file name for output matrix
     vector<string> sequence; // get value from alignment file
-    double d0_scale;
+    double d0_scale    =0;
 
     bool h_opt = false; // print full help message
     bool v_opt = false; // print version
@@ -340,15 +340,17 @@ int main(int argc, char *argv[])
     char   *secx, *secy;           // for the secondary structure 
     int    xlen_aa,ylen_aa;        // total length of protein
     int    xlen_na,ylen_na;        // total length of RNA/DNA
+    vector<string> resi_vec1;  // residue index for chain1
+    vector<string> resi_vec2;  // residue index for chain2
 
     /* parse complex */
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
-        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na);
+        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
-        atom_opt, 0, het_opt, ylen_aa, ylen_na);
+        atom_opt, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
     if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);
@@ -401,18 +403,13 @@ int main(int argc, char *argv[])
         output_results(
             xname.substr(dir1_opt.size()),
             yname.substr(dir2_opt.size()),
-            chainID_list1[0].c_str(),
-            chainID_list2[0].c_str(),
-            xlen, ylen, t0, u0, TM1, TM2, 
-            TM3, TM4, TM5, rmsd0, d0_out,
+            chainID_list1[0], chainID_list2[0],
+            xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5, rmsd0, d0_out,
             seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
-            n_ali8, L_ali, TM_ali, rmsd_ali,
-            TM_0, d0_0, d0A, d0B,
-            0, d0_scale, d0a, d0u, 
-            (m_opt?fname_matrix:"").c_str(),
-            outfmt_opt, ter_opt, 
-            (o_opt?fname_super:"").c_str(),
-            0, a_opt, false, d_opt, mirror_opt);
+            n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0, d0A, d0B,
+            0, d0_scale, d0a, d0u, (m_opt?fname_matrix:"").c_str(),
+            outfmt_opt, ter_opt, true, split_opt, o_opt, fname_super,
+            0, a_opt, false, d_opt, mirror_opt, resi_vec1, resi_vec2);
 
         /* clean up */
         seqM.clear();
@@ -453,9 +450,12 @@ int main(int argc, char *argv[])
     double **TM1_mat;
     double **TM2_mat;
     double **TMave_mat;
+    double **ut_mat; // rotation matrices for all-against-all alignment
+    int ui,uj,ut_idx;
     NewArray(&TM1_mat,chain1_num,chain2_num);
     NewArray(&TM2_mat,chain1_num,chain2_num);
     NewArray(&TMave_mat,chain1_num,chain2_num);
+    NewArray(&ut_mat,chain1_num*chain2_num,4*3);
     vector<string> tmp_str_vec(chain2_num,"");
     vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
     vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
@@ -480,6 +480,13 @@ int main(int argc, char *argv[])
 
         for (j=0;j<chain2_num;j++)
         {
+            ut_idx=i*chain2_num+j;
+            for (ui=0;ui<4;ui++)
+                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=0;
+            ut_mat[ut_idx][0]=1;
+            ut_mat[ut_idx][4]=1;
+            ut_mat[ut_idx][8]=1;
+
             if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
             {
                 TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
@@ -526,7 +533,10 @@ int main(int argc, char *argv[])
                 0, false, true, false, true,
                 mol_vec1[i]+mol_vec2[j],TMcut);
 
-            /* print result */
+            /* store result */
+            for (ui=0;ui<3;ui++)
+                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=u0[ui][uj];
+            for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
             TM1_mat[i][j]=TM2; // normalized by chain1
             TM2_mat[i][j]=TM1; // normalized by chain2
             seqxA_mat[i][j]=seqxA;
@@ -595,9 +605,13 @@ int main(int argc, char *argv[])
             calculate_centroids(ya_vec, chain2_num, ycentroids));
 
         /* refine enhanced greedy search with centroid superposition */
-        refined_greedy_search(TMave_mat, assign1_list, assign2_list,
-            chain1_num, chain2_num, xcentroids, ycentroids,
-            d0MM, len_aa+len_na);
+        //double het_deg=check_heterooligomer(TMave_mat, chain1_num, chain2_num);
+        homo_refined_greedy_search(TMave_mat, assign1_list,
+            assign2_list, chain1_num, chain2_num, xcentroids,
+            ycentroids, d0MM, len_aa+len_na, ut_mat);
+        hetero_refined_greedy_search(TMave_mat, assign1_list,
+            assign2_list, chain1_num, chain2_num, xcentroids,
+            ycentroids, d0MM, len_aa+len_na);
         
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
@@ -629,18 +643,16 @@ int main(int argc, char *argv[])
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
         chain1_num, chain2_num, TM1_mat, TM2_mat, TMave_mat,
         seqxA_mat, seqM_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-        d0_scale, m_opt, o_opt, outfmt_opt, ter_opt,
-        a_opt, d_opt, fast_opt, full_opt, mirror_opt);
+        d0_scale, m_opt, o_opt, outfmt_opt, ter_opt, split_opt,
+        a_opt, d_opt, fast_opt, full_opt, mirror_opt, resi_vec1, resi_vec2);
 
     /* clean up everything */
     delete [] assign1_list;
     delete [] assign2_list;
-    chain1_list.clear();
-    chain2_list.clear();
-    sequence.clear();
     DeleteArray(&TM1_mat,  chain1_num);
     DeleteArray(&TM2_mat,  chain1_num);
     DeleteArray(&TMave_mat,chain1_num);
+    DeleteArray(&ut_mat,   chain1_num*chain2_num);
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqM_mat);
     vector<vector<string> >().swap(seqyA_mat);
@@ -653,10 +665,13 @@ int main(int argc, char *argv[])
     vector<vector<char> >().swap(secy_vec); // secondary structure of complex2
     mol_vec1.clear();       // molecule type of complex1, RNA if >0
     mol_vec2.clear();       // molecule type of complex2, RNA if >0
-    chainID_list1.clear();  // list of chainID1
-    chainID_list2.clear();  // list of chainID2
+    vector<string>().swap(chainID_list1);  // list of chainID1
+    vector<string>().swap(chainID_list2);  // list of chainID2
     xlen_vec.clear();       // length of complex1
     ylen_vec.clear();       // length of complex2
+    vector<string>().swap(chain1_list);
+    vector<string>().swap(chain2_list);
+    vector<string>().swap(sequence);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;

@@ -121,7 +121,7 @@ void split(const string &line, vector<string> &line_vec,
     const char delimiter=' ')
 {
     bool within_word = false;
-    for (int pos=0;pos<line.size();pos++)
+    for (size_t pos=0;pos<line.size();pos++)
     {
         if (line[pos]==delimiter)
         {
@@ -156,13 +156,13 @@ size_t get_PDB_lines(const string filename,
     if (filename.size()>=3 && 
         filename.substr(filename.size()-3,3)==".gz")
     {
-        fin_gz.open("zcat "+filename);
+        fin_gz.open("zcat '"+filename+"'");
         compress_type=1;
     }
     else if (filename.size()>=4 && 
         filename.substr(filename.size()-4,4)==".bz2")
     {
-        fin_gz.open("bzcat "+filename);
+        fin_gz.open("bzcat '"+filename+"'");
         compress_type=2;
     }
     else fin.open(filename.c_str());
@@ -260,7 +260,7 @@ size_t get_PDB_lines(const string filename,
     }
     else if (infmt_opt==1) // SPICKER format
     {
-        int L=0;
+        size_t L=0;
         float x,y,z;
         stringstream i8_stream;
         while (compress_type?fin_gz.good():fin.good())
@@ -293,8 +293,7 @@ size_t get_PDB_lines(const string filename,
     }
     else if (infmt_opt==2) // xyz format
     {
-        int L=0;
-        char A;
+        size_t L=0;
         stringstream i8_stream;
         while (compress_type?fin_gz.good():fin.good())
         {
@@ -456,10 +455,10 @@ size_t get_PDB_lines(const string filename,
                         ':'+model_index);
                     else if (split_opt==2 && ter_opt==0)
                         chainID_list.push_back(':'+model_index+','+asym_id);
-                    else if (split_opt==2 && ter_opt==1)
+                    else //if (split_opt==2 && ter_opt==1)
                         chainID_list.push_back(':'+asym_id);
-                    else
-                        chainID_list.push_back("");
+                    //else
+                        //chainID_list.push_back("");
                 }
             }
 
@@ -475,10 +474,10 @@ size_t get_PDB_lines(const string filename,
                         ':'+model_index);
                     else if (split_opt==2 && ter_opt==0)
                         chainID_list.push_back(':'+model_index+','+asym_id);
-                    else if (split_opt==2 && ter_opt==1)
+                    else //if (split_opt==2 && ter_opt==1)
                         chainID_list.push_back(':'+asym_id);
-                    else
-                        chainID_list.push_back("");
+                    //else
+                        //chainID_list.push_back("");
                 }
             }
             if (prev_asym_id!=asym_id) prev_asym_id=asym_id;
@@ -534,7 +533,7 @@ size_t get_FASTA_lines(const string filename,
 {
     string line;
     vector<string> tmp_str_vec;
-    int l;
+    size_t l;
     
     int compress_type=0; // uncompressed file
     ifstream fin;
@@ -542,13 +541,13 @@ size_t get_FASTA_lines(const string filename,
     if (filename.size()>=3 && 
         filename.substr(filename.size()-3,3)==".gz")
     {
-        fin_gz.open("zcat "+filename);
+        fin_gz.open("zcat '"+filename+"'");
         compress_type=1;
     }
     else if (filename.size()>=4 && 
         filename.substr(filename.size()-4,4)==".bz2")
     {
-        fin_gz.open("bzcat "+filename);
+        fin_gz.open("bzcat '"+filename+"'");
         compress_type=2;
     }
     else fin.open(filename.c_str());
@@ -661,9 +660,9 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
 }
 
 int read_PDB(const vector<string> &PDB_lines, double **a, char *seq,
-    vector<string> &resi_vec, const int byresi_opt)
+    vector<string> &resi_vec, const int read_resi)
 {
-    int i;
+    size_t i;
     for (i=0;i<PDB_lines.size();i++)
     {
         a[i][0] = atof(PDB_lines[i].substr(30, 8).c_str());
@@ -671,9 +670,9 @@ int read_PDB(const vector<string> &PDB_lines, double **a, char *seq,
         a[i][2] = atof(PDB_lines[i].substr(46, 8).c_str());
         seq[i]  = AAmap(PDB_lines[i].substr(17, 3));
 
-        if (byresi_opt>=2) resi_vec.push_back(PDB_lines[i].substr(22,5)+
-                                              PDB_lines[i][21]);
-        if (byresi_opt==1) resi_vec.push_back(PDB_lines[i].substr(22,5));
+        if (read_resi>=2) resi_vec.push_back(PDB_lines[i].substr(22,5)+
+                                             PDB_lines[i][21]);
+        if (read_resi==1) resi_vec.push_back(PDB_lines[i].substr(22,5));
     }
     seq[i]='\0'; 
     return i;
@@ -756,7 +755,7 @@ void read_user_alignment(vector<string>&sequence, const string &fname_lign,
     if (i_opt==3)
     {
         int aligned_resNum=0;
-        for (int i=0;i<sequence[0].size();i++) 
+        for (size_t i=0;i<sequence[0].size();i++)
             aligned_resNum+=(sequence[0][i]!='-' && sequence[1][i]!='-');
         if (aligned_resNum<3)
             PrintErrorAndQuit("ERROR! Superposition is undefined for <3 aligned residues.");

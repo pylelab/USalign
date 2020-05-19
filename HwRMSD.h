@@ -52,7 +52,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     const vector<string>&sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt,
     const int a_opt, const bool u_opt, const bool d_opt, const int mol_type,
-    const int outfmt_opt, int *invmap, const int glocal=0, const int iter_opt=1)
+    const int outfmt_opt, int *invmap, const int glocal=0, const int iter_opt=1,
+    const int seq_opt=3)
 {
     /***********************/
     /* allocate memory     */
@@ -82,8 +83,10 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         seqxA_tmp=sequence[0];
         seqyA_tmp=sequence[1];
     }
-    else NWalign_main(seqx, seqy, xlen, ylen, seqxA_tmp, seqyA_tmp,
-            mol_type, invmap_tmp, 1, glocal);
+    else if (seq_opt==2) NWalign_main(secx, secy, xlen, ylen,
+            seqxA_tmp, seqyA_tmp, mol_type, invmap_tmp, 1, glocal);
+    else NWalign_main(seqx, seqy, xlen, ylen,
+            seqxA_tmp, seqyA_tmp, mol_type, invmap_tmp, 1, glocal);
     int total_iter=(i_opt==3 || iter_opt<1)?1:iter_opt;
 
     /*******************************/
@@ -93,8 +96,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     {
         n_ali_tmp=n_ali8_tmp=0;
         /* get ss alignment for the second iteration */
-        if (iter==1 && !i_opt) NWalign_main(secx, secy, xlen, ylen,
-            seqxA_tmp, seqyA_tmp, mol_type, invmap_tmp, 1, glocal);
+        if (iter==1 && !i_opt && seq_opt==3) NWalign_main(secx, secy, xlen,
+            ylen, seqxA_tmp, seqyA_tmp, mol_type, invmap_tmp, 1, glocal);
 
         /* parse initial alignment */
         if (seqxA_tmp.size())

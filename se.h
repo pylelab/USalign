@@ -34,7 +34,6 @@ int se_main(
     /***********************/
     /* allocate memory     */
     /***********************/
-    int minlen = min(xlen, ylen);
     NewArray(&score, xlen+1, ylen+1);
     NewArray(&path, xlen+1, ylen+1);
     NewArray(&val, xlen+1, ylen+1);

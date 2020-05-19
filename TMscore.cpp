@@ -465,8 +465,8 @@ int main(int argc, char *argv[])
                     output_TMscore_results(
                         xname.substr(dir1_opt.size()),
                         yname.substr(dir2_opt.size()),
-                        chainID_list1[chain_i].c_str(),
-                        chainID_list2[chain_j].c_str(),
+                        chainID_list1[chain_i],
+                        chainID_list2[chain_j],
                         xlen, ylen, t0, u0, TM1, TM2, 
                         TM3, TM4, TM5, rmsd0, d0_out,
                         seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
@@ -477,7 +477,8 @@ int main(int argc, char *argv[])
                         outfmt_opt, ter_opt, 
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
                         a_opt, u_opt, d_opt, mirror_opt,
-                        L_lt_d, rmsd_d0_out, GDT_list, maxsub);
+                        L_lt_d, rmsd_d0_out, GDT_list, maxsub,
+                        split_opt, resi_vec1, resi_vec2);
 
                     /* Done! Free memory */
                     seqM.clear();

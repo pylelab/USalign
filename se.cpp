@@ -412,8 +412,9 @@ int main(int argc, char *argv[])
                         n_ali8, L_ali, TM_ali, rmsd_ali,
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
-                        "", outfmt_opt, ter_opt, "",
-                        false, a_opt, u_opt, d_opt, 0);
+                        "", outfmt_opt, ter_opt, 0, split_opt,
+                        0, "", false, a_opt, u_opt, d_opt, 0,
+                        resi_vec1, resi_vec2);
 
                     /* Done! Free memory */
                     delete [] invmap;

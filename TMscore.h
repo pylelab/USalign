@@ -841,7 +841,7 @@ int TMscore_main(double **xa, double **ya,
 
 void output_TMscore_results(
     const string xname, const string yname,
-    const char *chainID1, const char *chainID2,
+    const string chainID1, const string chainID2,
     const int xlen, const int ylen, double t[3], double u[3][3],
     const double TM1, const double TM2,
     const double TM3, const double TM4, const double TM5,
@@ -855,14 +855,15 @@ void output_TMscore_results(
     const int outfmt_opt, const int ter_opt, const char *fname_super,
     const int a_opt, const bool u_opt, const bool d_opt, const int mirror_opt,
     int L_lt_d, const double rmsd_d0_out,
-    double GDT_list[5], double maxsub)
+    double GDT_list[5], double maxsub, const int split_opt,
+    const vector<string>&resi_vec1, const vector<string>&resi_vec2)
 {
     if (outfmt_opt<=0)
     {
         printf("\nStructure1: %s%s    Length=%5d\n",
-            xname.c_str(), chainID1, xlen);
+            xname.c_str(), chainID1.c_str(), xlen);
         printf("Structure2: %s%s    Length=%5d (by which all scores are normalized)\n",
-            yname.c_str(), chainID2, ylen);
+            yname.c_str(), chainID2.c_str(), ylen);
 
         printf("Number of residues in common=%5d\n", n_ali8);
         printf("RMSD of  the common residues=%9.3f\n\n", rmsd);
@@ -919,10 +920,10 @@ void output_TMscore_results(
     else if (outfmt_opt==1)
     {
         printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            xname.c_str(), chainID1, xlen, d0B, Liden/xlen, TM2);
+            xname.c_str(), chainID1.c_str(), xlen, d0B, Liden/xlen, TM2);
         printf("%s\n", seqxA);
         printf(">%s%s\tL=%d\td0=%.2f\tseqID=%.3f\tTM-score=%.5f\n",
-            yname.c_str(), chainID2, ylen, d0A, Liden/ylen, TM1);
+            yname.c_str(), chainID2.c_str(), ylen, d0A, Liden/ylen, TM1);
         printf("%s\n", seqyA);
 
         printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
@@ -942,8 +943,8 @@ void output_TMscore_results(
     else if (outfmt_opt==2)
     {
         printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
-            xname.c_str(), chainID1, yname.c_str(), chainID2, TM2, TM1, rmsd,
-            Liden/xlen, Liden/ylen, (n_ali8>0)?Liden/n_ali8:0,
+            xname.c_str(), chainID1.c_str(), yname.c_str(), chainID2.c_str(),
+            TM2, TM1, rmsd, Liden/xlen, Liden/ylen, (n_ali8>0)?Liden/n_ali8:0,
             xlen, ylen, n_ali8);
     }
     cout << endl;
@@ -951,5 +952,7 @@ void output_TMscore_results(
     if (strlen(fname_matrix)) 
         output_rotation_matrix(fname_matrix, t, u);
     if (strlen(fname_super))
-        output_superpose(xname, fname_super, t, u, ter_opt, mirror_opt);
+        output_pymol(xname, yname, fname_super, t, u, ter_opt, 
+            0, split_opt, mirror_opt, seqM, seqxA, seqyA,
+            resi_vec1, resi_vec2, chainID1, chainID2);
 }

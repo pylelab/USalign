@@ -556,9 +556,10 @@ int main(int argc, char *argv[])
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
-                        outfmt_opt, ter_opt, 
+                        outfmt_opt, ter_opt, 0, split_opt, o_opt,
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        i_opt, a_opt, u_opt, d_opt,mirror_opt);
+                        i_opt, a_opt, u_opt, d_opt,mirror_opt,
+                        resi_vec1, resi_vec2 );
 
                     /* Done! Free memory */
                     seqM.clear();

@@ -62,7 +62,12 @@ void print_extra_help()
 "             2: glocal-both alignment\n"
 "             3: Smith-Waterman algorithm for local alignment\n"
 "\n"
-"    -iter    ALignment-superposition iterations. Default is 1\n"
+"    -iter    Alignment-superposition iterations. Default is 1\n"
+"\n"
+"    -seq     Type of sequence used to make initial alignment\n"
+"             1: amino acid/nucleotide sequence\n"
+"             2: secondary structure\n"
+"             3: (default) sequence + secondary structure\n"
 "\n"
 "    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
@@ -162,6 +167,7 @@ int main(int argc, char *argv[])
     vector<string> chain2_list; // only when -dir2 is set
     int    glocal    =0;
     int    iter_opt  =1;
+    int    seq_opt   =3;
 
     for(int i = 1; i < argc; i++)
     {
@@ -261,6 +267,10 @@ int main(int argc, char *argv[])
         {
             iter_opt=atoi(argv[i + 1]); i++;
         }
+        else if ( !strcmp(argv[i],"-seq") && i < (argc-1) )
+        {
+            seq_opt=atoi(argv[i + 1]); i++;
+        }
         else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
         {
             het_opt=atoi(argv[i + 1]); i++;
@@ -322,6 +332,8 @@ int main(int argc, char *argv[])
     if (split_opt<0 || split_opt>2)
         PrintErrorAndQuit("-split can only be 0, 1 or 2");
     if (iter_opt<=0) PrintErrorAndQuit("-iter must be >0");
+    if (seq_opt!=1 && seq_opt!=2 && seq_opt!=3)
+        PrintErrorAndQuit("-seq must be 1, 2 or 3");
 
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
@@ -393,7 +405,7 @@ int main(int argc, char *argv[])
             seqx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
                 resi_vec1, byresi_opt);
-            if (iter_opt>=2)  // secondary structure assignment
+            if (seq_opt==2 || (seq_opt==3 && iter_opt>=2))  // SS assignment
             {
                 secx = new char[xlen+1];
                 if (mol_vec1[chain_i]>0) 
@@ -432,7 +444,7 @@ int main(int argc, char *argv[])
                     seqy = new char[ylen + 1];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
                         resi_vec2, byresi_opt);
-                    if (iter_opt>=2)
+                    if (seq_opt==2 || (seq_opt==3 && iter_opt>=2))  // SS assignment
                     {
                         secy = new char[ylen+1];
                         if (mol_vec2[chain_j]>0)
@@ -467,7 +479,7 @@ int main(int argc, char *argv[])
                         rmsd_ali, n_ali, n_ali8, xlen, ylen, sequence,
                         Lnorm_ass, d0_scale, i_opt, a_opt, u_opt, d_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],
-                        outfmt_opt, invmap, glocal, iter_opt);
+                        outfmt_opt, invmap, glocal, iter_opt, seq_opt);
 
                     if (outfmt_opt>=2) 
                         get_seqID(invmap, seqx, seqy, ylen, Liden, n_ali8);
@@ -485,9 +497,10 @@ int main(int argc, char *argv[])
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
                         (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
-                        outfmt_opt, ter_opt, 
+                        outfmt_opt, ter_opt, false, split_opt, o_opt,
                         (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
-                        false, a_opt, u_opt, d_opt, 0);
+                        false, a_opt, u_opt, d_opt, 0,
+                        resi_vec1, resi_vec2);
 
                     /* Done! Free memory */
                     seqM.clear();
