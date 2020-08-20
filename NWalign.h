@@ -12,8 +12,8 @@ using namespace std;
 const int gapopen_blosum62=-11;
 const int gapext_blosum62=-1;
 
-const int gapopen_blastn=-5;
-const int gapext_blastn=-2;
+const int gapopen_blastn=-15; //-5;
+const int gapext_blastn =-4;  //-2;
 
 /* initialize matrix in gotoh algorithm */
 void init_gotoh_mat(int **S, int **JumpH, int **JumpV, int **P,
