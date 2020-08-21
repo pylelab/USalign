@@ -36,6 +36,9 @@ void print_extra_help()
 "             under 'chain2_folder'\n"
 "             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
 "\n"
+"    -pair    (Only when -dir1 and -dir2 are set, default is no) whether to\n"
+"             perform pair alignment rather than all-against-all alignment\n"
+"\n"
 "    -suffix  (Only when -dir1 and/or -dir2 are set, default is empty)\n"
 "             add file name suffix to files listed by chain1_list or chain2_list\n"
 "\n"
@@ -193,6 +196,7 @@ int main(int argc, char *argv[])
     string dir_opt   ="";    // set -dir to empty
     string dir1_opt  ="";    // set -dir1 to empty
     string dir2_opt  ="";    // set -dir2 to empty
+    bool   pair_opt=false;   // pair alignment
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
@@ -287,6 +291,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-dir2") && i < (argc-1) )
         {
             dir2_opt=argv[i + 1]; i++;
+        }
+        else if ( !strcmp(argv[i],"-pair") )
+        {
+            pair_opt=true;
         }
         else if ( !strcmp(argv[i],"-suffix") && i < (argc-1) )
         {
@@ -465,6 +473,7 @@ int main(int argc, char *argv[])
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
+                if (pair_opt && j!=i) continue;
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
                 {
