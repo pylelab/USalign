@@ -400,6 +400,11 @@ int NWalign_main(const char *seqx, const char *seqy, const int xlen,
     {
         gapopen=gapopen_blastn;
         gapext =gapext_blastn;
+        if (glocal==3)
+        {
+            gapopen=-5;
+            gapext =-2;
+        }
     }
 
     for (i=0;i<xlen+1;i++)
