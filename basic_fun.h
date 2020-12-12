@@ -501,9 +501,9 @@ size_t get_PDB_lines(const string filename,
             i8_stream<<"ATOM  "
                 <<setw(5)<<i<<" "<<atom<<" "<<AA<<" "<<asym_id[0]
                 <<setw(5)<<resi.substr(0,5)<<"   "
-                <<setw(8)<<line_vec[_atom_site["Cartn_x"]]
-                <<setw(8)<<line_vec[_atom_site["Cartn_y"]]
-                <<setw(8)<<line_vec[_atom_site["Cartn_z"]];
+                <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_z"]].substr(0,8);
             PDB_lines.back().push_back(i8_stream.str());
             i8_stream.str(string());
         }
