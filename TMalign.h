@@ -1656,9 +1656,9 @@ void output_pymol(const string xname, const string yname,
     {
         for (i=0;i<strlen(seqM);i++)
         {
-            i1+=(seqxA[i]!='-');
+            i1+=(seqxA[i]!='-' && seqxA[i]!='*');
             i2+=(seqyA[i]!='-');
-            if (seqM[i]==' ') continue;
+            if (seqM[i]==' ' || seqxA[i]=='*') continue;
             curr_resi1=resi_vec1[i1].substr(0,4);
             curr_resi2=resi_vec2[i2].substr(0,4);
             if (resi1_sele.size()==0)
