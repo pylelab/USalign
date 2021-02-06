@@ -57,6 +57,8 @@
                Added GDT and MaxSub to TMscore program.
    2019/08/18: Prevent excessive circular permutation alignment by -cp.
    2020/05/19: Add back rasmol output
+   2020/12/12: Fixed bug in double precision coordinate mmcif alignment
+   2021/01/07: Fixed bug in TMscore -c
 ===============================================================================
 
 =========================
@@ -91,4 +93,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-08/18/2019
+2021/01/07

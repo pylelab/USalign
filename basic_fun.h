@@ -501,9 +501,9 @@ size_t get_PDB_lines(const string filename,
             i8_stream<<"ATOM  "
                 <<setw(5)<<i<<" "<<atom<<" "<<AA<<" "<<asym_id[0]
                 <<setw(5)<<resi.substr(0,5)<<"   "
-                <<setw(8)<<line_vec[_atom_site["Cartn_x"]]
-                <<setw(8)<<line_vec[_atom_site["Cartn_y"]]
-                <<setw(8)<<line_vec[_atom_site["Cartn_z"]];
+                <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_z"]].substr(0,8);
             PDB_lines.back().push_back(i8_stream.str());
             i8_stream.str(string());
         }
@@ -605,57 +605,108 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     int i2=0; // positions in resi_vec2
     int xlen=resi_vec1.size();
     int ylen=resi_vec2.size();
-    map<char,int> chainID_map1;
-    map<char,int> chainID_map2;
+    map<string,string> chainID_map1;
+    map<string,string> chainID_map2;
     if (byresi_opt==3)
     {
-        vector<char> chainID_vec;
-        char chainID;
+        vector<string> chainID_vec;
+        string chainID;
+        stringstream ss;
         int i;
         for (i=0;i<xlen;i++)
         {
-            chainID=resi_vec1[i][5];
+            chainID=resi_vec1[i].substr(5);
             if (!chainID_vec.size()|| chainID_vec.back()!=chainID)
             {
                 chainID_vec.push_back(chainID);
-                chainID_map1[chainID]=chainID_vec.size();
+                ss<<chainID_vec.size();
+                chainID_map1[chainID]=ss.str();
+                ss.str("");
             }
         }
         chainID_vec.clear();
         for (i=0;i<ylen;i++)
         {
-            chainID=resi_vec2[i][5];
+            chainID=resi_vec2[i].substr(5);
             if (!chainID_vec.size()|| chainID_vec.back()!=chainID)
             {
                 chainID_vec.push_back(chainID);
-                chainID_map2[chainID]=chainID_vec.size();
+                ss<<chainID_vec.size();
+                chainID_map2[chainID]=ss.str();
+                ss.str("");
             }
         }
-        chainID_vec.clear();
+        vector<string>().swap(chainID_vec);
     }
+    string chainID1="";
+    string chainID2="";
+    string chainID1_prev="";
+    string chainID2_prev="";
     while(i1<xlen && i2<ylen)
     {
-        if ((byresi_opt<=2 && resi_vec1[i1]==resi_vec2[i2]) || (byresi_opt==3
-             && resi_vec1[i1].substr(0,5)==resi_vec2[i2].substr(0,5)
-             && chainID_map1[resi_vec1[i1][5]]==chainID_map2[resi_vec2[i2][5]]))
+        if (byresi_opt==2)
         {
-            sequence[0]+=seqx[i1++];
-            sequence[1]+=seqy[i2++];
+            chainID1=resi_vec1[i1].substr(5);
+            chainID2=resi_vec2[i2].substr(5);
         }
-        else if (atoi(resi_vec1[i1].substr(0,4).c_str())<=
-                 atoi(resi_vec2[i2].substr(0,4).c_str()))
+        else if (byresi_opt==3)
         {
-            sequence[0]+=seqx[i1++];
-            sequence[1]+='-';
+            chainID1=chainID_map1[resi_vec1[i1].substr(5)];
+            chainID2=chainID_map2[resi_vec2[i2].substr(5)];
+        }
+
+        if (chainID1==chainID2)
+        {
+            if (atoi(resi_vec1[i1].substr(0,4).c_str())<
+                atoi(resi_vec2[i2].substr(0,4).c_str()))
+            {
+                sequence[0]+=seqx[i1++];
+                sequence[1]+='-';
+            }
+            else if (atoi(resi_vec1[i1].substr(0,4).c_str())>
+                     atoi(resi_vec2[i2].substr(0,4).c_str()))
+            {
+                sequence[0]+='-';
+                sequence[1]+=seqy[i2++];
+            }
+            else
+            {
+                sequence[0]+=seqx[i1++];
+                sequence[1]+=seqy[i2++];
+            }
+            chainID1_prev=chainID1;
+            chainID2_prev=chainID2;
         }
         else
         {
-            sequence[0]+='-';
-            sequence[1]+=seqy[i2++];
+            if (chainID1_prev==chainID1 && chainID2_prev!=chainID2)
+            {
+                sequence[0]+=seqx[i1++];
+                sequence[1]+='-';
+                chainID1_prev=chainID1;
+            }
+            else if (chainID1_prev!=chainID1 && chainID2_prev==chainID2)
+            {
+                sequence[0]+='-';
+                sequence[1]+=seqy[i2++];
+                chainID2_prev=chainID2;
+            }
+            else
+            {
+                sequence[0]+=seqx[i1++];
+                sequence[1]+=seqy[i2++];
+                chainID1_prev=chainID1;
+                chainID2_prev=chainID2;
+            }
         }
+        
     }
-    chainID_map1.clear();
-    chainID_map2.clear();
+    map<string,string>().swap(chainID_map1);
+    map<string,string>().swap(chainID_map2);
+    chainID1.clear();
+    chainID2.clear();
+    chainID1_prev.clear();
+    chainID2_prev.clear();
     return sequence[0].size();
 }
 

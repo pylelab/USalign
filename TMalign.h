@@ -3081,8 +3081,9 @@ int TMalign_main(double **xa, double **ya,
     }
     if(!flag)
     {
-        cout << "There is no alignment between the two proteins!" << endl;
-        cout << "Program stop with no result!" << endl;
+        cout << "There is no alignment between the two proteins! "
+             << "Program stop with no result!" << endl;
+        TM1=TM2=TM3=TM4=TM5=0;
         return 1;
     }
 
