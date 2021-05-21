@@ -59,6 +59,8 @@
    2020/05/19: Add back rasmol output
    2020/12/12: Fixed bug in double precision coordinate mmcif alignment
    2021/01/07: Fixed bug in TMscore -c
+   2021/05/29: Remove unnecessary depedency on malloc.h, which prevent
+               compilation on Mac OS
 ===============================================================================
 
 =========================
@@ -93,4 +95,4 @@ fortran version, including RNA alignment and batch alignment of multiple
 structures. A full list of available options can be explored by:
   ./TMalign -h
 
-2021/01/07
+2021/05/20
