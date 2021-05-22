@@ -41,7 +41,7 @@ double Kabsch_Superpose(double **r1, double **r2, double **xt,
     return RMSD;
 }
 
-/* outfmt_opt>=2 should not parse the sequence alignment */
+/* outfmt_opt is disabled for alignment consistency */
 int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     const char *secx, const char *secy, double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -128,7 +128,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             seqM_tmp, seqxA_tmp, seqyA_tmp, rmsd0_tmp, L_ali_tmp, Liden_tmp,
             TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
             sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
-            mol_type, outfmt_opt, invmap_tmp);
+            mol_type, 1, invmap_tmp);
 
         /* accept new alignment */
         if (TM1_tmp>TM1 && TM2_tmp>TM2)
@@ -150,13 +150,10 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             else if (u_opt) TM_0=TM4;
             else if (d_opt) TM_0=TM5;
 
-            if (outfmt_opt<2)
-            {
-                seqxA =seqxA_tmp;
-                seqM  =seqM_tmp;
-                seqyA =seqyA_tmp;
-            }
-            else for (j=0; j<ylen; j++) invmap[j]=invmap_tmp[j];
+            seqxA =seqxA_tmp;
+            seqM  =seqM_tmp;
+            seqyA =seqyA_tmp;
+            for (j=0; j<ylen; j++) invmap[j]=invmap_tmp[j];
 
             rmsd0 =rmsd0_tmp;
             Liden =Liden_tmp;
@@ -174,12 +171,9 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         else
         {
             if (iter>=2) break;
-            if (outfmt_opt<2)
-            {
-                seqxA_tmp  = seqxA;
-                seqyA_tmp  = seqyA;
-            }
-            else for (j=0; j<ylen; j++) invmap_tmp[j]=invmap[j];
+            seqxA_tmp  = seqxA;
+            seqyA_tmp  = seqyA;
+            for (j=0; j<ylen; j++) invmap_tmp[j]=invmap[j];
             rmsd0_tmp  = 0;
             Liden_tmp  = 0;
             n_ali_tmp  = 0;
