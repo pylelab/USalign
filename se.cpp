@@ -402,8 +402,8 @@ int main(int argc, char *argv[])
 
                     /* print result */
                     output_results(
-                        xname.substr(dir1_opt.size()).c_str(),
-                        yname.substr(dir2_opt.size()).c_str(),
+                        xname.substr(dir1_opt.size()+dir_opt.size()).c_str(),
+                        yname.substr(dir2_opt.size()+dir_opt.size()).c_str(),
                         chainID_list1[chain_i].c_str(),
                         chainID_list2[chain_j].c_str(),
                         xlen, ylen, t0, u0, TM1, TM2, 

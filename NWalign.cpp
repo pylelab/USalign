@@ -325,8 +325,8 @@ int main(int argc, char *argv[])
                     else get_seqID(seqxA, seqyA, seqM, Liden, L_ali);
 
                     output_NWalign_results(
-                        xname.substr(dir1_opt.size()),
-                        yname.substr(dir2_opt.size()),
+                        xname.substr(dir1_opt.size()+dir_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()),
                         chainID_list1[chain_i].c_str(),
                         chainID_list2[chain_j].c_str(),
                         xlen, ylen, seqM.c_str(), seqxA.c_str(),

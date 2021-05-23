@@ -62,7 +62,7 @@ void print_extra_help()
 "             2: glocal-both alignment\n"
 "             3: Smith-Waterman algorithm for local alignment\n"
 "\n"
-"    -iter    Alignment-superposition iterations. Default is 1\n"
+"    -iter    Alignment-superposition iterations. Default is 10\n"
 "\n"
 "    -seq     Type of sequence used to make initial alignment\n"
 "             1: amino acid/nucleotide sequence\n"
@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
     int    glocal    =0;
-    int    iter_opt  =1;
+    int    iter_opt  =10;
+    double early_opt =0.01;
     int    seq_opt   =3;
 
     for(int i = 1; i < argc; i++)
@@ -266,6 +267,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-iter") && i < (argc-1) )
         {
             iter_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-early") && i < (argc-1) )
+        {
+            early_opt=atof(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-seq") && i < (argc-1) )
         {
@@ -479,15 +484,15 @@ int main(int argc, char *argv[])
                         rmsd_ali, n_ali, n_ali8, xlen, ylen, sequence,
                         Lnorm_ass, d0_scale, i_opt, a_opt, u_opt, d_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],
-                        outfmt_opt, invmap, glocal, iter_opt, seq_opt);
+                        invmap, glocal, iter_opt, seq_opt, early_opt);
 
                     if (outfmt_opt>=2) 
                         get_seqID(invmap, seqx, seqy, ylen, Liden, n_ali8);
 
                     /* print result */
                     output_results(
-                        xname.substr(dir1_opt.size()),
-                        yname.substr(dir2_opt.size()),
+                        xname.substr(dir1_opt.size()+dir_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()),
                         chainID_list1[chain_i].c_str(),
                         chainID_list2[chain_j].c_str(),
                         xlen, ylen, t0, u0, TM1, TM2, 

@@ -52,8 +52,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     const vector<string>&sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt,
     const int a_opt, const bool u_opt, const bool d_opt, const int mol_type,
-    const int outfmt_opt, int *invmap, const int glocal=0, const int iter_opt=1,
-    const int seq_opt=3)
+    int *invmap, const int glocal=0, const int iter_opt=10,
+    const int seq_opt=3, const double early_opt=0.01)
 {
     /***********************/
     /* allocate memory     */
@@ -74,6 +74,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     int L_ali_tmp,n_ali_tmp,n_ali8_tmp;
     double Liden_tmp;
     double rmsd_ali_tmp;
+    double max_TM=0;
+    double cur_TM=0;
 
     /* initialize alignment */
     TM1=TM2=TM1_tmp=TM2_tmp=L_ali=-1;
@@ -179,17 +181,21 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             n_ali_tmp  = 0;
             n_ali8_tmp = 0;
         }
+
+        if (iter>=2 && early_opt>0)
+        {
+            cur_TM=(TM1+TM2)/2;
+            if (cur_TM-max_TM<early_opt) break;
+            max_TM=cur_TM;
+        }
     }
 
     /************/
     /* clean up */
     /************/
-    if (outfmt_opt<2)
-    {
-        seqxA_tmp.clear();
-        seqM_tmp.clear();
-        seqyA_tmp.clear();
-    }
+    seqxA_tmp.clear();
+    seqM_tmp.clear();
+    seqyA_tmp.clear();
     delete [] invmap_tmp;
     DeleteArray(&xt, xlen);
     DeleteArray(&r1, minlen);
