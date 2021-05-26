@@ -41,6 +41,28 @@ double Kabsch_Superpose(double **r1, double **r2, double **xt,
     return RMSD;
 }
 
+void parse_alignment_into_invmap(const string seqxA_tmp,
+    const string seqyA_tmp, const int xlen, const int ylen, int *invmap_tmp)
+{
+    if (seqxA_tmp.size()==0) return;
+    int i1=-1;
+    int i2=-1;
+    int j = 0;
+    int L = min(seqxA_tmp.size(), seqyA_tmp.size());
+    for (j = 0; j < ylen; j++) invmap_tmp[j] = -1;
+    for (j = 0; j<L; j++)
+    {
+        if (seqxA_tmp[j] != '-') i1++;
+        if (seqyA_tmp[j] != '-')
+        {
+            i2++;
+            if (i2 >= ylen || i1 >= xlen) j = L;
+            else if (seqxA_tmp[j] != '-') invmap_tmp[i2] = i1;
+        }
+    }
+    return;
+}
+
 /* outfmt_opt is disabled for alignment consistency */
 int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     const char *secx, const char *secy, double t0[3], double u0[3][3],
@@ -102,23 +124,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             ylen, seqxA_tmp, seqyA_tmp, mol_type, invmap_tmp, 1, glocal);
 
         /* parse initial alignment */
-        if (seqxA_tmp.size())
-        {
-            for (j = 0; j < ylen; j++) invmap_tmp[j] = -1;
-            i1 = -1;
-            i2 = -1;
-            L = min(seqxA_tmp.size(), seqyA_tmp.size());
-            for (j = 0; j<L; j++)
-            {
-                if (seqxA_tmp[j] != '-') i1++;
-                if (seqyA_tmp[j] != '-')
-                {
-                    i2++;
-                    if (i2 >= ylen || i1 >= xlen) j = L;
-                    else if (seqxA_tmp[j] != '-') invmap_tmp[i2] = i1;
-                }
-            }
-        }
+        parse_alignment_into_invmap(seqxA_tmp, seqyA_tmp, xlen, ylen, invmap_tmp);
 
         /* superpose */
         Kabsch_Superpose(r1, r2, xt, xa, ya, xlen, ylen, invmap_tmp,
@@ -131,6 +137,39 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
             TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
             sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
             mol_type, 1, invmap_tmp);
+
+        if (n_ali8_tmp==0)
+        {
+            cerr<<"WARNING! zero aligned residue in iteration "<<iter<<endl;
+            if (xlen>=ylen) seqxA_tmp=(string)(seqx);
+            if (xlen<=ylen) seqyA_tmp=(string)(seqy);
+            if (xlen<ylen)
+            {
+                seqxA_tmp.clear();
+                for (i1=0;i1<(int)((ylen-xlen)/2);i1++) seqxA_tmp+='-';
+                seqxA_tmp+=(string)(seqx);
+                for (i1=seqxA_tmp.size();i1<ylen;i1++) seqxA_tmp+='-';
+            }
+            if (xlen>ylen)
+            {
+                seqyA_tmp.clear();
+                for (i1=0;i1<(int)((xlen-ylen)/2);i1++) seqyA_tmp+='-';
+                seqyA_tmp+=(string)(seqy);
+                for (i1=seqyA_tmp.size();i1<xlen;i1++) seqyA_tmp+='-';
+            }
+        
+            parse_alignment_into_invmap(seqxA_tmp, seqyA_tmp, xlen, ylen, invmap_tmp);
+
+            Kabsch_Superpose(r1, r2, xt, xa, ya, xlen, ylen, invmap_tmp,
+                L_ali, t, u, mol_type);
+
+            se_main(xt, ya, seqx, seqy, TM1_tmp, TM2_tmp, TM3_tmp, TM4_tmp,
+                TM5_tmp, d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                seqM_tmp, seqxA_tmp, seqyA_tmp, rmsd0_tmp, L_ali_tmp, Liden_tmp,
+                TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
+                sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
+                mol_type, 1, invmap_tmp);
+        }
 
         /* accept new alignment */
         if (TM1_tmp>TM1 && TM2_tmp>TM2)
