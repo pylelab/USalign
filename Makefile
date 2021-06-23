@@ -1,9 +1,15 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
 LDFLAGS=-static# -lm
-PROGRAM=TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign
+PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign
 
 all: ${PROGRAM}
+
+qTMclust: qTMclust.cpp HwRMSD.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
+USalign: USalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
@@ -32,14 +38,8 @@ pdb2fasta: pdb2fasta.cpp basic_fun.h pstream.h
 NWalign: NWalign.cpp NWalign.h basic_fun.h pstream.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-qTMclust: qTMclust.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
-	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
-
-Contactlib: Contactlib.cpp Contactlib.h TMalign.h basic_fun.h
-	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
-
 HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 clean:
-	rm -f ${PROGRAM} qTMclust Contactlib HwRMSD
+	rm -f ${PROGRAM} HwRMSD
