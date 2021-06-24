@@ -50,13 +50,16 @@ void print_help(bool h_opt=false)
 "    qTMclust -split 1 -ter 0 multimodel.pdb -TMcut 0.5 -o cluster.txt\n"
 "\n"
 "Options:\n"
-"    -TMcut   TM-score cutoff in the range of [0.5,1) for considering two\n"
-"             structures being similar.\n"
+"    -TMcut   TM-score cutoff in the range of [0.45,1) for considering two\n"
+"             structures being similar. Default is 0.5.\n"
 "\n"
-"    -a       How to normalize TM-score:\n"
-"            -2: (default) normalize TM-score by longer structure length\n"
-"            -1: normalize TM-score by shorter structure length\n"
-"             1: normalize TM-score by average structure length\n"
+"    -a       Which TM-score to use when aligning structures with different lengths?\n"
+"             1: the larger TM-score, i.e. normalized by shorter length\n"
+"             2: (default) the smaller TM-score, i.e. normalized by longer length\n"
+"             3: average of the two TM-scores\n"
+"             4: harmonic average of the two TM-scores\n"
+"             5: geometric average of the two TM-scores\n"
+"             6: root mean square of the two TM-scores\n"
 "\n"
 "    -o       Output the cluster result to file.\n"
 "             Default is print result to screen.\n"
@@ -106,7 +109,7 @@ int main(int argc, char *argv[])
 
     bool h_opt = false; // print full help message
     int  i_opt = 0;     // 3 for -I, stick to user given alignment
-    int  a_opt = -2;    // flag for -a, normalized by longer length
+    int  a_opt = 2;    // flag for -a, normalized by longer length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
@@ -145,8 +148,8 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-a") && i < (argc-1) )
         {
             a_opt=atoi(argv[i + 1]); i++;
-            if (a_opt!=-2 && a_opt!=-1 && a_opt!=1)
-                PrintErrorAndQuit("-a must be -2, -1, or 1");
+            if (a_opt<1 || a_opt>6)
+                PrintErrorAndQuit("-a must be within 1 to 6");
         }
         else if ( !strcmp(argv[i],"-h") )
         {
@@ -393,8 +396,11 @@ int main(int argc, char *argv[])
         {
             chain_j=clust_repr_vec[j-1];
             ylen=xyz_vec[chain_j].size();
-            if (a_opt==-2 && xlen<TMcut*ylen) continue;
-            else if (a_opt==1 && xlen<TMcut*(xlen+ylen)/2) continue;
+            if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
             index_vec.push_back(chain_j);
         }
         sizePROT=index_vec.size();
@@ -411,8 +417,11 @@ int main(int argc, char *argv[])
             {
                 chain_j=index_vec[j];
                 ylen=xyz_vec[chain_j].size();
-                if (a_opt==-2 && xlen<TMcut*ylen) continue;
-                else if (a_opt==1 && xlen<TMcut*(xlen+ylen)/2) continue;
+                if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+                else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+                else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+                else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+                else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
                 
                 NewArray(&ya, ylen, 3);
                 for (r=0;r<ylen;r++)
@@ -449,12 +458,16 @@ int main(int argc, char *argv[])
                     rmsd_ali, n_ali, n_ali8, xlen, ylen,
                     sequence, Lnorm_ass,
                     d0_scale, i_opt,
-                    a_opt, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
+                    false, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
                     invmap, glocal, iter_opt);
 
                 TM=TM3; // average length
-                if (a_opt==-2) TM=TM1; // longer length
-                else if (a_opt==-1) TM=TM2; // shorter length
+                if      (a_opt==1) TM=TM2; // shorter length
+                else if (a_opt==2) TM=TM1; // longer length
+                else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
+                else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+                else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+                else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
                 HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
 
@@ -498,8 +511,11 @@ int main(int argc, char *argv[])
         {
             chain_j=index_vec[j];
             ylen=xyz_vec[chain_j].size();
-            if (a_opt==-2 && xlen<TMcut*ylen) continue;
-            else if (a_opt==1 && xlen<TMcut*(xlen+ylen)/2) continue;
+            if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
 
             NewArray(&ya, ylen, 3);
             for (r=0;r<ylen;r++)
@@ -536,7 +552,7 @@ int main(int argc, char *argv[])
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                i_opt, a_opt, u_opt, d_opt, overwrite_fast_opt,
+                i_opt, false, u_opt, d_opt, overwrite_fast_opt,
                 mol_vec[chain_i]+mol_vec[chain_j],TMcut);
 
             //if (false)
@@ -549,8 +565,12 @@ int main(int argc, char *argv[])
             seqyA.clear();
 
             double TM=TM3; // average length
-            if (a_opt==-2) TM=TM1; // longer length
-            else if (a_opt==-1) TM=TM2; // shorter length
+            if      (a_opt==1) TM=TM2; // shorter length
+            else if (a_opt==2) TM=TM1; // longer length
+            else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
+            else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+            else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+            else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
             double dTM=0.1*(fast_ub-Lave)/(fast_ub-fast_lb);
             if (dTM<0) dTM=0;
@@ -581,7 +601,7 @@ int main(int argc, char *argv[])
                     seqM, seqxA, seqyA,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                    i_opt, a_opt, u_opt, d_opt, false,
+                    i_opt, false, u_opt, d_opt, false,
                     mol_vec[chain_i]+mol_vec[chain_j],TMcut);
                 seqM.clear();
                 seqxA.clear();
@@ -589,8 +609,12 @@ int main(int argc, char *argv[])
                 DeleteArray(&ya, ylen);
                 
                 TM=TM3;                // average length
-                if (a_opt==-2) TM=TM1; // longer length
-                else if (a_opt==-1) TM=TM2; // shorter length
+                if      (a_opt==1) TM=TM2; // shorter length
+                else if (a_opt==2) TM=TM1; // longer length
+                else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
+                else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+                else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+                else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
                 cout<<"*\t"<<chainID_list[chain_j]<<'\t'<<TM2<<'\t'<<TM1<<endl;
                 if (TM>=TMcut)
                 {

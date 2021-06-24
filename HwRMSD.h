@@ -140,7 +140,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
 
         if (n_ali8_tmp==0)
         {
-            cerr<<"WARNING! zero aligned residue in iteration "<<iter<<endl;
+            //cerr<<"WARNING! zero aligned residue in iteration "<<iter<<endl;
             if (xlen>=ylen) seqxA_tmp=(string)(seqx);
             if (xlen<=ylen) seqyA_tmp=(string)(seqy);
             if (xlen<ylen)
