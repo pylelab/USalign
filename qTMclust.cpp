@@ -396,7 +396,8 @@ int main(int argc, char *argv[])
         {
             chain_j=clust_repr_vec[j-1];
             ylen=xyz_vec[chain_j].size();
-            if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+            if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
+            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
             else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
             else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
             else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
@@ -417,7 +418,8 @@ int main(int argc, char *argv[])
             {
                 chain_j=index_vec[j];
                 ylen=xyz_vec[chain_j].size();
-                if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+                if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
+                else if (a_opt==2 && xlen<TMcut*ylen)       continue;
                 else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
                 else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
                 else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
@@ -511,7 +513,8 @@ int main(int argc, char *argv[])
         {
             chain_j=index_vec[j];
             ylen=xyz_vec[chain_j].size();
-            if      (a_opt==2 && xlen<TMcut*ylen)       continue;
+            if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
+            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
             else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
             else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
             else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
