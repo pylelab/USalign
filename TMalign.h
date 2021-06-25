@@ -1,5 +1,7 @@
 /* Functions for the core TMalign algorithm, including the entry function
  * TMalign_main */
+#ifndef TMalign_h
+#define TMalign_h 1
 
 #include "param_set.h"
 #include "NW.h"
@@ -3459,3 +3461,4 @@ int CPalign_main(double **xa, double **ya,
     seqyA_cp.clear();
     return cp_point;
 }
+#endif
