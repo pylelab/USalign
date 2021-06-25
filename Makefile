@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-O3 -ffast-math
 LDFLAGS=-static# -lm
-PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign
+PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign HwRMSD
 
 all: ${PROGRAM}
 
@@ -42,4 +42,4 @@ HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h se.h param_set.h basic_fun.h Kabsch.h NW.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 clean:
-	rm -f ${PROGRAM} HwRMSD
+	rm -f ${PROGRAM}
