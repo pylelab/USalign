@@ -4,7 +4,7 @@
  * No filter will be used if only TMalign.h is included. */
 
 #include "HwRMSD.h"
-//#include "TMalign.h"
+#include "TMalign.h"
 
 using namespace std;
 
@@ -87,6 +87,27 @@ void print_help(bool h_opt=false)
     if (h_opt) print_extra_help();
 
     exit(EXIT_SUCCESS);
+}
+
+void filter_lower_bound(double &lb_HwRMSD, double &lb_TMfast, 
+    const double TMcut, const int a_opt,const int mol_type)
+{
+    lb_HwRMSD=0.5*TMcut;
+    lb_TMfast=0.9*TMcut;
+    if (a_opt<=1)
+    {
+        if (mol_type>0) // RNA
+        {
+            lb_HwRMSD=0.02*TMcut;
+            lb_TMfast=0.60*TMcut;
+        }
+        else // protein
+        {
+            lb_HwRMSD=0.25*TMcut;
+            lb_TMfast=0.80*TMcut;
+        }
+    }
+    return;
 }
 
 int main(int argc, char *argv[])
@@ -264,6 +285,10 @@ int main(int argc, char *argv[])
     vector<vector<float> >xyz_tmp;
     int r; // residue index
     size_t newchainnum;
+    double ub_HwRMSD=0.90*TMcut+0.10;
+    double lb_HwRMSD=0.5*TMcut;
+    double ub_TMfast=0.90*TMcut+0.10;
+    double lb_TMfast=0.9*TMcut;
 
 #ifdef TMalign_HwRMSD_h
     /* These parameters controls HwRMSD filter. iter_opt typically should be
@@ -424,6 +449,9 @@ int main(int argc, char *argv[])
                 else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
                 else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
                 else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+
+                if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
+                    TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
                 
                 NewArray(&ya, ylen, 3);
                 for (r=0;r<ylen;r++)
@@ -471,7 +499,8 @@ int main(int argc, char *argv[])
                 else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
                 else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
-                HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
+                if (TM>=lb_HwRMSD)
+                    HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
 
                 /* clean up after each HwRMSD */
                 seqM.clear();
@@ -481,7 +510,7 @@ int main(int argc, char *argv[])
                 delete [] invmap;
 
                 /* if a good hit is guaranteed to be found, stop the loop */
-                if (TM>=TMcut+0.1) break;
+                if (TM>=ub_HwRMSD) break;
             }
 
             stable_sort(HwRMSDscore_list.begin(),HwRMSDscore_list.end(),
@@ -519,6 +548,8 @@ int main(int argc, char *argv[])
             else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
             else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
             else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+            if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast,
+                TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
 
             NewArray(&ya, ylen, 3);
             for (r=0;r<ylen;r++)
@@ -529,7 +560,7 @@ int main(int argc, char *argv[])
             }
 
             Lave=sqrt(xlen*ylen); // geometry average because O(L1*L2)
-            bool overwrite_fast_opt=(fast_opt==true || Lave>=fast_lb);
+            bool overwrite_fast_opt=(fast_opt==true || Lave>=fast_ub);
             
             /* declare variable specific to this pair of TMalign */
             double t0[3], u0[3][3];
@@ -575,17 +606,14 @@ int main(int argc, char *argv[])
             else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
             else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
-            double dTM=0.1*(fast_ub-Lave)/(fast_ub-fast_lb);
-            if (dTM<0) dTM=0;
-
-            if (TM<TMcut-dTM || 
+            if (TM<lb_TMfast || 
                (TM<TMcut && (fast_opt || overwrite_fast_opt==false)))
             {
                 DeleteArray(&ya, ylen);
                 continue;
             }
 
-            if (TM>=TMcut+dTM || 
+            if (TM>=ub_TMfast || 
                (TM>=TMcut && (fast_opt || overwrite_fast_opt==false)))
             {
                 clust_mem_vec[chain_i]=clust_repr_map[chain_j];
@@ -594,7 +622,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            if (Lave<fast_ub)
+            if (TM<lb_TMfast && overwrite_fast_opt==false)
             {
                 TMalign_main(
                     xa, ya, &seq_vec[chain_i][0], &seq_vec[chain_j][0],
