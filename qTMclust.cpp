@@ -437,104 +437,107 @@ int main(int argc, char *argv[])
             <<"#repr="<<sizePROT<<"/"<<clust_repr_vec.size()<<endl;
 
 #ifdef TMalign_HwRMSD_h
-            vector<pair<double,size_t> > HwRMSDscore_list;
-            double TM;
-            for (j=0;j<sizePROT;j++)
+        vector<pair<double,size_t> > HwRMSDscore_list;
+        double TM;
+        for (j=0;j<sizePROT;j++)
+        {
+            chain_j=index_vec[j];
+            ylen=xyz_vec[chain_j].size();
+            if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
+            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+
+            if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
+                TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
+            
+            NewArray(&ya, ylen, 3);
+            for (r=0;r<ylen;r++)
             {
-                chain_j=index_vec[j];
-                ylen=xyz_vec[chain_j].size();
-                if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
-                else if (a_opt==2 && xlen<TMcut*ylen)       continue;
-                else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
-                else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
-                else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
-                else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
-
-                if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
-                    TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
-                
-                NewArray(&ya, ylen, 3);
-                for (r=0;r<ylen;r++)
-                {
-                    ya[r][0]=xyz_vec[chain_j][r][0];
-                    ya[r][1]=xyz_vec[chain_j][r][1];
-                    ya[r][2]=xyz_vec[chain_j][r][2];
-                }
-
-                /* declare variable specific to this pair of HwRMSD */
-                double t0[3], u0[3][3];
-                double TM1, TM2;
-                double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
-                double d0_0, TM_0;
-                double d0A, d0B, d0u, d0a;
-                double d0_out=5.0;
-                string seqM, seqxA, seqyA;// for output alignment
-                double rmsd0 = 0.0;
-                int L_ali;                // Aligned length in standard_TMscore
-                double Liden=0;
-                double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
-                int n_ali=0;
-                int n_ali8=0;
-                int *invmap = new int[ylen+1];
-
-                /* entry function for structure alignment */
-                HwRMSD_main(
-                    xa, ya, &seq_vec[chain_i][0], &seq_vec[chain_j][0],
-                    &sec_vec[chain_i][0], &sec_vec[chain_j][0], t0, u0,
-                    TM1, TM2, TM3, TM4, TM5,
-                    d0_0, TM_0, d0A, d0B, d0u,
-                    d0a, d0_out, seqM, seqxA, seqyA,
-                    rmsd0, L_ali, Liden, TM_ali,
-                    rmsd_ali, n_ali, n_ali8, xlen, ylen,
-                    sequence, Lnorm_ass,
-                    d0_scale, i_opt,
-                    false, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
-                    invmap, glocal, iter_opt);
-
-                TM=TM3; // average length
-                if      (a_opt==1) TM=TM2; // shorter length
-                else if (a_opt==2) TM=TM1; // longer length
-                else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
-                else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
-                else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
-                else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
-
-                if (TM>=lb_HwRMSD)
-                    HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
-
-                /* clean up after each HwRMSD */
-                seqM.clear();
-                seqxA.clear();
-                seqyA.clear();
-                DeleteArray(&ya, ylen);
-                delete [] invmap;
-
-                /* if a good hit is guaranteed to be found, stop the loop */
-                if (TM>=ub_HwRMSD) break;
+                ya[r][0]=xyz_vec[chain_j][r][0];
+                ya[r][1]=xyz_vec[chain_j][r][1];
+                ya[r][2]=xyz_vec[chain_j][r][2];
             }
 
-            stable_sort(HwRMSDscore_list.begin(),HwRMSDscore_list.end(),
-                greater<pair<double,size_t> >());
+            /* declare variable specific to this pair of HwRMSD */
+            double t0[3], u0[3][3];
+            double TM1, TM2;
+            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+            double d0_0, TM_0;
+            double d0A, d0B, d0u, d0a;
+            double d0_out=5.0;
+            string seqM, seqxA, seqyA;// for output alignment
+            double rmsd0 = 0.0;
+            int L_ali;                // Aligned length in standard_TMscore
+            double Liden=0;
+            double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+            int n_ali=0;
+            int n_ali8=0;
+            int *invmap = new int[ylen+1];
 
-            int cur_repr_num_cutoff=min_repr_num;
-            if (xlen<=fast_lb) cur_repr_num_cutoff=max_repr_num;
-            else if (xlen>fast_lb && xlen<fast_ub) cur_repr_num_cutoff+=
-                (fast_ub-xlen)/(fast_ub-fast_lb)*(max_repr_num-min_repr_num);
+            /* entry function for structure alignment */
+            HwRMSD_main(
+                xa, ya, &seq_vec[chain_i][0], &seq_vec[chain_j][0],
+                &sec_vec[chain_i][0], &sec_vec[chain_j][0], t0, u0,
+                TM1, TM2, TM3, TM4, TM5,
+                d0_0, TM_0, d0A, d0B, d0u,
+                d0a, d0_out, seqM, seqxA, seqyA,
+                rmsd0, L_ali, Liden, TM_ali,
+                rmsd_ali, n_ali, n_ali8, xlen, ylen,
+                sequence, Lnorm_ass,
+                d0_scale, i_opt,
+                false, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
+                invmap, glocal, iter_opt);
 
-            index_vec.clear();
-            for (j=0;j<HwRMSDscore_list.size();j++)
-            {
-                TM=HwRMSDscore_list[j].first;
-                if ((TM<TMcut*0.5 && index_vec.size()>=cur_repr_num_cutoff)
-                  ||(TM<TMcut*0.4)) break;
-                chain_j=HwRMSDscore_list[j].second;
-                index_vec.push_back(chain_j);
-                cout<<"#"<<chain_j<<"\t"<<chainID_list[chain_j]<<"\t"
-                    <<setiosflags(ios::fixed)<<setprecision(4)<<TM<<endl;
-            }
-            cout<<index_vec.size()<<" out of "
-                <<HwRMSDscore_list.size()<<" entries"<<endl;
-            HwRMSDscore_list.clear();
+            TM=TM3; // average length
+            if      (a_opt==1) TM=TM2; // shorter length
+            else if (a_opt==2) TM=TM1; // longer length
+            else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
+            else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+            else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+            else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
+
+            Lave=sqrt(xlen*ylen); // geometry average because O(L1*L2)
+            if (TM>=lb_HwRMSD || Lave<=fast_lb)
+                HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
+
+            /* clean up after each HwRMSD */
+            seqM.clear();
+            seqxA.clear();
+            seqyA.clear();
+            DeleteArray(&ya, ylen);
+            delete [] invmap;
+
+            /* if a good hit is guaranteed to be found, stop the loop */
+            if (TM>=ub_HwRMSD) break;
+        }
+
+        stable_sort(HwRMSDscore_list.begin(),HwRMSDscore_list.end(),
+            greater<pair<double,size_t> >());
+
+        int cur_repr_num_cutoff=min_repr_num;
+        if (xlen<=fast_lb) cur_repr_num_cutoff=max_repr_num;
+        else if (xlen>fast_lb && xlen<fast_ub) cur_repr_num_cutoff+=
+            (fast_ub-xlen)/(fast_ub-fast_lb)*(max_repr_num-min_repr_num);
+
+        index_vec.clear();
+        for (j=0;j<HwRMSDscore_list.size();j++)
+        {
+            TM=HwRMSDscore_list[j].first;
+            chain_j=HwRMSDscore_list[j].second;
+            ylen=xyz_vec[chain_j].size();
+            Lave=sqrt(xlen*ylen); // geometry average because O(L1*L2)
+            if (Lave>fast_lb && TM<TMcut*0.5 && 
+                index_vec.size()>=cur_repr_num_cutoff) break;
+            index_vec.push_back(chain_j);
+            cout<<"#"<<chain_j<<"\t"<<chainID_list[chain_j]<<"\t"
+                <<setiosflags(ios::fixed)<<setprecision(4)<<TM<<endl;
+        }
+        cout<<index_vec.size()<<" out of "
+            <<HwRMSDscore_list.size()<<" entries"<<endl;
+        HwRMSDscore_list.clear();
 #endif
 
         found_clust=false;
