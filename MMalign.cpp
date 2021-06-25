@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
 
         t2 = clock();
         float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
-        printf("Total CPU time is %5.2f seconds\n", diff);
+        printf("#Total CPU time is %5.2f seconds\n", diff);
         return 0;
     }
 
@@ -675,6 +675,6 @@ int main(int argc, char *argv[])
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
-    printf("Total CPU time is %5.2f seconds\n", diff);
+    printf("#Total CPU time is %5.2f seconds\n", diff);
     return 0;
 }
