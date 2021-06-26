@@ -50,7 +50,7 @@ void print_help(bool h_opt=false)
 "    -TMcut   TM-score cutoff in the range of [0.45,1) for considering two\n"
 "             structures being similar. Default is 0.5.\n"
 "\n"
-"    -a       Which TM-score to use when aligning structures with different lengths?\n"
+"    -s       Which TM-score to use when aligning structures with different lengths?\n"
 "             1: the larger TM-score, i.e. normalized by shorter length\n"
 "             2: (default) the smaller TM-score, i.e. normalized by longer length\n"
 "             3: average of the two TM-scores\n"
@@ -90,11 +90,11 @@ void print_help(bool h_opt=false)
 }
 
 void filter_lower_bound(double &lb_HwRMSD, double &lb_TMfast, 
-    const double TMcut, const int a_opt,const int mol_type)
+    const double TMcut, const int s_opt,const int mol_type)
 {
     lb_HwRMSD=0.5*TMcut;
     lb_TMfast=0.9*TMcut;
-    if (a_opt<=1)
+    if (s_opt<=1)
     {
         if (mol_type>0) // RNA
         {
@@ -130,7 +130,8 @@ int main(int argc, char *argv[])
 
     bool h_opt = false; // print full help message
     int  i_opt = 0;     // 3 for -I, stick to user given alignment
-    int  a_opt = 2;    // flag for -a, normalized by longer length
+    int  a_opt = 0;     // flag for -a, do not normalized by average length
+    int  s_opt = 2;     // flag for -s, normalized by longer length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
 
@@ -166,11 +167,15 @@ int main(int argc, char *argv[])
         {
             fname_clust = argv[i + 1]; i++;
         }
-        else if ( !strcmp(argv[i],"-a") && i < (argc-1) )
+        else if ( !strcmp(argv[i],"-a") && i < (argc-1))
         {
-            a_opt=atoi(argv[i + 1]); i++;
-            if (a_opt<1 || a_opt>6)
-                PrintErrorAndQuit("-a must be within 1 to 6");
+            PrintErrorAndQuit("Sorry! -a is not used for clustering");
+        }
+        else if ( !strcmp(argv[i],"-s") && i < (argc-1) )
+        {
+            s_opt=atoi(argv[i + 1]); i++;
+            if (s_opt<1 || s_opt>6)
+                PrintErrorAndQuit("-s must be within 1 to 6");
         }
         else if ( !strcmp(argv[i],"-h") )
         {
@@ -289,6 +294,9 @@ int main(int argc, char *argv[])
     double lb_HwRMSD=0.5*TMcut;
     double ub_TMfast=0.90*TMcut+0.10;
     double lb_TMfast=0.9*TMcut;
+    if      (s_opt==2 || s_opt==4 || s_opt==5) a_opt=-2; // normalized by longer length, i.e. smaller TM
+    else if (s_opt==1 || s_opt==5) a_opt=-1; // normalized by shorter length, i.e. larger TM
+    else if (s_opt==3) a_opt= 1; // normalized by average length
 
 #ifdef TMalign_HwRMSD_h
     /* These parameters controls HwRMSD filter. iter_opt typically should be
@@ -422,11 +430,11 @@ int main(int argc, char *argv[])
             chain_j=clust_repr_vec[j-1];
             ylen=xyz_vec[chain_j].size();
             if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
-            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
-            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
-            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
-            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
-            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+            else if (s_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (s_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (s_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (s_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (s_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
             index_vec.push_back(chain_j);
         }
         sizePROT=index_vec.size();
@@ -444,14 +452,14 @@ int main(int argc, char *argv[])
             chain_j=index_vec[j];
             ylen=xyz_vec[chain_j].size();
             if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
-            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
-            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
-            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
-            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
-            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+            else if (s_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (s_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (s_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (s_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (s_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
 
-            if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
-                TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
+            if (s_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
+                TMcut, s_opt, mol_vec[chain_i]+mol_vec[chain_j]);
             
             NewArray(&ya, ylen, 3);
             for (r=0;r<ylen;r++)
@@ -464,7 +472,7 @@ int main(int argc, char *argv[])
             /* declare variable specific to this pair of HwRMSD */
             double t0[3], u0[3][3];
             double TM1, TM2;
-            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+            double TM3, TM4, TM5;     // for s_opt, u_opt, d_opt
             double d0_0, TM_0;
             double d0A, d0B, d0u, d0a;
             double d0_out=5.0;
@@ -488,16 +496,16 @@ int main(int argc, char *argv[])
                 rmsd_ali, n_ali, n_ali8, xlen, ylen,
                 sequence, Lnorm_ass,
                 d0_scale, i_opt,
-                false, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
+                a_opt, u_opt, d_opt, mol_vec[chain_i]+mol_vec[chain_j],
                 invmap, glocal, iter_opt);
 
             TM=TM3; // average length
-            if      (a_opt==1) TM=TM2; // shorter length
-            else if (a_opt==2) TM=TM1; // longer length
-            else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
-            else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
-            else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
-            else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
+            if      (s_opt==1) TM=TM2; // shorter length
+            else if (s_opt==2) TM=TM1; // longer length
+            else if (s_opt==3) TM=(TM1+TM2)/2;     // average TM
+            else if (s_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+            else if (s_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+            else if (s_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
             Lave=sqrt(xlen*ylen); // geometry average because O(L1*L2)
             if (TM>=lb_HwRMSD || Lave<=fast_lb)
@@ -546,13 +554,13 @@ int main(int argc, char *argv[])
             chain_j=index_vec[j];
             ylen=xyz_vec[chain_j].size();
             if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
-            else if (a_opt==2 && xlen<TMcut*ylen)       continue;
-            else if (a_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
-            else if (a_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
-            else if (a_opt==5 && xlen<TMcut*TMcut*ylen) continue;
-            else if (a_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
-            if (a_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast,
-                TMcut, a_opt, mol_vec[chain_i]+mol_vec[chain_j]);
+            else if (s_opt==2 && xlen<TMcut*ylen)       continue;
+            else if (s_opt==3 && xlen<(2*TMcut-1)*ylen) continue;
+            else if (s_opt==4 && xlen*(2/TMcut-1)<ylen) continue;
+            else if (s_opt==5 && xlen<TMcut*TMcut*ylen) continue;
+            else if (s_opt==6 && xlen*xlen<(2*TMcut*TMcut-1)*ylen*ylen) continue;
+            if (s_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast,
+                TMcut, s_opt, mol_vec[chain_i]+mol_vec[chain_j]);
 
             NewArray(&ya, ylen, 3);
             for (r=0;r<ylen;r++)
@@ -568,7 +576,7 @@ int main(int argc, char *argv[])
             /* declare variable specific to this pair of TMalign */
             double t0[3], u0[3][3];
             double TM1, TM2;
-            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+            double TM3, TM4, TM5;     // for s_opt, u_opt, d_opt
             double d0_0, TM_0;
             double d0A, d0B, d0u, d0a;
             double d0_out=5.0;
@@ -589,10 +597,9 @@ int main(int argc, char *argv[])
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                i_opt, false, u_opt, d_opt, overwrite_fast_opt,
+                i_opt, a_opt, u_opt, d_opt, overwrite_fast_opt,
                 mol_vec[chain_i]+mol_vec[chain_j],TMcut);
 
-            //if (false)
             cout<<status<<'\t'<<chainID_list[chain_j]<<'\t'
                 <<setiosflags(ios::fixed)<<setprecision(4)
                 <<TM2<<'\t'<<TM1<<'\t'<<overwrite_fast_opt<<endl;
@@ -602,12 +609,12 @@ int main(int argc, char *argv[])
             seqyA.clear();
 
             double TM=TM3; // average length
-            if      (a_opt==1) TM=TM2; // shorter length
-            else if (a_opt==2) TM=TM1; // longer length
-            else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
-            else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
-            else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
-            else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
+            if      (s_opt==1) TM=TM2; // shorter length
+            else if (s_opt==2) TM=TM1; // longer length
+            else if (s_opt==3) TM=(TM1+TM2)/2;     // average TM
+            else if (s_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+            else if (s_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+            else if (s_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
 
             if (TM<lb_TMfast || 
                (TM<TMcut && (fast_opt || overwrite_fast_opt==false)))
@@ -635,7 +642,7 @@ int main(int argc, char *argv[])
                     seqM, seqxA, seqyA,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                    i_opt, false, u_opt, d_opt, false,
+                    i_opt, a_opt, u_opt, d_opt, false,
                     mol_vec[chain_i]+mol_vec[chain_j],TMcut);
                 seqM.clear();
                 seqxA.clear();
@@ -643,12 +650,12 @@ int main(int argc, char *argv[])
                 DeleteArray(&ya, ylen);
                 
                 TM=TM3;                // average length
-                if      (a_opt==1) TM=TM2; // shorter length
-                else if (a_opt==2) TM=TM1; // longer length
-                else if (a_opt==3) TM=(TM1+TM2)/2;     // average TM
-                else if (a_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
-                else if (a_opt==5) TM=sqrt(TM1*TM2);   // geometric average
-                else if (a_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
+                if      (s_opt==1) TM=TM2; // shorter length
+                else if (s_opt==2) TM=TM1; // longer length
+                else if (s_opt==3) TM=(TM1+TM2)/2;     // average TM
+                else if (s_opt==4) TM=2/(1/TM1+1/TM2); // harmonic average
+                else if (s_opt==5) TM=sqrt(TM1*TM2);   // geometric average
+                else if (s_opt==6) TM=sqrt((TM1*TM1+TM2*TM2)/2); // root mean square
                 cout<<"*\t"<<chainID_list[chain_j]<<'\t'<<TM2<<'\t'<<TM1<<endl;
                 if (TM>=TMcut)
                 {
