@@ -1,7 +1,10 @@
 #include "TMalign.h"
 
 /* entry function for se
- * outfmt_opt>=2 should not parse sequence alignment */
+ * outfmt_opt>=2 should not parse sequence alignment 
+ * u_opt corresponds to option -L
+ *       if u_opt==2, use d0 from Lnorm_ass for alignment
+ * */
 int se_main(
     double **xa, double **ya, const char *seqx, const char *seqy,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -12,7 +15,7 @@ int se_main(
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen, const vector<string> &sequence,
     const double Lnorm_ass, const double d0_scale, const bool i_opt,
-    const bool a_opt, const bool u_opt, const bool d_opt, const int mol_type,
+    const bool a_opt, const int u_opt, const bool d_opt, const int mol_type,
     const int outfmt_opt, int *invmap)
 {
     double D0_MIN;        //for d0
@@ -50,8 +53,15 @@ int se_main(
         parameter_set4final((xlen+ylen)*0.5, D0_MIN, Lnorm,
             d0a, d0_search, mol_type); // set d0a
     if (u_opt)
+    {
         parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
             d0u, d0_search, mol_type); // set d0u
+        if (u_opt==2)
+        {
+            parameter_set4search(Lnorm_ass, Lnorm_ass, D0_MIN, Lnorm,
+                score_d8, d0, d0_search, dcu0); // set score_d8
+        }
+    }
 
     /* perform alignment */
     for(int j=0; j<ylen; j++) invmap[j]=-1;

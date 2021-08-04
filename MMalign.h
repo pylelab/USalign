@@ -823,8 +823,7 @@ double MMalign_search(
     const vector<int> &mol_vec1, const vector<int> &mol_vec2,
     const vector<int> &xlen_vec, const vector<int> &ylen_vec,
     double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
-    int len_aa, int len_na, int chain1_num, int chain2_num,
-    double **TM1_mat, double **TM2_mat, double **TMave_mat,
+    int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
     double d0_scale, bool fast_opt)
@@ -892,8 +891,7 @@ double MMalign_search(
         xlen=xlen_vec[i];
         if (xlen<3)
         {
-            for (j=0;j<chain2_num;j++)
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=-1;
             continue;
         }
         seqx = new char[xlen+1];
@@ -910,14 +908,14 @@ double MMalign_search(
         {
             if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
             {
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
 
             ylen=ylen_vec[j];
             if (ylen<3)
             {
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
             seqy = new char[ylen+1];
@@ -943,16 +941,14 @@ double MMalign_search(
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                0, false, true, false,
-                mol_vec1[i]+mol_vec2[j], 1, invmap);
+                0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
 
             /* print result */
-            TM1_mat[i][j]=TM2; // normalized by chain1
-            TM2_mat[i][j]=TM1; // normalized by chain2
             seqxA_mat[i][j]=seqxA;
             seqyA_mat[i][j]=seqyA;
 
             TMave_mat[i][j]=TM4*Lnorm_ass;
+            if (assign1_list[i]==j) total_score+=TMave_mat[i][j];
 
             /* clean up */
             seqM.clear();
@@ -983,7 +979,7 @@ void MMalign_final(
     const vector<int> &xlen_vec, const vector<int> &ylen_vec,
     double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
     int len_aa, int len_na, int chain1_num, int chain2_num,
-    double **TM1_mat, double **TM2_mat, double **TMave_mat,
+    double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqM_mat,
     vector<vector<string> >&seqyA_mat, int *assign1_list, int *assign2_list,
     vector<string>&sequence, const double d0_scale, const bool m_opt,
@@ -1131,7 +1127,7 @@ void MMalign_final(
         ylen=ylen_vec[j];
         if (ylen<3)
         {
-            TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+            TMave_mat[i][j]=-1;
             continue;
         }
         seqy = new char[ylen+1];
@@ -1158,7 +1154,7 @@ void MMalign_final(
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass, d0_scale,
-            1, a_opt, true, d_opt, mol_vec1[i]+mol_vec2[j], 1, invmap);
+            1, a_opt, 2, d_opt, mol_vec1[i]+mol_vec2[j], 1, invmap);
 
         //TM2=TM4*Lnorm_ass/xlen;
         //TM1=TM4*Lnorm_ass/ylen;

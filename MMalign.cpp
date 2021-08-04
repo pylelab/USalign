@@ -447,13 +447,9 @@ int main(int argc, char *argv[])
     /* declare TM-score tables */
     int chain1_num=xa_vec.size();
     int chain2_num=ya_vec.size();
-    double **TM1_mat;
-    double **TM2_mat;
     double **TMave_mat;
     double **ut_mat; // rotation matrices for all-against-all alignment
     int ui,uj,ut_idx;
-    NewArray(&TM1_mat,chain1_num,chain2_num);
-    NewArray(&TM2_mat,chain1_num,chain2_num);
     NewArray(&TMave_mat,chain1_num,chain2_num);
     NewArray(&ut_mat,chain1_num*chain2_num,4*3);
     vector<string> tmp_str_vec(chain2_num,"");
@@ -468,8 +464,7 @@ int main(int argc, char *argv[])
         xlen=xlen_vec[i];
         if (xlen<3)
         {
-            for (j=0;j<chain2_num;j++)
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=-1;
             continue;
         }
         seqx = new char[xlen+1];
@@ -489,14 +484,14 @@ int main(int argc, char *argv[])
 
             if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
             {
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
 
             ylen=ylen_vec[j];
             if (ylen<3)
             {
-                TM1_mat[i][j]=TM2_mat[i][j]=TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
             seqy = new char[ylen+1];
@@ -537,8 +532,6 @@ int main(int argc, char *argv[])
             for (ui=0;ui<3;ui++)
                 for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=u0[ui][uj];
             for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
-            TM1_mat[i][j]=TM2; // normalized by chain1
-            TM2_mat[i][j]=TM1; // normalized by chain2
             seqxA_mat[i][j]=seqxA;
             seqyA_mat[i][j]=seqyA;
             TMave_mat[i][j]=TM4*Lnorm_tmp;
@@ -620,17 +613,22 @@ int main(int argc, char *argv[])
     if (len_aa+len_na>1000) fast_opt=true;
 
     /* perform iterative alignment */
-    for (int iter=0;iter<1;iter++)
+    double max_total_score=0; // ignore old total_score because previous
+                              // total score was based on monomeric chain
+                              // superpositions
+    for (int iter=0;iter<10;iter++)
     {
         total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
             secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
             xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
-            chain1_num, chain2_num, TM1_mat, TM2_mat, TMave_mat,
+            chain1_num, chain2_num, TMave_mat,
             seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
             d0_scale, true);
         total_score=enhanced_greedy_search(TMave_mat, assign1_list,
             assign2_list, chain1_num, chain2_num);
         if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
+        if (total_score>max_total_score) max_total_score=total_score;
+        else break;
     }
 
     /* final alignment */
@@ -641,7 +639,7 @@ int main(int argc, char *argv[])
         xa_vec, ya_vec, seqx_vec, seqy_vec,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
-        chain1_num, chain2_num, TM1_mat, TM2_mat, TMave_mat,
+        chain1_num, chain2_num, TMave_mat,
         seqxA_mat, seqM_mat, seqyA_mat, assign1_list, assign2_list, sequence,
         d0_scale, m_opt, o_opt, outfmt_opt, ter_opt, split_opt,
         a_opt, d_opt, fast_opt, full_opt, mirror_opt, resi_vec1, resi_vec2);
@@ -649,8 +647,6 @@ int main(int argc, char *argv[])
     /* clean up everything */
     delete [] assign1_list;
     delete [] assign2_list;
-    DeleteArray(&TM1_mat,  chain1_num);
-    DeleteArray(&TM2_mat,  chain1_num);
     DeleteArray(&TMave_mat,chain1_num);
     DeleteArray(&ut_mat,   chain1_num*chain2_num);
     vector<vector<string> >().swap(seqxA_mat);
