@@ -690,28 +690,21 @@ int MMalign(const string &xname, const string &yname,
         DeleteArray(&xcentroids, chain1_num);
         DeleteArray(&ycentroids, chain2_num);
     }
-    if (len_aa+len_na>1000) fast_opt=true;
 
     /* perform iterative alignment */
+    if (len_aa+len_na>500) fast_opt=true;
     double max_total_score=0; // ignore old total_score because previous
-                              // total score was based on monomeric chain
-                              // superpositions
-    for (int iter=0;iter<10;iter++)
-    {
-        total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
-            secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
-            xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
-            chain1_num, chain2_num, TMave_mat,
-            seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-            d0_scale, true);
-        total_score=enhanced_greedy_search(TMave_mat, assign1_list,
-            assign2_list, chain1_num, chain2_num);
-        if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
-        if (total_score>max_total_score) max_total_score=total_score;
-        else break;
-    }
+                              // score was from monomeric chain superpositions
+    int max_iter=5-(int)((len_aa+len_na)/200);
+    if (max_iter<2) max_iter=2;
+    MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+        TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+        d0_scale, fast_opt);
 
     /* final alignment */
+    if (len_aa+len_na>1000) fast_opt=true;
     if (outfmt_opt==0) print_version();
     MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,

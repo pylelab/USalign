@@ -776,6 +776,7 @@ int copy_chain_pair_data(
     int *assign1_list, int *assign2_list, vector<string>&sequence)
 {
     int i,j,r;
+    for (i=0;i<sequence.size();i++) sequence[i].clear();
     sequence.clear();
     sequence.push_back("");
     sequence.push_back("");
@@ -826,7 +827,7 @@ double MMalign_search(
     int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool fast_opt)
+    double d0_scale, bool fast_opt, const int i_opt=3)
 {
     double total_score=0;
     int i,j;
@@ -875,7 +876,7 @@ double MMalign_search(
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-        3, false, true, false, fast_opt, mol_type, -1);
+        i_opt, false, true, false, fast_opt, mol_type, -1);
 
     /* clean up */
     delete [] seqx;
@@ -1187,4 +1188,134 @@ void MMalign_final(
     }
     sequence.clear();
     return;
+}
+
+void copy_chain_assign_data(int chain1_num, int chain2_num,
+    vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
+    int *assign1_list, int *assign2_list, double **TMave_mat,
+    vector<vector<string> >&seqxA_tmp, vector<vector<string> >&seqyA_tmp,
+    int *assign1_tmp,  int *assign2_tmp,  double **TMave_tmp)
+{
+    int i,j;
+    for (i=0;i<chain1_num;i++) assign1_tmp[i]=assign1_list[i];
+    for (i=0;i<chain2_num;i++) assign2_tmp[i]=assign2_list[i];
+    for (i=0;i<chain1_num;i++)
+    {
+        for (j=0;j<chain2_num;j++)
+        {
+            seqxA_tmp[i][j]=seqxA_mat[i][j];
+            seqyA_tmp[i][j]=seqyA_mat[i][j];
+            TMave_tmp[i][j]=TMave_mat[i][j];
+        }
+    }
+    return;
+}
+
+void MMalign_iter(double & max_total_score, const int max_iter,
+    const vector<vector<vector<double> > >&xa_vec,
+    const vector<vector<vector<double> > >&ya_vec,
+    const vector<vector<char> >&seqx_vec, const vector<vector<char> >&seqy_vec,
+    const vector<vector<char> >&secx_vec, const vector<vector<char> >&secy_vec,
+    const vector<int> &mol_vec1, const vector<int> &mol_vec2,
+    const vector<int> &xlen_vec, const vector<int> &ylen_vec,
+    double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
+    int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
+    vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
+    int *assign1_list, int *assign2_list, vector<string>&sequence,
+    double d0_scale, bool fast_opt)
+{
+    /* tmp assignment */
+    double total_score;
+    int *assign1_tmp, *assign2_tmp;
+    assign1_tmp=new int[chain1_num];
+    assign2_tmp=new int[chain2_num];
+    double **TMave_tmp;
+    NewArray(&TMave_tmp,chain1_num,chain2_num);
+    vector<string> tmp_str_vec(chain2_num,"");
+    vector<vector<string> >seqxA_tmp(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_tmp(chain1_num,tmp_str_vec);
+    copy_chain_assign_data(chain1_num, chain2_num,
+        seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
+        seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp);
+    
+    for (int iter=0;iter<max_iter;iter++)
+    {
+        total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
+            secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+            xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
+            chain1_num, chain2_num, 
+            TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp,
+            sequence, d0_scale, fast_opt);
+        total_score=enhanced_greedy_search(TMave_tmp, assign1_tmp,
+            assign2_tmp, chain1_num, chain2_num);
+        if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
+        if (total_score<=max_total_score) break;
+        max_total_score=total_score;
+        copy_chain_assign_data(chain1_num, chain2_num,
+            seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
+            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
+    }
+
+    /* clean up everything */
+    delete [] assign1_tmp;
+    delete [] assign2_tmp;
+    DeleteArray(&TMave_tmp,chain1_num);
+    vector<string>().swap(tmp_str_vec);
+    vector<vector<string> >().swap(seqxA_tmp);
+    vector<vector<string> >().swap(seqyA_tmp);
+}
+
+void MMalign_cross(double & max_total_score, const int max_iter,
+    const vector<vector<vector<double> > >&xa_vec,
+    const vector<vector<vector<double> > >&ya_vec,
+    const vector<vector<char> >&seqx_vec, const vector<vector<char> >&seqy_vec,
+    const vector<vector<char> >&secx_vec, const vector<vector<char> >&secy_vec,
+    const vector<int> &mol_vec1, const vector<int> &mol_vec2,
+    const vector<int> &xlen_vec, const vector<int> &ylen_vec,
+    double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
+    int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
+    vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
+    int *assign1_list, int *assign2_list, vector<string>&sequence,
+    double d0_scale, bool fast_opt)
+{
+    /* tmp assignment */
+    int *assign1_tmp, *assign2_tmp;
+    assign1_tmp=new int[chain1_num];
+    assign2_tmp=new int[chain2_num];
+    double **TMave_tmp;
+    NewArray(&TMave_tmp,chain1_num,chain2_num);
+    vector<string> tmp_str_vec(chain2_num,"");
+    vector<vector<string> >seqxA_tmp(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_tmp(chain1_num,tmp_str_vec);
+    copy_chain_assign_data(chain1_num, chain2_num,
+        seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
+        seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp);
+
+    double total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
+        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+        TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp, sequence,
+        d0_scale, fast_opt, 0);
+    if (total_score>max_total_score)
+    {
+        copy_chain_assign_data(chain1_num, chain2_num,
+            seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
+            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
+        max_total_score=total_score;
+    }
+
+    if (max_iter) MMalign_iter(
+        max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+        TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+        d0_scale, fast_opt);
+
+    /* clean up everything */
+    delete [] assign1_tmp;
+    delete [] assign2_tmp;
+    DeleteArray(&TMave_tmp,chain1_num);
+    vector<string>().swap(tmp_str_vec);
+    vector<vector<string> >().swap(seqxA_tmp);
+    vector<vector<string> >().swap(seqyA_tmp);
 }
