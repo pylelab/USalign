@@ -1248,7 +1248,7 @@ void MMalign_iter(double & max_total_score, const int max_iter,
             sequence, d0_scale, fast_opt);
         total_score=enhanced_greedy_search(TMave_tmp, assign1_tmp,
             assign2_tmp, chain1_num, chain2_num);
-        if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
+        //if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
         if (total_score<=max_total_score) break;
         max_total_score=total_score;
         copy_chain_assign_data(chain1_num, chain2_num,

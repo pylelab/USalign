@@ -703,6 +703,16 @@ int MMalign(const string &xname, const string &yname,
         TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
         d0_scale, fast_opt);
 
+    /* perform cross chain alignment
+     * MMalign_cross is skipped because it increase time by 50% (even if max_iter=1
+     * above) and do not give significant TM-score improvement */
+    if (max_total_score==0) MMalign_cross(
+        max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+        TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+        d0_scale, true);
+
     /* final alignment */
     if (len_aa+len_na>1000) fast_opt=true;
     if (outfmt_opt==0) print_version();
