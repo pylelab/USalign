@@ -704,9 +704,8 @@ int MMalign(const string &xname, const string &yname,
         d0_scale, fast_opt);
 
     /* perform cross chain alignment
-     * MMalign_cross is skipped because it increase time by 50% (even if max_iter=1
-     * above) and do not give significant TM-score improvement */
-    if (max_total_score==0) MMalign_cross(
+     * in some cases, this leads to dramatic improvement, esp for homodimer */
+    MMalign_cross(
         max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
