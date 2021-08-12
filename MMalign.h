@@ -170,6 +170,16 @@ bool adjust_dimer_assignment(
     return total_score1<total_score2;
 }
 
+/* count how many chains are paired */
+int count_assign_pair(int *assign1_list,const int chain1_num)
+{
+    int pair_num=0;
+    int i;
+    for (i=0;i<chain1_num;i++) pair_num+=(assign1_list[i]>=0);
+    return pair_num;
+}
+
+
 /* assign chain-chain correspondence */
 double enhanced_greedy_search(double **TMave_mat,int *assign1_list,
     int *assign2_list, const int chain1_num, const int chain2_num)
@@ -1190,13 +1200,18 @@ void MMalign_final(
     return;
 }
 
-void copy_chain_assign_data(int chain1_num, int chain2_num,
+void copy_chain_assign_data(int chain1_num, int chain2_num, 
+    vector<string> &sequence,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, double **TMave_mat,
     vector<vector<string> >&seqxA_tmp, vector<vector<string> >&seqyA_tmp,
     int *assign1_tmp,  int *assign2_tmp,  double **TMave_tmp)
 {
     int i,j;
+    for (i=0;i<sequence.size();i++) sequence[i].clear();
+    sequence.clear();
+    sequence.push_back("");
+    sequence.push_back("");
     for (i=0;i<chain1_num;i++) assign1_tmp[i]=assign1_list[i];
     for (i=0;i<chain2_num;i++) assign2_tmp[i]=assign2_list[i];
     for (i=0;i<chain1_num;i++)
@@ -1206,6 +1221,11 @@ void copy_chain_assign_data(int chain1_num, int chain2_num,
             seqxA_tmp[i][j]=seqxA_mat[i][j];
             seqyA_tmp[i][j]=seqyA_mat[i][j];
             TMave_tmp[i][j]=TMave_mat[i][j];
+            if (assign1_list[i]==j)
+            {
+                sequence[0]+=seqxA_mat[i][j];
+                sequence[1]+=seqyA_mat[i][j];
+            }
         }
     }
     return;
@@ -1234,7 +1254,8 @@ void MMalign_iter(double & max_total_score, const int max_iter,
     vector<string> tmp_str_vec(chain2_num,"");
     vector<vector<string> >seqxA_tmp(chain1_num,tmp_str_vec);
     vector<vector<string> >seqyA_tmp(chain1_num,tmp_str_vec);
-    copy_chain_assign_data(chain1_num, chain2_num,
+    vector<string> sequence_tmp;
+    copy_chain_assign_data(chain1_num, chain2_num, sequence_tmp,
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp);
     
@@ -1251,7 +1272,7 @@ void MMalign_iter(double & max_total_score, const int max_iter,
         //if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
         if (total_score<=max_total_score) break;
         max_total_score=total_score;
-        copy_chain_assign_data(chain1_num, chain2_num,
+        copy_chain_assign_data(chain1_num, chain2_num, sequence,
             seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
             seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
     }
@@ -1287,18 +1308,19 @@ void MMalign_cross(double & max_total_score, const int max_iter,
     vector<string> tmp_str_vec(chain2_num,"");
     vector<vector<string> >seqxA_tmp(chain1_num,tmp_str_vec);
     vector<vector<string> >seqyA_tmp(chain1_num,tmp_str_vec);
-    copy_chain_assign_data(chain1_num, chain2_num,
+    vector<string> sequence_tmp;
+    copy_chain_assign_data(chain1_num, chain2_num, sequence_tmp,
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp);
 
     double total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
-        TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp, sequence,
-        d0_scale, fast_opt, 0);
+        TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp, sequence_tmp,
+        d0_scale, fast_opt, 1);
     if (total_score>max_total_score)
     {
-        copy_chain_assign_data(chain1_num, chain2_num,
+        copy_chain_assign_data(chain1_num, chain2_num, sequence,
             seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
             seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
         max_total_score=total_score;
