@@ -536,7 +536,9 @@ int MMalign(const string &xname, const string &yname,
     vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
     vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
     vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
-    tmp_str_vec.clear();
+
+    double maxTMmono=-1;
+    int maxTMmono_i,maxTMmono_j;
 
     /* get all-against-all alignment */
     for (i=0;i<chain1_num;i++)
@@ -615,6 +617,12 @@ int MMalign(const string &xname, const string &yname,
             seqxA_mat[i][j]=seqxA;
             seqyA_mat[i][j]=seqyA;
             TMave_mat[i][j]=TM4*Lnorm_tmp;
+            if (TMave_mat[i][j]>maxTMmono)
+            {
+                maxTMmono=TMave_mat[i][j];
+                maxTMmono_i=i;
+                maxTMmono_j=j;
+            }
 
             /* clean up */
             seqM.clear();
@@ -691,6 +699,20 @@ int MMalign(const string &xname, const string &yname,
         DeleteArray(&ycentroids, chain2_num);
     }
 
+    /* store initial assignment */
+    int init_pair_num=count_assign_pair(assign1_list,chain1_num);
+    int *assign1_init, *assign2_init;
+    assign1_init=new int[chain1_num];
+    assign2_init=new int[chain2_num];
+    double **TMave_init;
+    NewArray(&TMave_init,chain1_num,chain2_num);
+    vector<vector<string> >seqxA_init(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_init(chain1_num,tmp_str_vec);
+    vector<string> sequence_init;
+    copy_chain_assign_data(chain1_num, chain2_num, sequence_init,
+        seqxA_mat,  seqyA_mat,  assign1_list, assign2_list, TMave_mat,
+        seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init);
+
     /* perform iterative alignment */
     if (len_aa+len_na>500) fast_opt=true;
     double max_total_score=0; // ignore old total_score because previous
@@ -703,14 +725,53 @@ int MMalign(const string &xname, const string &yname,
         TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
         d0_scale, fast_opt);
 
+    /* sometime MMalign_iter is even worse than monomer alignment */
+    if (max_total_score<maxTMmono)
+    {
+        copy_chain_assign_data(chain1_num, chain2_num, sequence,
+            seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init,
+            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
+        for (i=0;i<chain1_num;i++)
+        {
+            if (i!=maxTMmono_i) assign1_list[i]=-1;
+            else assign1_list[i]=maxTMmono_j;
+        }
+        for (j=0;j<chain2_num;j++)
+        {
+            if (j!=maxTMmono_j) assign2_list[j]=-1;
+            else assign2_list[j]=maxTMmono_i;
+        }
+        sequence[0]=seqxA_mat[maxTMmono_i][maxTMmono_j];
+        sequence[1]=seqyA_mat[maxTMmono_i][maxTMmono_j];
+        max_total_score=maxTMmono;
+        MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+            secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+            xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+            TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+            d0_scale, fast_opt);
+    }
+
     /* perform cross chain alignment
      * in some cases, this leads to dramatic improvement, esp for homodimer */
+    int iter_pair_num=count_assign_pair(assign1_list,chain1_num);
+    if (iter_pair_num>=init_pair_num) copy_chain_assign_data(
+        chain1_num, chain2_num, sequence_init,
+        seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
+        seqxA_init, seqyA_init, assign1_init,  assign2_init,  TMave_init);
+    double max_total_score_cross=max_total_score;
     MMalign_cross(
-        max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+        max_total_score_cross, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
-        TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+        TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init, sequence_init,
         d0_scale, true);
+    if (max_total_score_cross>max_total_score) 
+    {
+        max_total_score=max_total_score_cross;
+        copy_chain_assign_data(chain1_num, chain2_num, sequence,
+            seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init,
+            seqxA_mat,  seqyA_mat,  assign1_list, assign2_list, TMave_mat);
+    } 
 
     /* final alignment */
     if (len_aa+len_na>1000) fast_opt=true;
@@ -734,6 +795,13 @@ int MMalign(const string &xname, const string &yname,
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqM_mat);
     vector<vector<string> >().swap(seqyA_mat);
+    vector<string>().swap(tmp_str_vec);
+
+    delete [] assign1_init;
+    delete [] assign2_init;
+    DeleteArray(&TMave_init,chain1_num);
+    vector<vector<string> >().swap(seqxA_init);
+    vector<vector<string> >().swap(seqyA_init);
 
     vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
     vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
