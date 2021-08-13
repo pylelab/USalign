@@ -461,6 +461,7 @@ int main(int argc, char *argv[])
     int maxTMmono_i,maxTMmono_j;
 
     /* get all-against-all alignment */
+    if (len_aa+len_na>500) fast_opt=true;
     for (i=0;i<chain1_num;i++)
     {
         xlen=xlen_vec[i];
@@ -527,7 +528,7 @@ int main(int argc, char *argv[])
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_tmp, d0_scale,
-                0, false, true, false, true,
+                0, false, true, false, fast_opt,
                 mol_vec1[i]+mol_vec2[j],TMcut);
 
             /* store result */
@@ -634,7 +635,6 @@ int main(int argc, char *argv[])
         seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init);
 
     /* perform iterative alignment */
-    if (len_aa+len_na>500) fast_opt=true;
     double max_total_score=0; // ignore old total_score because previous
                               // score was from monomeric chain superpositions
     int max_iter=5-(int)((len_aa+len_na)/200);
