@@ -1,3 +1,4 @@
+#include <cfloat>
 #include "se.h"
 
 /* count the number of nucleic acid chains (na_chain_num) and
@@ -969,6 +970,7 @@ double MMalign_search(
             delete[]seqy;
             delete[]secy;
             DeleteArray(&ya,ylen);
+            delete[]invmap;
         }
         delete[]seqx;
         delete[]secx;
@@ -1195,6 +1197,7 @@ void MMalign_final(
         delete[]secx;
         DeleteArray(&xa,xlen);
         DeleteArray(&xt,xlen);
+        delete[]invmap;
     }
     sequence.clear();
     return;
@@ -1340,4 +1343,128 @@ void MMalign_cross(double & max_total_score, const int max_iter,
     vector<string>().swap(tmp_str_vec);
     vector<vector<string> >().swap(seqxA_tmp);
     vector<vector<string> >().swap(seqyA_tmp);
+}
+
+/* return the number of chains that are trimmed */
+int trimComplex(vector<vector<vector<double> > >&a_trim_vec,
+    vector<vector<char> >&seq_trim_vec, vector<vector<char> >&sec_trim_vec,
+    vector<int>&len_trim_vec,
+    const vector<vector<vector<double> > >&a_vec,
+    const vector<vector<char> >&seq_vec, const vector<vector<char> >&sec_vec,
+    const vector<int> &len_vec, const vector<int> &mol_vec,
+    const int Lchain_aa_max, const int Lchain_na_max)
+{
+    int trim_chain_count=0;
+    int chain_num=a_vec.size();
+    int i,j;
+    int r1,r2;
+    double dinter;
+    double dinter_min;
+    vector<pair<double,int> >dinter_vec;
+    vector<bool> include_vec;
+    vector<char> seq_empty;
+    vector<vector<double> >  a_empty;
+    vector<double> xcoor(3,0);
+    vector<double> ycoor(3,0);
+    int xlen,ylen;
+    int Lchain_max;
+    double expand=2;
+    for (i=0;i<chain_num;i++)
+    {
+        xlen=len_vec[i];
+        if (mol_vec[i]>0) Lchain_max=Lchain_na_max*expand;
+        else              Lchain_max=Lchain_aa_max*expand;
+        if (Lchain_max<3) Lchain_max=3;
+        if (xlen<=Lchain_max || xlen<=3)
+        {
+            a_trim_vec.push_back(a_vec[i]);
+            seq_trim_vec.push_back(seq_vec[i]);
+            sec_trim_vec.push_back(sec_vec[i]);
+            len_trim_vec.push_back(xlen);
+            continue;
+        }
+        trim_chain_count++;
+        for (r1=0;r1<xlen;r1++)
+        {
+            xcoor[0]=a_vec[i][r1][0];
+            xcoor[1]=a_vec[i][r1][1];
+            xcoor[2]=a_vec[i][r1][2];
+            dinter_min=FLT_MAX;
+            for (j=0;j<chain_num;j++)
+            {
+                if (i==j) continue;
+                ylen=len_vec[j];
+                for (r2=0;r2<ylen;r2++)
+                {
+                    ycoor[0]=a_vec[j][r2][0];
+                    ycoor[1]=a_vec[j][r2][1];
+                    ycoor[2]=a_vec[j][r2][2];
+                    dinter=(xcoor[0]-ycoor[0])*(xcoor[0]-ycoor[0])+
+                           (xcoor[1]-ycoor[1])*(xcoor[1]-ycoor[1])+
+                           (xcoor[2]-ycoor[2])*(xcoor[2]-ycoor[2]);
+                    if (dinter<dinter_min) dinter_min=dinter;
+                }
+            }
+            dinter_vec.push_back(make_pair(dinter,r1));
+        }
+        sort(dinter_vec.begin(),dinter_vec.end());
+        include_vec.assign(xlen,false);
+        for (r1=0;r1<Lchain_max;r1++)
+            include_vec[dinter_vec[r1].second]=true;
+        dinter_vec.clear();
+
+        a_trim_vec.push_back(a_empty);
+        seq_trim_vec.push_back(seq_empty);
+        sec_trim_vec.push_back(seq_empty);
+        len_trim_vec.push_back(Lchain_max);
+        for (r1=0;r1<xlen;r1++)
+        {
+            if (include_vec[r1]==false) continue;
+            a_trim_vec[i].push_back(a_vec[i][r1]);
+            seq_trim_vec[i].push_back(seq_vec[i][r1]);
+            sec_trim_vec[i].push_back(sec_vec[i][r1]);
+        }
+        include_vec.clear();
+    }
+    vector<pair<double,int> >().swap(dinter_vec);
+    vector<bool>().swap(include_vec);
+    vector<double> ().swap(xcoor);
+    vector<double> ().swap(ycoor);
+    return trim_chain_count;
+}
+
+void writeTrimComplex(vector<vector<vector<double> > >&a_trim_vec,
+    vector<vector<char> >&seq_trim_vec, vector<int>&len_trim_vec,
+    vector<string>&chainID_list, vector<int>&mol_vec,
+    const string &atom_opt, string filename)
+{
+    int c,r;
+    int a=0;
+    string chainID;
+    string atom;
+    ofstream fp(filename.c_str());
+    for (c=0;c<chainID_list.size();c++)
+    {
+        chainID=chainID_list[c];
+        if (chainID.size()==1) chainID=" "+chainID;
+        else if (chainID.size()>2) chainID=chainID.substr(chainID.size()-2,2);
+        if (chainID[0]==':') chainID=" "+chainID.substr(1);
+        atom=atom_opt;
+        if (atom_opt=="auto")
+            if (mol_vec[c]>0) atom=" C3'";
+            else              atom=" CA ";
+
+        for (r=0;r<len_trim_vec[c];r++)
+            fp<<"ATOM  "<<resetiosflags(ios::right)<<setw(5)<<++a<<' '
+              <<atom<<' '<<AAmap(seq_trim_vec[c][r])<<chainID
+              <<setw(4)<<r+1<<"    "
+              <<setiosflags(ios::fixed)<<setprecision(3)
+              <<setw(8)<<a_trim_vec[c][r][0]
+              <<setw(8)<<a_trim_vec[c][r][1]
+              <<setw(8)<<a_trim_vec[c][r][2]<<endl;
+    }
+    fp.close();
+    atom.clear();
+    chainID.clear();
+    return;
 }

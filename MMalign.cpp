@@ -447,12 +447,12 @@ int main(int argc, char *argv[])
     /* declare TM-score tables */
     int chain1_num=xa_vec.size();
     int chain2_num=ya_vec.size();
+    vector<string> tmp_str_vec(chain2_num,"");
     double **TMave_mat;
     double **ut_mat; // rotation matrices for all-against-all alignment
     int ui,uj,ut_idx;
     NewArray(&TMave_mat,chain1_num,chain2_num);
     NewArray(&ut_mat,chain1_num*chain2_num,4*3);
-    vector<string> tmp_str_vec(chain2_num,"");
     vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
     vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
     vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
@@ -461,6 +461,7 @@ int main(int argc, char *argv[])
     int maxTMmono_i,maxTMmono_j;
 
     /* get all-against-all alignment */
+    if (len_aa+len_na>750) fast_opt=true;
     for (i=0;i<chain1_num;i++)
     {
         xlen=xlen_vec[i];
@@ -527,7 +528,7 @@ int main(int argc, char *argv[])
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_tmp, d0_scale,
-                0, false, true, false, true,
+                0, false, true, false, fast_opt,
                 mol_vec1[i]+mol_vec2[j],TMcut);
 
             /* store result */
@@ -634,7 +635,6 @@ int main(int argc, char *argv[])
         seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init);
 
     /* perform iterative alignment */
-    if (len_aa+len_na>500) fast_opt=true;
     double max_total_score=0; // ignore old total_score because previous
                               // score was from monomeric chain superpositions
     int max_iter=5-(int)((len_aa+len_na)/200);
@@ -694,7 +694,6 @@ int main(int argc, char *argv[])
     } 
 
     /* final alignment */
-    if (len_aa+len_na>1000) fast_opt=true;
     if (outfmt_opt==0) print_version();
     MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,
