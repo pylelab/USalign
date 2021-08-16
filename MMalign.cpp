@@ -570,8 +570,7 @@ int main(int argc, char *argv[])
     if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
 
     /* refine alignment for large oligomers */
-    int aln_chain_num=0;
-    for (i=0;i<chain1_num;i++) aln_chain_num+=(assign1_list[i]>=0);
+    int aln_chain_num=count_assign_pair(assign1_list,chain1_num);
     bool is_oligomer=(aln_chain_num>=3);
     if (aln_chain_num==2) // dimer alignment
     {
@@ -679,12 +678,19 @@ int main(int argc, char *argv[])
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_init, seqyA_init, assign1_init,  assign2_init,  TMave_init);
     double max_total_score_cross=max_total_score;
-    MMalign_cross(
-        max_total_score_cross, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+
+    //if (init_pair_num!=2 && is_oligomer==false) MMalign_cross(
+        //max_total_score_cross, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
+        //secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        //xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+        //TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init, sequence_init,
+        //d0_scale, true);
+    //else 
+    MMalign_dimer(max_total_score_cross, xa_vec, ya_vec, seqx_vec, seqy_vec,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
         TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init, sequence_init,
-        d0_scale, true);
+        d0_scale, fast_opt);
     if (max_total_score_cross>max_total_score) 
     {
         max_total_score=max_total_score_cross;
