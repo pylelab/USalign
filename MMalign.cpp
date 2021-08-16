@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
     int maxTMmono_i,maxTMmono_j;
 
     /* get all-against-all alignment */
-    if (len_aa+len_na>750) fast_opt=true;
+    if (len_aa+len_na>500) fast_opt=true;
     for (i=0;i<chain1_num;i++)
     {
         xlen=xlen_vec[i];
