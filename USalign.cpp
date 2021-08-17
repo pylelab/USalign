@@ -79,9 +79,9 @@ void print_extra_help()
 "           1: align both 'ATOM  ' and 'HETATM' residues\n"
 "           2: align both 'ATOM  ' and MSE residues\n"
 "\n"
-"   -full  Whether to show full MM-align results, including alignment of\n"
-"          individual chains. T or F, (default F)\n"
-"\n"
+//"   -full  Whether to show full MM-align results, including alignment of\n"
+//"          individual chains. T or F, (default F)\n"
+//"\n"
 " -infmt1  Input format for structure_11\n"
 " -infmt2  Input format for structure_2\n"
 "          -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -116,8 +116,12 @@ void print_help(bool h_opt=false)
 "\n"
 "     -cp  Alignment with circular permutation (CP-align)\n"
 "\n"
-"     -mm  Alignment of two multi-chain complex structures (MM-align)\n"
-"          To use this option, '-ter' option must be 0 or 1.\n"
+"     -mm  Multimeric alignment option:\n"
+"          0: (default) alignment of monomeric structures (TM-align, RNA-align)\n"
+"          1: alignment of two multi-chain complex structures (MM-align)\n"
+"          3: alignment of individual chains to a complex structures\n"
+"             $ USalign -dir1 monomers/ list ComplexTemplate.pdb -ter 0\n"
+"          To use -mm >=1, '-ter' option must be 0 or 1.\n"
 "\n"
 "    -ter  Number of chains to align.\n"
 "          3: only align the first chain, or the first segment of the\n"
@@ -138,9 +142,9 @@ void print_help(bool h_opt=false)
 //"          3: (similar to TMscore '-c' option; used with -ter 0 or 1)\n"
 //"             align by residue index and order of chain\n"
 "\n"
-"      -I  Stick to the alignment specified by FASTA file 'align.txt'\n"
+"      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
-"      -i  Use the alignment specified by 'align.txt' as an initial alignment\n"
+"      -i  Use lignment specified by 'align.txt' as an initial alignment\n"
 "\n"
 "      -m  Output rotation matrix for superposition\n"
 "\n"
@@ -815,6 +819,360 @@ int MMalign(const string &xname, const string &yname,
     return 1;
 }
 
+
+/* alignment individual chains to a complex. */
+int MMdock(const string &xname, const string &yname,
+    const string &fname_super, const string &fname_lign,
+    const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass,
+    const double d0_scale, const bool m_opt, const int o_opt,
+    const int a_opt, const bool u_opt, const bool d_opt,
+    const double TMcut, const int infmt1_opt, const int infmt2_opt,
+    const int ter_opt, const int split_opt, const int outfmt_opt,
+    bool fast_opt, const int mirror_opt, const int het_opt,
+    const string &atom_opt, const string &mol_opt,
+    const string &dir1_opt, const string &dir2_opt,
+    const vector<string> &chain1_list, const vector<string> &chain2_list)
+{
+    /* declare previously global variables */
+    vector<vector<vector<double> > > xa_vec; // structure of complex1
+    vector<vector<vector<double> > > ya_vec; // structure of complex2
+    vector<vector<char> >seqx_vec; // sequence of complex1
+    vector<vector<char> >seqy_vec; // sequence of complex2
+    vector<vector<char> >secx_vec; // secondary structure of complex1
+    vector<vector<char> >secy_vec; // secondary structure of complex2
+    vector<int> mol_vec1;          // molecule type of complex1, RNA if >0
+    vector<int> mol_vec2;          // molecule type of complex2, RNA if >0
+    vector<string> chainID_list1;  // list of chainID1
+    vector<string> chainID_list2;  // list of chainID2
+    vector<int> xlen_vec;          // length of complex1
+    vector<int> ylen_vec;          // length of complex2
+    int    i,j;                    // chain index
+    int    xlen, ylen;             // chain length
+    double **xa, **ya;             // structure of single chain
+    char   *seqx, *seqy;           // for the protein sequence 
+    char   *secx, *secy;           // for the secondary structure 
+    int    xlen_aa,ylen_aa;        // total length of protein
+    int    xlen_na,ylen_na;        // total length of RNA/DNA
+    vector<string> resi_vec1;  // residue index for chain1
+    vector<string> resi_vec2;  // residue index for chain2
+
+    /* parse complex */
+    parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
+        xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
+        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
+    if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 individual chain");
+    parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
+        ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
+        atom_opt, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
+    if (xa_vec.size()>ya_vec.size()) PrintErrorAndQuit(
+        "ERROR! more individual chains to align than number of chains in complex template");
+    int len_aa=getmin(xlen_aa,ylen_aa);
+    int len_na=getmin(xlen_na,ylen_na);
+    if (a_opt)
+    {
+        len_aa=(xlen_aa+ylen_aa)/2;
+        len_na=(xlen_na+ylen_na)/2;
+    }
+
+    /* perform monomer alignment if there is only one chain */
+    if (xa_vec.size()==1 && ya_vec.size()==1)
+    {
+        xlen = xlen_vec[0];
+        ylen = ylen_vec[0];
+        seqx = new char[xlen+1];
+        seqy = new char[ylen+1];
+        secx = new char[xlen+1];
+        secy = new char[ylen+1];
+        NewArray(&xa, xlen, 3);
+        NewArray(&ya, ylen, 3);
+        copy_chain_data(xa_vec[0],seqx_vec[0],secx_vec[0], xlen,xa,seqx,secx);
+        copy_chain_data(ya_vec[0],seqy_vec[0],secy_vec[0], ylen,ya,seqy,secy);
+        
+        /* declare variable specific to this pair of TMalign */
+        double t0[3], u0[3][3];
+        double TM1, TM2;
+        double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+        double d0_0, TM_0;
+        double d0A, d0B, d0u, d0a;
+        double d0_out=5.0;
+        string seqM, seqxA, seqyA;// for output alignment
+        double rmsd0 = 0.0;
+        int L_ali;                // Aligned length in standard_TMscore
+        double Liden=0;
+        double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+        int n_ali=0;
+        int n_ali8=0;
+
+        /* entry function for structure alignment */
+        TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            t0, u0, TM1, TM2, TM3, TM4, TM5,
+            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+            seqM, seqxA, seqyA,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale,
+            0, a_opt, u_opt, d_opt, fast_opt,
+            mol_vec1[0]+mol_vec2[0],TMcut);
+
+        /* print result */
+        output_results(
+            xname.substr(dir1_opt.size()),
+            yname.substr(dir2_opt.size()),
+            chainID_list1[0], chainID_list2[0],
+            xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5, rmsd0, d0_out,
+            seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
+            n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0, d0A, d0B,
+            Lnorm_ass, d0_scale, d0a, d0u, (m_opt?fname_matrix:"").c_str(),
+            outfmt_opt, ter_opt, true, split_opt, o_opt, fname_super,
+            0, a_opt, false, d_opt, mirror_opt, resi_vec1, resi_vec2);
+
+        /* clean up */
+        seqM.clear();
+        seqxA.clear();
+        seqyA.clear();
+        delete[]seqx;
+        delete[]seqy;
+        delete[]secx;
+        delete[]secy;
+        DeleteArray(&xa,xlen);
+        DeleteArray(&ya,ylen);
+
+        vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+        vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+        vector<vector<char> >().swap(seqx_vec); // sequence of complex1
+        vector<vector<char> >().swap(seqy_vec); // sequence of complex2
+        vector<vector<char> >().swap(secx_vec); // secondary structure of complex1
+        vector<vector<char> >().swap(secy_vec); // secondary structure of complex2
+        mol_vec1.clear();       // molecule type of complex1, RNA if >0
+        mol_vec2.clear();       // molecule type of complex2, RNA if >0
+        chainID_list1.clear();  // list of chainID1
+        chainID_list2.clear();  // list of chainID2
+        xlen_vec.clear();       // length of complex1
+        ylen_vec.clear();       // length of complex2
+        return 0;
+    }
+
+    /* declare TM-score tables */
+    int chain1_num=xa_vec.size();
+    int chain2_num=ya_vec.size();
+    vector<string> tmp_str_vec(chain2_num,"");
+    double **TMave_mat;
+    double **ut_mat; // rotation matrices for all-against-all alignment
+    int ui,uj,ut_idx;
+    NewArray(&TMave_mat,chain1_num,chain2_num);
+    NewArray(&ut_mat,chain1_num*chain2_num,4*3);
+    vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
+
+    /* get all-against-all alignment */
+    if (len_aa+len_na>500) fast_opt=true;
+    for (i=0;i<chain1_num;i++)
+    {
+        xlen=xlen_vec[i];
+        if (xlen<3)
+        {
+            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=-1;
+            continue;
+        }
+        seqx = new char[xlen+1];
+        secx = new char[xlen+1];
+        NewArray(&xa, xlen, 3);
+        copy_chain_data(xa_vec[i],seqx_vec[i],secx_vec[i],
+            xlen,xa,seqx,secx);
+
+        for (j=0;j<chain2_num;j++)
+        {
+            ut_idx=i*chain2_num+j;
+            for (ui=0;ui<4;ui++)
+                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=0;
+            ut_mat[ut_idx][0]=1;
+            ut_mat[ut_idx][4]=1;
+            ut_mat[ut_idx][8]=1;
+
+            if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
+            {
+                TMave_mat[i][j]=-1;
+                continue;
+            }
+
+            ylen=ylen_vec[j];
+            if (ylen<3)
+            {
+                TMave_mat[i][j]=-1;
+                continue;
+            }
+            seqy = new char[ylen+1];
+            secy = new char[ylen+1];
+            NewArray(&ya, ylen, 3);
+            copy_chain_data(ya_vec[j],seqy_vec[j],secy_vec[j],
+                ylen,ya,seqy,secy);
+
+            /* declare variable specific to this pair of TMalign */
+            double t0[3], u0[3][3];
+            double TM1, TM2;
+            double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+            double d0_0, TM_0;
+            double d0A, d0B, d0u, d0a;
+            double d0_out=5.0;
+            string seqM, seqxA, seqyA;// for output alignment
+            double rmsd0 = 0.0;
+            int L_ali;                // Aligned length in standard_TMscore
+            double Liden=0;
+            double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+            int n_ali=0;
+            int n_ali8=0;
+
+            int Lnorm_tmp=len_aa;
+            if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
+
+            /* entry function for structure alignment */
+            TMalign_main(xa, ya, seqx, seqy, secx, secy,
+                t0, u0, TM1, TM2, TM3, TM4, TM5,
+                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                seqM, seqxA, seqyA,
+                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+                0, false, true, false, fast_opt,
+                mol_vec1[i]+mol_vec2[j],TMcut);
+
+            /* store result */
+            for (ui=0;ui<3;ui++)
+                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=u0[ui][uj];
+            for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
+            seqxA_mat[i][j]=seqxA;
+            seqyA_mat[i][j]=seqyA;
+            TMave_mat[i][j]=TM4*Lnorm_tmp;
+
+            /* clean up */
+            seqM.clear();
+            seqxA.clear();
+            seqyA.clear();
+
+            delete[]seqy;
+            delete[]secy;
+            DeleteArray(&ya,ylen);
+        }
+
+        delete[]seqx;
+        delete[]secx;
+        DeleteArray(&xa,xlen);
+    }
+
+    /* calculate initial chain-chain assignment */
+    int *assign1_list; // value is index of assigned chain2
+    int *assign2_list; // value is index of assigned chain1
+    assign1_list=new int[chain1_num];
+    assign2_list=new int[chain2_num];
+    enhanced_greedy_search(TMave_mat, assign1_list,
+        assign2_list, chain1_num, chain2_num);
+
+    /* final alignment */
+    if (outfmt_opt==0) print_version();
+    for (i=0;i<chain1_num;i++)
+    {
+        j=assign1_list[i];
+        if (j<0)
+        {
+            cerr<<"Warning! "<<chainID_list1[j]<<" cannot be alighed"<<endl;
+            continue;
+        }
+
+        xlen =xlen_vec[i];
+        seqx = new char[xlen+1];
+        secx = new char[xlen+1];
+        NewArray(&xa, xlen, 3);
+        copy_chain_data(xa_vec[i],seqx_vec[i],secx_vec[i], xlen,xa,seqx,secx);
+
+        ylen =ylen_vec[j];
+        seqy = new char[ylen+1];
+        secy = new char[ylen+1];
+        NewArray(&ya, ylen, 3);
+        copy_chain_data(ya_vec[j],seqy_vec[j],secy_vec[j], ylen,ya,seqy,secy);
+
+        /* declare variable specific to this pair of TMalign */
+        double t0[3], u0[3][3];
+        double TM1, TM2;
+        double TM3, TM4, TM5;     // for a_opt, u_opt, d_opt
+        double d0_0, TM_0;
+        double d0A, d0B, d0u, d0a;
+        double d0_out=5.0;
+        string seqM, seqxA, seqyA;// for output alignment
+        double rmsd0 = 0.0;
+        int L_ali;                // Aligned length in standard_TMscore
+        double Liden=0;
+        double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+        int n_ali=0;
+        int n_ali8=0;
+
+        int c;
+        for (c=0; c<sequence.size(); c++) sequence[c].clear();
+        sequence.clear();
+        sequence.push_back(seqxA_mat[i][j]);
+        sequence.push_back(seqyA_mat[i][j]);
+            
+        /* entry function for structure alignment */
+        TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            t0, u0, TM1, TM2, TM3, TM4, TM5,
+            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+            seqM, seqxA, seqyA,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale,
+            3, a_opt, u_opt, d_opt, fast_opt,
+            mol_vec1[i]+mol_vec2[j]);
+
+         output_results(
+            xname.substr(dir1_opt.size()),
+            yname.substr(dir2_opt.size()),
+            chainID_list1[i], chainID_list2[j],
+            xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
+            rmsd0, d0_out, seqM.c_str(),
+            seqxA.c_str(), seqyA.c_str(), Liden,
+            n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
+            d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
+            (m_opt?fname_matrix+chainID_list1[i]:"").c_str(),
+            outfmt_opt, ter_opt, false, split_opt, o_opt,
+            fname_super+chainID_list1[i], false, a_opt, u_opt, d_opt, mirror_opt,
+            resi_vec1, resi_vec2);
+
+        /* clean up */
+        seqM.clear();
+        seqxA.clear();
+        seqyA.clear();
+
+        delete[]seqy;
+        delete[]secy;
+        DeleteArray(&ya,ylen);
+
+        delete[]seqx;
+        delete[]secx;
+        DeleteArray(&xa,xlen);
+    }
+
+    /* clean up everything */
+    delete [] assign1_list;
+    delete [] assign2_list;
+    DeleteArray(&TMave_mat,chain1_num);
+    DeleteArray(&ut_mat,   chain1_num*chain2_num);
+    vector<vector<string> >().swap(seqxA_mat);
+    vector<vector<string> >().swap(seqM_mat);
+    vector<vector<string> >().swap(seqyA_mat);
+    vector<string>().swap(tmp_str_vec);
+
+    vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+    vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+    vector<vector<char> >().swap(seqx_vec); // sequence of complex1
+    vector<vector<char> >().swap(seqy_vec); // sequence of complex2
+    vector<vector<char> >().swap(secx_vec); // secondary structure of complex1
+    vector<vector<char> >().swap(secy_vec); // secondary structure of complex2
+    mol_vec1.clear();       // molecule type of complex1, RNA if >0
+    mol_vec2.clear();       // molecule type of complex2, RNA if >0
+    vector<string>().swap(chainID_list1);  // list of chainID1
+    vector<string>().swap(chainID_list2);  // list of chainID2
+    xlen_vec.clear();       // length of complex1
+    ylen_vec.clear();       // length of complex2
+    return 1;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) print_help();
@@ -1076,7 +1434,9 @@ int main(int argc, char *argv[])
         }
         else if ( !strcmp(argv[i],"-mm") )
         {
-            mm_opt=1;
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -mm");
+            mm_opt=atoi(argv[i + 1]); i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
@@ -1188,17 +1548,23 @@ int main(int argc, char *argv[])
 
     /* real alignment. entry functions are MMalign_main and 
      * TMalign_main */
-    if (mm_opt) MMalign(xname, yname, fname_super, fname_lign,
-        fname_matrix, sequence, d0_scale, m_opt, o_opt,
-        a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
-        ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list);
-    else TMalign(xname, yname, fname_super, fname_lign, fname_matrix,
+    if (mm_opt==0) TMalign(xname, yname, fname_super, fname_lign, fname_matrix,
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
         atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
         chain1_list, chain2_list);
+    else if (mm_opt==1) MMalign(xname, yname, fname_super, fname_lign,
+        fname_matrix, sequence, d0_scale, m_opt, o_opt,
+        a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
+        ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
+        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list);
+    else if (mm_opt==2) MMdock(xname, yname, fname_super, fname_lign,
+        fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, o_opt, a_opt,
+        u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
+        split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
+        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list);
+    else cerr<<"WARNING! -mm "<<mm_opt<<" not implemented"<<endl;
 
     /* clean up */
     vector<string>().swap(chain1_list);
