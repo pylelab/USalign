@@ -956,13 +956,32 @@ int MMdock(const string &xname, const string &yname,
     int chain2_num=ya_vec.size();
     vector<string> tmp_str_vec(chain2_num,"");
     double **TMave_mat;
-    double **ut_mat; // rotation matrices for all-against-all alignment
-    int ui,uj,ut_idx;
     NewArray(&TMave_mat,chain1_num,chain2_num);
-    NewArray(&ut_mat,chain1_num*chain2_num,4*3);
     vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
     vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
     vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
+
+    /* trimComplex */
+    vector<vector<vector<double> > > ya_trim_vec; // structure of complex2
+    vector<vector<char> >seqy_trim_vec; // sequence of complex2
+    vector<vector<char> >secy_trim_vec; // secondary structure of complex2
+    vector<int> ylen_trim_vec;          // length of complex2
+    int Lchain_aa_max1=0;
+    int Lchain_na_max1=0;
+    for (i=0;i<chain1_num;i++)
+    {
+        xlen=xlen_vec[i];
+        if      (mol_vec1[i]>0  && xlen>Lchain_na_max1) Lchain_na_max1=xlen;
+        else if (mol_vec1[i]<=0 && xlen>Lchain_aa_max1) Lchain_aa_max1=xlen;
+    }
+    int trim_chain_count=trimComplex(ya_trim_vec,seqy_trim_vec,
+        secy_trim_vec,ylen_trim_vec,ya_vec,seqy_vec,secy_vec,ylen_vec,
+        mol_vec2,Lchain_aa_max1,Lchain_na_max1);
+    int    ylen_trim;             // chain length
+    double **ya_trim;             // structure of single chain
+    char   *seqy_trim;           // for the protein sequence
+    char   *secy_trim;           // for the secondary structure
+    double **xt;
 
     /* get all-against-all alignment */
     if (len_aa+len_na>500) fast_opt=true;
@@ -982,13 +1001,6 @@ int MMdock(const string &xname, const string &yname,
 
         for (j=0;j<chain2_num;j++)
         {
-            ut_idx=i*chain2_num+j;
-            for (ui=0;ui<4;ui++)
-                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=0;
-            ut_mat[ut_idx][0]=1;
-            ut_mat[ut_idx][4]=1;
-            ut_mat[ut_idx][8]=1;
-
             if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
             {
                 TMave_mat[i][j]=-1;
@@ -1026,19 +1038,52 @@ int MMdock(const string &xname, const string &yname,
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
 
             /* entry function for structure alignment */
-            TMalign_main(xa, ya, seqx, seqy, secx, secy,
-                t0, u0, TM1, TM2, TM3, TM4, TM5,
-                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
-                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                xlen, ylen, sequence, Lnorm_tmp, d0_scale,
-                0, false, true, false, fast_opt,
-                mol_vec1[i]+mol_vec2[j],TMcut);
+            if (trim_chain_count && ylen_trim_vec[j]<ylen)
+            {
+                ylen_trim = ylen_trim_vec[j];
+                seqy_trim = new char[ylen_trim+1];
+                secy_trim = new char[ylen_trim+1];
+                NewArray(&ya_trim, ylen_trim, 3);
+                copy_chain_data(ya_trim_vec[j],seqy_trim_vec[j],secy_trim_vec[j],
+                    ylen_trim,ya_trim,seqy_trim,secy_trim);
+                TMalign_main(xa, ya_trim, seqx, seqy_trim, secx, secy_trim,
+                    t0, u0, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen_trim, sequence, Lnorm_tmp, d0_scale,
+                    0, false, true, false, fast_opt,
+                    mol_vec1[i]+mol_vec2[j],TMcut);
+                seqxA.clear();
+                seqyA.clear();
+                delete[]seqy_trim;
+                delete[]secy_trim;
+                DeleteArray(&ya_trim,ylen_trim);
 
+                NewArray(&xt,xlen,3);
+                do_rotation(xa, xt, xlen, t0, u0);
+                int *invmap = new int[ylen+1];
+                se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+                    0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
+                delete[]invmap;
+                DeleteArray(&xt, xlen);
+            }
+            else
+            {
+                TMalign_main(xa, ya, seqx, seqy, secx, secy,
+                    t0, u0, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+                    0, false, true, false, fast_opt,
+                    mol_vec1[i]+mol_vec2[j],TMcut);
+            }
+            
             /* store result */
-            for (ui=0;ui<3;ui++)
-                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=u0[ui][uj];
-            for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
             seqxA_mat[i][j]=seqxA;
             seqyA_mat[i][j]=seqyA;
             TMave_mat[i][j]=TM4*Lnorm_tmp;
@@ -1057,6 +1102,10 @@ int MMdock(const string &xname, const string &yname,
         delete[]secx;
         DeleteArray(&xa,xlen);
     }
+    vector<vector<vector<double> > >().swap(ya_trim_vec);
+    vector<vector<char> >().swap(seqy_trim_vec);
+    vector<vector<char> >().swap(secy_trim_vec);
+    vector<int> ().swap(ylen_trim_vec);
 
     /* calculate initial chain-chain assignment */
     int *assign1_list; // value is index of assigned chain2
@@ -1068,6 +1117,11 @@ int MMdock(const string &xname, const string &yname,
 
     /* final alignment */
     if (outfmt_opt==0) print_version();
+    double **ut_mat; // rotation matrices for all-against-all alignment
+    NewArray(&ut_mat,chain1_num,4*3);
+    int ui,uj;
+    vector<string>xname_vec;
+    vector<string>yname_vec;
     for (i=0;i<chain1_num;i++)
     {
         j=assign1_list[i];
@@ -1119,20 +1173,25 @@ int MMdock(const string &xname, const string &yname,
             xlen, ylen, sequence, Lnorm_ass, d0_scale,
             3, a_opt, u_opt, d_opt, fast_opt,
             mol_vec1[i]+mol_vec2[j]);
+        
+        for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=u0[ui][uj];
+        for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=t0[uj];
 
-         output_results(
-            xname.substr(dir1_opt.size()),
-            yname.substr(dir2_opt.size()),
+        output_results(
+            xname.c_str(), yname.c_str(),
             chainID_list1[i], chainID_list2[j],
             xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
             rmsd0, d0_out, seqM.c_str(),
             seqxA.c_str(), seqyA.c_str(), Liden,
             n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
             d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
-            (m_opt?fname_matrix+chainID_list1[i]:"").c_str(),
-            outfmt_opt, ter_opt, false, split_opt, o_opt,
-            fname_super+chainID_list1[i], false, a_opt, u_opt, d_opt, mirror_opt,
+            "", outfmt_opt, ter_opt, false, split_opt, 
+            false, "",//o_opt, fname_super+chainID_list1[i], 
+            false, a_opt, u_opt, d_opt, mirror_opt,
             resi_vec1, resi_vec2);
+        
+        xname_vec.push_back(xname+chainID_list1[i]);
+        yname_vec.push_back(yname+chainID_list2[j]);
 
         /* clean up */
         seqM.clear();
@@ -1148,11 +1207,20 @@ int MMdock(const string &xname, const string &yname,
         DeleteArray(&xa,xlen);
     }
 
+    if (m_opt) output_dock_rotation_matrix(fname_matrix.c_str(),
+        xname_vec,yname_vec, ut_mat);
+
+    if (o_opt) output_dock(chain1_list, ter_opt, split_opt, infmt1_opt, atom_opt,
+        mirror_opt, het_opt, ut_mat, fname_super);
+
+
     /* clean up everything */
+    vector<string>().swap(xname_vec);
+    vector<string>().swap(yname_vec);
     delete [] assign1_list;
     delete [] assign2_list;
     DeleteArray(&TMave_mat,chain1_num);
-    DeleteArray(&ut_mat,   chain1_num*chain2_num);
+    DeleteArray(&ut_mat,   chain1_num);
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqM_mat);
     vector<vector<string> >().swap(seqyA_mat);
@@ -1464,7 +1532,7 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-suffix is only valid if -dir, -dir1 or -dir2 is set");
     if ((dir_opt.size() || dir1_opt.size() || dir2_opt.size()))
     {
-        if (m_opt || o_opt)
+        if (mm_opt!=2 && (m_opt || o_opt))
             PrintErrorAndQuit("-m or -o cannot be set with -dir, -dir1 or -dir2");
         else if (dir_opt.size() && (dir1_opt.size() || dir2_opt.size()))
             PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");

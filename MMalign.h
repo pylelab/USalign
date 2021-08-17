@@ -659,6 +659,378 @@ void copy_chain_data(const vector<vector<double> >&a_vec_i,
     sec[len]=0;
 }
 
+/* clear chains with L<3 */
+void clear_full_PDB_lines(vector<vector<string> > PDB_lines,const string atom_opt)
+{
+    int chain_i;
+    int Lch;
+    int a;
+    bool select_atom;
+    string line;
+    for (chain_i=0;chain_i<PDB_lines.size();chain_i++)
+    {
+        Lch=0;
+        for (a=0;a<PDB_lines[chain_i].size();a++)
+        {
+            line=PDB_lines[chain_i][a];
+            if (atom_opt=="auto")
+            {
+                if (line[17]==' ' && (line[18]=='D'||line[18]==' '))
+                     select_atom=(line.compare(12,4," C3'")==0);
+                else select_atom=(line.compare(12,4," CA ")==0);
+            }
+            else     select_atom=(line.compare(12,4,atom_opt)==0);
+            Lch+=select_atom;
+        }
+        if (Lch<3)
+        {
+            for (a=0;a<PDB_lines[chain_i].size();a++)
+                PDB_lines[chain_i][a].clear();
+            PDB_lines[chain_i].clear();
+        }
+    }
+    line.clear();
+}
+
+size_t get_full_PDB_lines(const string filename,
+    vector<vector<string> >&PDB_lines, const int ter_opt,
+    const int infmt_opt, const int split_opt, const int het_opt)
+{
+    size_t i=0; // resi i.e. atom index
+    string line;
+    char chainID=0;
+    vector<string> tmp_str_vec;
+    
+    int compress_type=0; // uncompressed file
+    ifstream fin;
+    redi::ipstream fin_gz; // if file is compressed
+    if (filename.size()>=3 && 
+        filename.substr(filename.size()-3,3)==".gz")
+    {
+        fin_gz.open("zcat '"+filename+"'");
+        compress_type=1;
+    }
+    else if (filename.size()>=4 && 
+        filename.substr(filename.size()-4,4)==".bz2")
+    {
+        fin_gz.open("bzcat '"+filename+"'");
+        compress_type=2;
+    }
+    else fin.open(filename.c_str());
+
+    if (infmt_opt==0||infmt_opt==-1) // PDB format
+    {
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (infmt_opt==-1 && line.compare(0,5,"loop_")==0) // PDBx/mmCIF
+                return get_full_PDB_lines(filename,PDB_lines,
+                    ter_opt, 3, split_opt,het_opt);
+            if (i > 0)
+            {
+                if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
+                else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
+            }
+            if (split_opt && line.compare(0,3,"END")==0) chainID=0;
+            if (line.size()>=54 && (line[16]==' ' || line[16]=='A') && (
+                (line.compare(0, 6, "ATOM  ")==0) || 
+                (line.compare(0, 6, "HETATM")==0 && het_opt==1) ||
+                (line.compare(0, 6, "HETATM")==0 && het_opt==2 && 
+                 line.compare(17,3, "MSE")==0)))
+            {
+                if (!chainID)
+                {
+                    chainID=line[21];
+                    PDB_lines.push_back(tmp_str_vec);
+                }
+                else if (ter_opt>=2 && chainID!=line[21]) break;
+                if (split_opt==2 && chainID!=line[21])
+                {
+                    chainID=line[21];
+                    PDB_lines.push_back(tmp_str_vec);
+                } 
+               
+                PDB_lines.back().push_back(line);
+                i++;
+            }
+        }
+    }
+    else if (infmt_opt==1) // SPICKER format
+    {
+        size_t L=0;
+        float x,y,z;
+        stringstream i8_stream;
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) fin_gz>>L>>x>>y>>z;
+            else               fin   >>L>>x>>y>>z;
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (!(compress_type?fin_gz.good():fin.good())) break;
+            for (i=0;i<L;i++)
+            {
+                if (compress_type) fin_gz>>x>>y>>z;
+                else               fin   >>x>>y>>z;
+                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  UNK  "<<setw(4)
+                    <<i+1<<"    "<<setiosflags(ios::fixed)<<setprecision(3)
+                    <<setw(8)<<x<<setw(8)<<y<<setw(8)<<z;
+                line=i8_stream.str();
+                i8_stream.str(string());
+                PDB_lines.back().push_back(line);
+            }
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+        }
+    }
+    else if (infmt_opt==2) // xyz format
+    {
+        size_t L=0;
+        stringstream i8_stream;
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            L=atoi(line.c_str());
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            for (i=0;i<line.size();i++)
+                if (line[i]==' '||line[i]=='\t') break;
+            if (!(compress_type?fin_gz.good():fin.good())) break;
+            PDB_lines.push_back(tmp_str_vec);
+            for (i=0;i<L;i++)
+            {
+                if (compress_type) getline(fin_gz, line);
+                else               getline(fin, line);
+                i8_stream<<"ATOM   "<<setw(4)<<i+1<<"  CA  "
+                    <<AAmap(line[0])<<"  "<<setw(4)<<i+1<<"    "
+                    <<line.substr(2,8)<<line.substr(11,8)<<line.substr(20,8);
+                line=i8_stream.str();
+                i8_stream.str(string());
+                PDB_lines.back().push_back(line);
+            }
+        }
+    }
+    else if (infmt_opt==3) // PDBx/mmCIF format
+    {
+        bool loop_ = false; // not reading following content
+        map<string,int> _atom_site;
+        int atom_site_pos;
+        vector<string> line_vec;
+        string alt_id=".";  // alternative location indicator
+        string asym_id="."; // this is similar to chainID, except that
+                            // chainID is char while asym_id is a string
+                            // with possibly multiple char
+        string prev_asym_id="";
+        string AA="";       // residue name
+        string atom="";
+        string resi="";
+        string model_index=""; // the same as model_idx but type is string
+        stringstream i8_stream;
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (line.size()==0) continue;
+            if (loop_) loop_ = line.compare(0,2,"# ");
+            if (!loop_)
+            {
+                if (line.compare(0,5,"loop_")) continue;
+                while(1)
+                {
+                    if (compress_type)
+                    {
+                        if (fin_gz.good()) getline(fin_gz, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    else
+                    {
+                        if (fin.good()) getline(fin, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                    }
+                    if (line.size()) break;
+                }
+                if (line.compare(0,11,"_atom_site.")) continue;
+
+                loop_=true;
+                _atom_site.clear();
+                atom_site_pos=0;
+                _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+
+                while(1)
+                {
+                    if (compress_type) getline(fin_gz, line);
+                    else               getline(fin, line);
+                    if (line.size()==0) continue;
+                    if (line.compare(0,11,"_atom_site.")) break;
+                    _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                }
+
+
+                if (_atom_site.count("group_PDB")*
+                    _atom_site.count("label_atom_id")*
+                    _atom_site.count("label_comp_id")*
+                   (_atom_site.count("auth_asym_id")+
+                    _atom_site.count("label_asym_id"))*
+                   (_atom_site.count("auth_seq_id")+
+                    _atom_site.count("label_seq_id"))*
+                    _atom_site.count("Cartn_x")*
+                    _atom_site.count("Cartn_y")*
+                    _atom_site.count("Cartn_z")==0)
+                {
+                    loop_ = false;
+                    cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, label_atom_id, label_comp_id, auth_asym_id/label_asym_id, auth_seq_id/label_seq_id, Cartn_x, Cartn_y, Cartn_z"<<endl;
+                    continue;
+                }
+            }
+
+            line_vec.clear();
+            split(line,line_vec);
+            if ((line_vec[_atom_site["group_PDB"]]!="ATOM" &&
+                 line_vec[_atom_site["group_PDB"]]!="HETATM") ||
+                (line_vec[_atom_site["group_PDB"]]=="HETATM" &&
+                 (het_opt==0 || 
+                 (het_opt==2 && line_vec[_atom_site["label_comp_id"]]!="MSE")))
+                ) continue;
+            
+            alt_id=".";
+            if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
+                alt_id=line_vec[_atom_site["label_alt_id"]];
+            if (alt_id!="." && alt_id!="A") continue;
+
+            atom=line_vec[_atom_site["label_atom_id"]];
+            if (atom[0]=='"') atom=atom.substr(1);
+            if (atom.size() && atom[atom.size()-1]=='"')
+                atom=atom.substr(0,atom.size()-1);
+            if (atom.size()==0) continue;
+            if      (atom.size()==1) atom=" "+atom+"  ";
+            else if (atom.size()==2) atom=" "+atom+" "; // wrong for sidechain H
+            else if (atom.size()==3) atom=" "+atom;
+            else if (atom.size()>=5) continue;
+
+            AA=line_vec[_atom_site["label_comp_id"]]; // residue name
+            if      (AA.size()==1) AA="  "+AA;
+            else if (AA.size()==2) AA=" " +AA;
+            else if (AA.size()>=4) continue;
+
+            if (_atom_site.count("auth_asym_id"))
+                 asym_id=line_vec[_atom_site["auth_asym_id"]];
+            else asym_id=line_vec[_atom_site["label_asym_id"]];
+            if (asym_id==".") asym_id=" ";
+            
+            if (_atom_site.count("pdbx_PDB_model_num") && 
+                model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])
+            {
+                model_index=line_vec[_atom_site["pdbx_PDB_model_num"]];
+                if (PDB_lines.size() && ter_opt>=1) break;
+                if (PDB_lines.size()==0 || split_opt>=1)
+                {
+                    PDB_lines.push_back(tmp_str_vec);
+                    prev_asym_id=asym_id;
+                }
+            }
+
+            if (prev_asym_id!=asym_id)
+            {
+                if (prev_asym_id!="" && ter_opt>=2) break;
+                if (split_opt>=2) PDB_lines.push_back(tmp_str_vec);
+            }
+            if (prev_asym_id!=asym_id) prev_asym_id=asym_id;
+
+            if (_atom_site.count("auth_seq_id"))
+                 resi=line_vec[_atom_site["auth_seq_id"]];
+            else resi=line_vec[_atom_site["label_seq_id"]];
+            if (_atom_site.count("pdbx_PDB_ins_code") && 
+                line_vec[_atom_site["pdbx_PDB_ins_code"]]!="?")
+                resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
+            else resi+=" ";
+
+            i++;
+            i8_stream<<"ATOM  "
+                <<setw(5)<<i<<" "<<atom<<" "<<AA<<setw(2)<<asym_id.substr(0,2)
+                <<setw(5)<<resi.substr(0,5)<<"   "
+                <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
+                <<setw(8)<<line_vec[_atom_site["Cartn_z"]].substr(0,8);
+            PDB_lines.back().push_back(i8_stream.str());
+            i8_stream.str(string());
+        }
+        _atom_site.clear();
+        line_vec.clear();
+        alt_id.clear();
+        asym_id.clear();
+        AA.clear();
+    }
+
+    if (compress_type) fin_gz.close();
+    else               fin.close();
+    line.clear();
+    return PDB_lines.size();
+}
+
+void output_dock(const vector<string>&chain_list, const int ter_opt,
+    const int split_opt, const int infmt_opt, const string atom_opt,
+    const int mirror_opt, const int het_opt, double **ut_mat,
+    const string&fname_super)
+{
+    size_t i;
+    int chain_i,a;
+    string name;
+    int chainnum;
+    double x[3];  // before transform
+    double x1[3]; // after transform
+    string line;
+    vector<vector<string> >PDB_lines;
+    int m=0;
+    double t[3];
+    double u[3][3];
+    int ui,uj;
+    stringstream buf;
+    string filename;
+    for (i=0;i<chain_list.size();i++)
+    {
+        name=chain_list[i];
+        chainnum=get_full_PDB_lines(name, PDB_lines,
+            ter_opt, infmt_opt, split_opt, het_opt);
+        if (!chainnum) continue;
+        clear_full_PDB_lines(PDB_lines, atom_opt); // clear chains with <3 residue
+        for (chain_i=0;chain_i<chainnum;chain_i++)
+        {
+            if (PDB_lines[chain_i].size()<3) continue;
+            buf<<fname_super<<'.'<<m<<".pdb";
+            filename=buf.str();
+            buf.str(string());
+            for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) u[ui][uj]=ut_mat[m][ui*3+uj];
+            for (uj=0;uj<3;uj++) t[uj]=ut_mat[m][9+uj];
+            for (a=0;a<PDB_lines[chain_i].size();a++)
+            {
+                line=PDB_lines[chain_i][a];
+                x[0]=atof(line.substr(30,8).c_str());
+                x[1]=atof(line.substr(38,8).c_str());
+                x[2]=atof(line.substr(46,8).c_str());
+                if (mirror_opt) x[2]=-x[2];
+                transform(t, u, x, x1);
+                buf<<line.substr(0,30)<<setiosflags(ios::fixed)
+                   <<setprecision(3)
+                   <<setw(8)<<x1[0]<<setw(8)<<x1[1]<<setw(8)<<x1[2]
+                   <<line.substr(54)<<'\n';
+            }
+            buf<<"TER"<<endl;
+            ofstream fp;
+            fp.open(filename.c_str());
+            fp<<buf.str();
+            fp.close();
+            buf.str(string());
+            PDB_lines[chain_i].clear();
+            m++;
+        } // chain_i
+        name.clear();
+        PDB_lines.clear();
+    } // i
+    vector<vector<string> >().swap(PDB_lines);
+    line.clear();
+}
+
 void parse_chain_list(const vector<string>&chain_list,
     vector<vector<vector<double> > >&a_vec, vector<vector<char> >&seq_vec,
     vector<vector<char> >&sec_vec, vector<int>&mol_vec, vector<int>&len_vec,
@@ -2608,8 +2980,10 @@ void writeTrimComplex(vector<vector<vector<double> > >&a_trim_vec,
         if (chainID[0]==':') chainID=" "+chainID.substr(1);
         atom=atom_opt;
         if (atom_opt=="auto")
+        {
             if (mol_vec[c]>0) atom=" C3'";
             else              atom=" CA ";
+        }
 
         for (r=0;r<len_trim_vec[c];r++)
             fp<<"ATOM  "<<resetiosflags(ios::right)<<setw(5)<<++a<<' '
@@ -2624,4 +2998,38 @@ void writeTrimComplex(vector<vector<vector<double> > >&a_trim_vec,
     atom.clear();
     chainID.clear();
     return;
+}
+
+void output_dock_rotation_matrix(const char* fname_matrix,
+    const vector<string>&xname_vec, const vector<string>&yname_vec,
+    double ** ut_mat)
+{
+    fstream fout;
+    fout.open(fname_matrix, ios::out | ios::trunc);
+    if (fout)// succeed
+    {
+        int i,k;
+        for (i=0;i<xname_vec.size();i++)
+        {
+            fout << "------ The rotation matrix to rotate "
+                 <<xname_vec[i]<<" to "<<yname_vec[i]<<" ------\n"
+                 << "m               t[m]        u[m][0]        u[m][1]        u[m][2]\n";
+            for (k = 0; k < 3; k++)
+                fout<<k<<setiosflags(ios::fixed)<<setprecision(10)
+                    <<' '<<setw(18)<<ut_mat[i][9+k]
+                    <<' '<<setw(14)<<ut_mat[i][3*k+0]
+                    <<' '<<setw(14)<<ut_mat[i][3*k+1]
+                    <<' '<<setw(14)<<ut_mat[i][3*k+2]<<'\n';
+        }
+        fout << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
+                "for(i=0; i<L; i++)\n"
+                "{\n"
+                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
+                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
+                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
+                "}"<<endl;
+        fout.close();
+    }
+    else
+        cout << "Open file to output rotation matrix fail.\n";
 }
