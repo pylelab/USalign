@@ -119,7 +119,7 @@ void print_help(bool h_opt=false)
 "     -mm  Multimeric alignment option:\n"
 "          0: (default) alignment of monomeric structures (TM-align, RNA-align)\n"
 "          1: alignment of two multi-chain complex structures (MM-align)\n"
-"          3: alignment of individual chains to a complex structures\n"
+"          2: alignment of individual chains to a complex structures\n"
 "             $ USalign -dir1 monomers/ list ComplexTemplate.pdb -ter 0\n"
 "          To use -mm >=1, '-ter' option must be 0 or 1.\n"
 "\n"
