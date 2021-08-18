@@ -1128,11 +1128,18 @@ int MMdock(const string &xname, const string &yname,
     for (i=0;i<chain1_num;i++)
     {
         j=assign1_list[i];
+        xname_vec.push_back(xname+chainID_list1[i]);
         if (j<0)
         {
             cerr<<"Warning! "<<chainID_list1[j]<<" cannot be alighed"<<endl;
+            for (ui=0;ui<3;ui++)
+            {
+                for (uj=0;uj<4;uj++) ut_mat[i][ui*3+uj]=0;
+                ut_mat[i][ui*3+ui]=1;
+            }
             continue;
         }
+        yname_vec.push_back(yname+chainID_list2[j]);
 
         xlen =xlen_vec[i];
         seqx = new char[xlen+1];
@@ -1193,9 +1200,6 @@ int MMdock(const string &xname, const string &yname,
             false, a_opt, u_opt, d_opt, mirror_opt,
             resi_vec1, resi_vec2);
         
-        xname_vec.push_back(xname+chainID_list1[i]);
-        yname_vec.push_back(yname+chainID_list2[j]);
-
         /* clean up */
         seqM.clear();
         seqxA.clear();
@@ -1211,7 +1215,7 @@ int MMdock(const string &xname, const string &yname,
     }
 
     if (m_opt) output_dock_rotation_matrix(fname_matrix.c_str(),
-        xname_vec,yname_vec, ut_mat);
+        xname_vec,yname_vec, ut_mat, assign1_list);
 
     if (o_opt) output_dock(chain1_list, ter_opt, split_opt, infmt1_opt, atom_opt,
         mirror_opt, het_opt, ut_mat, fname_super);
