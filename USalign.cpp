@@ -114,14 +114,13 @@ void print_help(bool h_opt=false)
 "          prot: only align proteins in a structure.\n"
 "          RNA : only align RNA and DNA in a structure (RNA-align).\n"
 "\n"
-"     -cp  Alignment with circular permutation (CP-align)\n"
-"\n"
 "     -mm  Multimeric alignment option:\n"
 "          0: (default) alignment of monomeric structures (TM-align, RNA-align)\n"
 "          1: alignment of two multi-chain complex structures (MM-align)\n"
 "          2: alignment of individual chains to a complex structures\n"
 "             $ USalign -dir1 monomers/ list ComplexTemplate.pdb -ter 0\n"
-"          To use -mm >=1, '-ter' option must be 0 or 1.\n"
+"          3: alignment of circularly permuted structure (CP-align)\n"
+"          To use -mm 1 or -mm 2, '-ter' option must be 0 or 1.\n"
 "\n"
 "    -ter  Number of chains to align.\n"
 "          3: only align the first chain, or the first segment of the\n"
@@ -173,12 +172,12 @@ void print_help(bool h_opt=false)
 "      -h  Print the full help message, including additional options\n"
 "\n"
 "Example usages ('zcat' program is needed to read .gz compressed files):\n"
-"    USalign 101m.pdb 1mba.pdb                # TM-align for monomers\n"
+"    USalign 101m.cif.gz 1mba.pdb             # TM-align for monomers\n"
 "    USalign 1qf6.cif 5yyn.pdb.gz -mol RNA    # RNA-align for monomers\n"
 "    USalign model.pdb native.pdb -byresi 1   # TM-score for monomers\n"
-"    USalign 4v4a.cif.gz 4v49.cif -mm -ter 1  # MM-align for asymetic units\n"
-"    USalign 3ksc.pdb1 4lej.pdb1 -mm -ter 0   # MM-align for biological units\n"
-"    USalign 1ajk.pdb.gz 2ayh.pdb.gz -cp      # CP-align for monomers\n"
+"    USalign 4v4a.cif 4v49.cif -mm 1 -ter 1   # MM-align for asymetic units\n"
+"    USalign 3ksc.pdb1 4lej.pdb1 -mm 1 -ter 0 # MM-align for biological units\n"
+"    USalign 1ajk.pdb.gz 2ayh.pdb.gz -mm 3    # CP-align for monomers\n"
     <<endl;
 
     if (h_opt) print_extra_help();
@@ -1486,10 +1485,10 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -byresi");
             byresi_opt=atoi(argv[i + 1]); i++;
         }
-        else if ( !strcmp(argv[i],"-cp") )
-        {
-            cp_opt=1;
-        }
+        //else if ( !strcmp(argv[i],"-cp") )
+        //{
+            //cp_opt=1;
+        //}
         else if ( !strcmp(argv[i],"-mirror") )
         {
             if (i>=(argc-1)) 
@@ -1569,8 +1568,13 @@ int main(int argc, char *argv[])
     if (split_opt<0 || split_opt>2)
         PrintErrorAndQuit("-split can only be 0, 1 or 2");
 
+    if (mm_opt==3)
+    {
+        cp_opt=true;
+        mm_opt=0;
+    }
     if (cp_opt && i_opt)
-        PrintErrorAndQuit("-cp cannot be used with -i or -I");
+        PrintErrorAndQuit("-mm 3 cannot be used with -i or -I");
 
     if (mirror_opt && het_opt!=1)
         cerr<<"WARNING! -mirror was not used with -het 1. "
@@ -1580,7 +1584,7 @@ int main(int argc, char *argv[])
     {
         if (i_opt) PrintErrorAndQuit("-mm cannot be used with -i or -I");
         if (u_opt) PrintErrorAndQuit("-mm cannot be used with -u or -L");
-        if (cp_opt) PrintErrorAndQuit("-mm cannot be used with -cp");
+        //if (cp_opt) PrintErrorAndQuit("-mm cannot be used with -cp");
         if (dir_opt.size()) PrintErrorAndQuit("-mm cannot be used with -dir");
         if (byresi_opt) PrintErrorAndQuit("-mm cannot be used with -byresi");
         if (ter_opt>=2) PrintErrorAndQuit("-mm must be used with -ter 0 or -ter 1");
