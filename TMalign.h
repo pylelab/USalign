@@ -3242,6 +3242,7 @@ int TMalign_main(double **xa, double **ya,
 
     int kk=0, i_old=0, j_old=0;
     d=0;
+    Liden=0;
     for(int k=0; k<n_ali8; k++)
     {
         for(int i=i_old; i<m1[k]; i++)
@@ -3344,13 +3345,14 @@ int CPalign_main(double **xa, double **ya,
     secx_cp[2*xlen]=0;
     
     /* fTM-align alignment */
-    double TM1_cp,TM2_cp;
+    double TM1_cp,TM2_cp,TM4_cp;
+    const double Lnorm_tmp=getmin(xlen,ylen);
     TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
-        t0, u0, TM1_cp, TM2_cp, TM3, TM4, TM5,
+        t0, u0, TM1_cp, TM2_cp, TM3, TM4_cp, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-        xlen*2, ylen, sequence, Lnorm_ass, d0_scale,
-        0, false, false, false, true, mol_type, -1);
+        xlen*2, ylen, sequence, Lnorm_tmp, d0_scale,
+        0, false, true, false, true, mol_type, -1);
 
     /* delete gap in seqxA_cp */
     r=0;
@@ -3394,12 +3396,14 @@ int CPalign_main(double **xa, double **ya,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-        xlen, ylen, sequence, Lnorm_ass, d0_scale,
-        0, false, false, false, true, mol_type, -1);
+        xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+        0, false, true, false, true, mol_type, -1);
 
-    /* do not use cricular permutation of number of aligned residues is not
+    /* do not use circular permutation of number of aligned residues is not
      * larger than sequence-order dependent alignment */
-    if (n_ali8>cp_aln_best) cp_point=0;
+    //cout<<"cp: aln="<<cp_aln_best<<"\tTM="<<TM4_cp<<endl;
+    //cout<<"TM: aln="<<n_ali8<<"\tTM="<<TM4<<endl;
+    if (n_ali8>=cp_aln_best || TM4>=TM4_cp) cp_point=0;
 
     /* prepare structure for final alignment */
     seqM.clear();
@@ -3419,6 +3423,31 @@ int CPalign_main(double **xa, double **ya,
     }
     seqx_cp[xlen]=0;
     secx_cp[xlen]=0;
+
+    /* test another round of alignment as concatenated alignment can
+     * inflate the number of aligned residues and TM-score. e.g. 1yadA 2duaA */
+    if (cp_point!=0)
+    {
+        TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
+            t0, u0, TM1_cp, TM2_cp, TM3, TM4_cp, TM5,
+            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, cp_aln_best,
+            xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+            0, false, true, false, true, mol_type, -1);
+        //cout<<"cp: aln="<<cp_aln_best<<"\tTM="<<TM4_cp<<endl;
+        if (n_ali8>=cp_aln_best || TM4>=TM4_cp)
+        {
+            cp_point=0;
+            for (r=0;r<xlen;r++)
+            {
+                xa_cp[r][0]=xa[r][0];
+                xa_cp[r][1]=xa[r][1];
+                xa_cp[r][2]=xa[r][2];
+                seqx_cp[r]=seqx[r];
+                secx_cp[r]=secx[r];
+            }
+        }
+    }
 
     /* full TM-align */
     TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
@@ -3460,5 +3489,51 @@ int CPalign_main(double **xa, double **ya,
     seqxA_cp.clear();
     seqyA_cp.clear();
     return cp_point;
+}
+
+bool output_cp(const string&xname, const string&yname,
+    const string &seqxA, const string &seqyA, const int outfmt_opt)
+{
+    int r;
+    bool after_cp=false;
+    int left_num=0;
+    int right_num=0;
+    int left_aln_num=0;
+    int right_aln_num=0;
+    for (r=0;r<seqxA.size();r++)
+    {
+        if      (seqxA[r]=='-') continue;
+        else if (seqxA[r]=='*') after_cp=true;
+        else 
+        {
+            if (after_cp)
+            {
+                right_num++;
+                right_aln_num+=(seqyA[r]!='-');
+            }
+            else
+            {
+                left_num++;
+                left_aln_num+=(seqyA[r]!='-');
+            }
+        }
+    }
+    if (after_cp==false)
+    {
+        if (outfmt_opt<=0) cout<<"No CP"<<endl;
+        else if (outfmt_opt==1) cout<<"#No CP"<<endl;
+        else if (outfmt_opt==2) cout<<"@"<<xname<<'\t'<<yname<<'\t'<<"No CP"<<endl;
+    }
+    else
+    {
+        if (outfmt_opt<=0) cout<<"CP point in structure_1: "<<left_num<<'/'<<right_num<<'\n'
+            <<"CP point in structure_1 alignment: "<<left_aln_num<<'/'<<right_aln_num<<endl;
+        else if (outfmt_opt==1) cout<<"#CP_in_seq="<<left_num<<'/'<<right_num
+                                    <<"\tCP_in_aln="<<left_aln_num<<'/'<<right_aln_num<<endl;
+        else if (outfmt_opt==2) cout<<"@"<<xname<<'\t'<<yname<<'\t'<<left_num
+            <<'/'<<right_num<<'\t'<<left_aln_num<<'/'<<right_aln_num<<endl;
+
+    }
+    return after_cp;
 }
 #endif

@@ -341,6 +341,10 @@ int TMalign(string &xname, string &yname, const string &fname_super,
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
+                    if (cp_opt) output_cp(
+                        xname.substr(dir1_opt.size()+dir_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()),
+                        seqxA,seqyA,outfmt_opt);
                     output_results(
                         xname.substr(dir1_opt.size()+dir_opt.size()),
                         yname.substr(dir2_opt.size()+dir_opt.size()),
