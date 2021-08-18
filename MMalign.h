@@ -3002,7 +3002,7 @@ void writeTrimComplex(vector<vector<vector<double> > >&a_trim_vec,
 
 void output_dock_rotation_matrix(const char* fname_matrix,
     const vector<string>&xname_vec, const vector<string>&yname_vec,
-    double ** ut_mat)
+    double ** ut_mat, int *assign1_list)
 {
     fstream fout;
     fout.open(fname_matrix, ios::out | ios::trunc);
@@ -3011,6 +3011,7 @@ void output_dock_rotation_matrix(const char* fname_matrix,
         int i,k;
         for (i=0;i<xname_vec.size();i++)
         {
+            if (assign1_list[i]<0) continue;
             fout << "------ The rotation matrix to rotate "
                  <<xname_vec[i]<<" to "<<yname_vec[i]<<" ------\n"
                  << "m               t[m]        u[m][0]        u[m][1]        u[m][2]\n";
