@@ -1,9 +1,9 @@
 ==============================================================================
-   TM-align: protein and RNA structure alignment by TM-score superposition.
+   US-align: universal structure alignment of monomeric and complex proteins
+   and nucleic acids
 
-   This program was written by (in reverse chronological order)
-   Chengxin Zhang, Sha Gong, Jianjie Wu, and Jianyi Yang
-   at Yang Zhang lab, Department of Computational Medicine and Bioinformatics,
+   This program was written by Chengxin Zhang at Yang Zhang lab,
+   Department of Computational Medicine and Bioinformatics,
    University of Michigan, 100 Washtenaw Ave, Ann Arbor, MI 48109-2218.
    Please report issues to yangzhanglab@umich.edu
 
@@ -61,38 +61,36 @@
    2021/01/07: Fixed bug in TMscore -c
    2021/05/29: Remove unnecessary depedency on malloc.h, which prevent
                compilation on Mac OS
+   2021/08/17: Complete implementation of MMalign
 ===============================================================================
 
 =========================
- How to install TM-align
+ How to install US-align
 =========================
 To compile the program in your Linux computer, simply enter
 
- make
+    make
 
 or
 
- g++ -static -O3 -ffast-math -lm -o TMalign TMalign.cpp
+    g++ -static -O3 -ffast-math -lm -o TMalign TMalign.cpp
 
 The '-static' flag should be removed on Mac OS, which does not support
 building static executables.
 
+US-align cannot compile natively on Windows OS due to the lack of POSIX support
+on Windows. Nonetheless, it is fully tested and known to work on Linux
+Subsystem for Windows (WSL2) on Windows 10 onwards.
+
 =====================
- How to use TM-align
+ How to use US-align
 =====================
 You can run the program without arguments to obtain a brief instruction
 
- ./TMalign structure1.pdb structure2.pdb
+    ./USalign structure1.pdb structure2.pdb
 
-===================
- Fortran version
-===================
-You can download the fortran version of TM-align from
-https://zhanglab.ccmb.med.umich.edu/TM-align/
+A full list of available options can be explored by:
 
-This C++ version of TM-align implemented several features not available in the
-fortran version, including RNA alignment and batch alignment of multiple 
-structures. A full list of available options can be explored by:
-  ./TMalign -h
+    ./USalign -h
 
-2021/05/20
+2021/08/17
