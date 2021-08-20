@@ -1262,7 +1262,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     const vector<string> &chain_list)
 {
     /* declare previously global variables */
-    vector<vector<vector<double> > >a_vec; // structure of complex
+    vector<vector<vector<double> > >a_vec;  // atomic structure
+    vector<vector<vector<double> > >ua_vec; // unchanged atomic structure 
     vector<vector<char> >seq_vec;  // sequence of complex
     vector<vector<char> >sec_vec;  // secondary structure of complex
     vector<int> mol_vec;           // molecule type of complex1, RNA if >0
@@ -1282,6 +1283,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         atom_opt, false, het_opt, len_aa, len_na, o_opt, resi_vec);
     int chain_num=a_vec.size();
     if (chain_num<=1) PrintErrorAndQuit("ERROR! <2 chains for multiple alignment");
+    if (m_opt||o_opt) for (i=0;i<chain_num;i++) ua_vec.push_back(a_vec[i]);
     int mol_type=0;
     int total_len=0;
     xlen=0;
@@ -1294,7 +1296,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     if (!u_opt) Lnorm_ass=total_len/chain_num;
     u_opt=true;
     total_len-=xlen;
-    if (total_len>500) fast_opt=true;
+    if (total_len>750) fast_opt=true;
 
     /* get all-against-all alignment */
     double **TMave_mat;
@@ -1369,6 +1371,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     }
 
     /* representative related variables */   
+    int r;
     int repr_idx=0;
     vector<string>xname_vec;
     for (i=0;i<chain_num;i++) xname_vec.push_back(
@@ -1376,8 +1379,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     vector<string>yname_vec;
     double *TMave_list;
     TMave_list = new double[chain_num];
-    double **ut_mat; // rotation matrices for all-against-all alignment
-    NewArray(&ut_mat,chain_num,4*3);
     int *assign_list;
     assign_list=new int[chain_num];
     vector<string> msa(ylen,""); // row is position along msa; column is sequence
@@ -1425,7 +1426,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         //cout<<"repr="<<repr_idx<<"; "<<chain_list[repr_idx]<<"; TM="<<repr_TM<<endl;
 
         /* superpose superpose */
-        int ui,uj;
         yname=chain_list[repr_idx].substr(dir_opt.size())+chainID_list[repr_idx];
         double **xt;
         vector<pair<double,int> >TM_pair_vec; // TM vs chain
@@ -1437,7 +1437,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         //secy = new char[ylen+1];
         //NewArray(&ya, ylen, 3);
         //copy_chain_data(a_vec[repr_idx],seq_vec[repr_idx],sec_vec[repr_idx], ylen,ya,seqy,secy);
-        int r;
         for (r=0;r<sequence.size();r++) sequence[r].clear(); sequence.clear();
         sequence.push_back("");
         sequence.push_back("");
@@ -1445,13 +1444,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         {
             yname_vec.push_back(yname);
             xlen = len_vec[i];
-            if (i==repr_idx || xlen<3)
-            {
-                for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=0;
-                for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=0;
-                for (ui=0;ui<3;ui++) ut_mat[i][ui*3+ui]=1;
-                continue;
-            }
+            if (i==repr_idx || xlen<3) continue;
             TM_pair_vec.push_back(make_pair(-TMave_mat[i][repr_idx],i));
         }
         sort(TM_pair_vec.begin(),TM_pair_vec.end());
@@ -1513,9 +1506,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 2,  a_opt, u_opt, d_opt, fast_opt, mol_type);
         
-            for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=u0[ui][uj];
-            for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=t0[uj];
-
             if (outfmt_opt<0) output_results(
                 xname_vec[i].c_str(), xname_vec[j].c_str(), "", "",
                 xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
@@ -1865,22 +1855,53 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         "", false, a_opt, u_opt, d_opt, false,
         resi_vec, resi_vec );
 
-    if (m_opt)
+    if (m_opt || o_opt)
     {
-        assign_list[repr_idx]=-1;
-        output_dock_rotation_matrix(fname_matrix.c_str(),
-             xname_vec,yname_vec, ut_mat, assign_list);
-    }
+        double **ut_mat; // rotation matrices for all-against-all alignment
+        int ui,uj;
+        double t[3], u[3][3];
+        double rmsd;
+        NewArray(&ut_mat,chain_num,4*3);
+        for (i=0;i<chain_num;i++)
+        {
+            xlen=ylen=a_vec[i].size();
+            NewArray(&xa,xlen,3);
+            NewArray(&ya,xlen,3);
+            for (r=0;r<xlen;r++)
+            {
+                xa[r][0]=ua_vec[i][r][0];
+                xa[r][1]=ua_vec[i][r][1];
+                xa[r][2]=ua_vec[i][r][2];
+                ya[r][0]= a_vec[i][r][0];
+                ya[r][1]= a_vec[i][r][1];
+                ya[r][2]= a_vec[i][r][2];
+            }
+            Kabsch(xa,ya,xlen,1,&rmsd,t,u);
+            for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=u[ui][uj];
+            for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=t[uj];
+            DeleteArray(&xa,xlen);
+            DeleteArray(&ya,xlen);
+        }
+        vector<vector<vector<double> > >().swap(ua_vec);
 
-    if (o_opt) output_dock(chain_list, ter_opt, split_opt, infmt_opt, atom_opt,
-        false, het_opt, ut_mat, fname_super);
+        if (m_opt)
+        {
+            assign_list[repr_idx]=-1;
+            output_dock_rotation_matrix(fname_matrix.c_str(),
+                xname_vec,yname_vec, ut_mat, assign_list);
+        }
+
+        if (o_opt) output_dock(chain_list, ter_opt, split_opt, 
+                infmt_opt, atom_opt, false, het_opt, ut_mat, fname_super);
+        
+        DeleteArray(&ut_mat,chain_num);
+    }
 
     /* clean up */
     vector<string>().swap(msa);
     vector<string>().swap(tmp_str_vec);
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqyA_mat);
-    DeleteArray(&ut_mat,chain_num);
     vector<string>().swap(xname_vec);
     vector<string>().swap(yname_vec);
     delete[]TMave_list;
