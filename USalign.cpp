@@ -1251,11 +1251,11 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
 
 int mTMalign(string &xname, string &yname, const string &fname_super,
     const string &fname_matrix,
-    vector<string> &sequence, const double Lnorm_ass, const double d0_scale,
+    vector<string> &sequence, double Lnorm_ass, const double d0_scale,
     const bool m_opt, const int  i_opt, const int o_opt, const int a_opt,
-    const bool u_opt, const bool d_opt, const double TMcut,
+    bool u_opt, const bool d_opt, const double TMcut,
     const int infmt_opt, const int ter_opt,
-    const int split_opt, const int outfmt_opt, const bool fast_opt,
+    const int split_opt, const int outfmt_opt, bool fast_opt,
     const int het_opt,
     const string &atom_opt, const string &mol_opt, const string &dir_opt,
     const int byresi_opt,
@@ -1276,16 +1276,31 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     int    len_aa,len_na;          // total length of protein and RNA/DNA
     vector<string> resi_vec;       // residue index for chain
 
-    /* parse complex */
+    /* parse chain list */
     parse_chain_list(chain_list, a_vec, seq_vec, sec_vec, mol_vec,
         len_vec, chainID_list, ter_opt, split_opt, mol_opt, infmt_opt,
         atom_opt, false, het_opt, len_aa, len_na, o_opt, resi_vec);
     int chain_num=a_vec.size();
     if (chain_num<=1) PrintErrorAndQuit("ERROR! <2 chains for multiple alignment");
+    int mol_type=0;
+    int total_len=0;
+    xlen=0;
+    for (i=0; i<chain_num; i++)
+    {
+        if (len_vec[i]>xlen) xlen=len_vec[i];
+        total_len+=len_vec[i];
+        mol_type+=mol_vec[i];
+    }
+    if (!u_opt) Lnorm_ass=total_len/chain_num;
+    u_opt=true;
+    if ((total_len-xlen)>500) fast_opt=true;
 
     /* get all-against-all alignment */
     double **TMave_mat;
     NewArray(&TMave_mat,chain_num,chain_num);
+    vector<string> tmp_str_vec(chain_num,"");
+    vector<vector<string> >seqxA_mat(chain_num,tmp_str_vec);
+    vector<vector<string> >seqyA_mat(chain_num,tmp_str_vec);
     for (i=0;i<chain_num;i++) for (j=0;j<chain_num;j++) TMave_mat[i][j]=0;
     for (i=0;i<chain_num;i++)
     {
@@ -1295,6 +1310,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         secx = new char[xlen+1];
         NewArray(&xa, xlen, 3);
         copy_chain_data(a_vec[i],seq_vec[i],sec_vec[i],xlen,xa,seqx,secx);
+        seqxA_mat[i][i]=seqyA_mat[i][i]=(string)(seqx);
         for (j=i+1;j<chain_num;j++)
         {
             ylen=len_vec[j];
@@ -1326,12 +1342,13 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                0, false, false, false, true,
-                mol_vec[i]+mol_vec[j],TMcut);
+                0, false, u_opt, false, fast_opt,
+                mol_type,TMcut);
 
             /* store result */
-            TMave_mat[i][j]=TM2;
-            TMave_mat[j][i]=TM1;
+            TMave_mat[i][j]=TMave_mat[j][i]=TM4;
+            seqxA_mat[i][j]=seqyA_mat[j][i]=seqxA;
+            seqyA_mat[i][j]=seqxA_mat[j][i]=seqyA;
 
             /* clean up */
             seqM.clear();
@@ -1392,6 +1409,9 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     NewArray(&ya, ylen, 3);
     copy_chain_data(a_vec[repr_idx],seq_vec[repr_idx],sec_vec[repr_idx], ylen,ya,seqy,secy);
     int r;
+    for (r=0;r<sequence.size();r++) sequence[r].clear(); sequence.clear();
+    sequence.push_back("");
+    sequence.push_back("");
     for (i=0;i<chain_num;i++)
     {
         xname_vec.push_back(chain_list[i].substr(dir_opt.size())+chainID_list[i]);
@@ -1412,6 +1432,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         secx = new char[xlen+1];
         NewArray(&xa, xlen, 3);
         copy_chain_data(a_vec[i],seq_vec[i],sec_vec[i], xlen,xa,seqx,secx);
+        sequence[0]=seqxA_mat[i][repr_idx];
+        sequence[1]=seqyA_mat[i][repr_idx];
 
         /* declare variable specific to this pair of TMalign */
         double t0[3], u0[3][3];
@@ -1435,8 +1457,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             seqM, seqxA, seqyA,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass, d0_scale,
-            0, a_opt, u_opt, d_opt, fast_opt,
-            mol_vec[i]+mol_vec[repr_idx]);
+            3, a_opt, u_opt, d_opt, fast_opt,
+            mol_type);
         
         for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=u0[ui][uj];
         for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=t0[uj];
@@ -1469,6 +1491,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         seqM.clear();
         seqxA.clear();
         seqyA.clear();
+        sequence[0].clear();
+        sequence[1].clear();
 
         delete[]seqx;
         delete[]secx;
@@ -1498,9 +1522,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     int n_ali_total=0;
     int n_ali8_total=0;
     int xlen_total=0, ylen_total=0;
-    vector<string> tmp_str_vec(chain_num,"");
-    vector<vector<string> >seqxA_mat(chain_num,tmp_str_vec);
-    vector<vector<string> >seqyA_mat(chain_num,tmp_str_vec);
 
     for (i=0; i< chain_num; i++)
     {
@@ -1541,8 +1562,6 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 0, a_opt, u_opt, d_opt, mol_vec[i]+mol_vec[j], 1, invmap);
-            seqxA_mat[i][j]=seqyA_mat[j][i]=seqxA;
-            seqyA_mat[i][j]=seqxA_mat[j][i]=seqyA;
 
             if (xlen<=ylen)
             {
