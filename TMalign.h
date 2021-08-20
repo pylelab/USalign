@@ -2759,7 +2759,6 @@ int TMalign_main(double **xa, double **ya,
     //    get initial alignment from user's input:    //
     //    Stick to the initial alignment              //
     //************************************************//
-    bool bAlignStick = false;
     if (i_opt==3)// if input has set parameter for "-I"
     {
         // In the original code, this loop starts from 1, which is
@@ -2800,13 +2799,12 @@ int TMalign_main(double **xa, double **ya,
             TMmax = TM;
             for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
         }
-        bAlignStick = true;
     }
 
     /******************************************************/
     /*    get initial alignment with gapless threading    */
     /******************************************************/
-    if (!bAlignStick)
+    if (i_opt<=1)
     {
         get_initial(r1, r2, xtm, ytm, xa, ya, xlen, ylen, invmap0, d0,
             d0_search, fast_opt, t, u);
@@ -3009,60 +3007,60 @@ int TMalign_main(double **xa, double **ya,
                 return 6;
             }
         }
+    }
 
-        //************************************************//
-        //    get initial alignment from user's input:    //
-        //************************************************//
-        if (i_opt==1)// if input has set parameter for "-i"
+    //************************************************//
+    //    get initial alignment from user's input:    //
+    //************************************************//
+    if (i_opt>=1)// if input has set parameter for "-i"
+    {
+        for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
+            invmap[j] = -1;
+
+        int i1 = -1;// in C version, index starts from zero, not from one
+        int i2 = -1;
+        int L1 = sequence[0].size();
+        int L2 = sequence[1].size();
+        int L = min(L1, L2);// Get positions for aligned residues
+        for (int kk1 = 0; kk1 < L; kk1++)
         {
-            for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
-                invmap[j] = -1;
-
-            int i1 = -1;// in C version, index starts from zero, not from one
-            int i2 = -1;
-            int L1 = sequence[0].size();
-            int L2 = sequence[1].size();
-            int L = min(L1, L2);// Get positions for aligned residues
-            for (int kk1 = 0; kk1 < L; kk1++)
+            if (sequence[0][kk1] != '-')
+                i1++;
+            if (sequence[1][kk1] != '-')
             {
-                if (sequence[0][kk1] != '-')
-                    i1++;
-                if (sequence[1][kk1] != '-')
-                {
-                    i2++;
-                    if (i2 >= ylen || i1 >= xlen) kk1 = L;
-                    else if (sequence[0][kk1] != '-') invmap[i2] = i1;
-                }
+                i2++;
+                if (i2 >= ylen || i1 >= xlen) kk1 = L;
+                else if (sequence[0][kk1] != '-') invmap[i2] = i1;
             }
+        }
 
-            //--------------- 2. Align proteins from original alignment
-            double prevD0_MIN = D0_MIN;// stored for later use
-            int prevLnorm = Lnorm;
-            double prevd0 = d0;
-            TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya,
-                xlen, ylen, invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0,
-                d0_search, score_d8, t, u, mol_type);
-            D0_MIN = prevD0_MIN;
-            Lnorm = prevLnorm;
-            d0 = prevd0;
+        //--------------- 2. Align proteins from original alignment
+        double prevD0_MIN = D0_MIN;// stored for later use
+        int prevLnorm = Lnorm;
+        double prevd0 = d0;
+        TM_ali = standard_TMscore(r1, r2, xtm, ytm, xt, xa, ya,
+            xlen, ylen, invmap, L_ali, rmsd_ali, D0_MIN, Lnorm, d0,
+            d0_search, score_d8, t, u, mol_type);
+        D0_MIN = prevD0_MIN;
+        Lnorm = prevLnorm;
+        d0 = prevd0;
 
-            TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya,
-                xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true, Lnorm,
-                score_d8, d0);
-            if (TM > TMmax)
-            {
-                TMmax = TM;
-                for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
-            }
-            // Different from get_initial, get_initial_ss and get_initial_ssplus
-            TM = DP_iter(r1, r2, xtm, ytm, xt, path, val, xa, ya,
-                xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
-                local_d0_search, D0_MIN, Lnorm, d0, score_d8);
-            if (TM>TMmax)
-            {
-                TMmax = TM;
-                for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
-            }
+        TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya,
+            xlen, ylen, invmap, t, u, 40, 8, local_d0_search, true, Lnorm,
+            score_d8, d0);
+        if (TM > TMmax)
+        {
+            TMmax = TM;
+            for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
+        }
+        // Different from get_initial, get_initial_ss and get_initial_ssplus
+        TM = DP_iter(r1, r2, xtm, ytm, xt, path, val, xa, ya,
+            xlen, ylen, t, u, invmap, 0, 2, (fast_opt)?2:30,
+            local_d0_search, D0_MIN, Lnorm, d0, score_d8);
+        if (TM>TMmax)
+        {
+            TMmax = TM;
+            for (i = 0; i<ylen; i++) invmap0[i] = invmap[i];
         }
     }
 
