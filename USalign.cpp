@@ -1349,6 +1349,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             TMave_mat[i][j]=TMave_mat[j][i]=TM4;
             seqxA_mat[i][j]=seqyA_mat[j][i]=seqxA;
             seqyA_mat[i][j]=seqxA_mat[j][i]=seqyA;
+            //cout<<chain_list[i]<<':'<<chainID_list[i]
+                //<<chain_list[j]<<':'<<chainID_list[j]<<"\tTM4="<<TM4<<endl;
 
             /* clean up */
             seqM.clear();
@@ -1377,7 +1379,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             //cout<<'\t'<<setprecision(4)<<TMave_mat[i][j];
             TMave_list[j]+=TMave_mat[i][j];
         }
-        //cout<<endl;
+        //cout<<'\t'<<chain_list[i]<<':'<<chainID_list[i]<<endl;
     }
     int repr_idx=0;
     double repr_TM=0;
@@ -1404,12 +1406,13 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     vector<pair<double,int> >TM_pair_vec; // TM vs chain
 
     assign_list=new int[chain_num];
-    for (i=0; i<assign_list[i]; i++) assign_list[i]=-1;
-    ylen = len_vec[repr_idx];
-    seqy = new char[ylen+1];
-    secy = new char[ylen+1];
-    NewArray(&ya, ylen, 3);
-    copy_chain_data(a_vec[repr_idx],seq_vec[repr_idx],sec_vec[repr_idx], ylen,ya,seqy,secy);
+    for (i=0; i<chain_num; i++) assign_list[i]=-1;
+    assign_list[repr_idx]=repr_idx;
+    //ylen = len_vec[repr_idx];
+    //seqy = new char[ylen+1];
+    //secy = new char[ylen+1];
+    //NewArray(&ya, ylen, 3);
+    //copy_chain_data(a_vec[repr_idx],seq_vec[repr_idx],sec_vec[repr_idx], ylen,ya,seqy,secy);
     int r;
     for (r=0;r<sequence.size();r++) sequence[r].clear(); sequence.clear();
     sequence.push_back("");
@@ -1426,15 +1429,42 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             for (ui=0;ui<3;ui++) ut_mat[i][ui*3+ui]=1;
             continue;
         }
-        assign_list[i]=repr_idx;
         TM_pair_vec.push_back(make_pair(-TMave_mat[i][repr_idx],i));
-
+    }
+    sort(TM_pair_vec.begin(),TM_pair_vec.end());
+    
+    int tm_idx;
+    if (outfmt_opt<=0) cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
+                           <<"RMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
+    for (tm_idx=0; tm_idx<TM_pair_vec.size(); tm_idx++)
+    {
+        i=TM_pair_vec[tm_idx].second;
+        xlen = len_vec[i];
         seqx = new char[xlen+1];
         secx = new char[xlen+1];
         NewArray(&xa, xlen, 3);
         copy_chain_data(a_vec[i],seq_vec[i],sec_vec[i], xlen,xa,seqx,secx);
-        sequence[0]=seqxA_mat[i][repr_idx];
-        sequence[1]=seqyA_mat[i][repr_idx];
+
+        double maxTM=TMave_mat[i][repr_idx];
+        int maxj=repr_idx;
+        for (j=0;j<chain_num;j++)
+        {
+            if (i==j || assign_list[j]<0 || TMave_mat[i][j]<=maxTM) continue;
+            maxj=j;
+            maxTM=TMave_mat[i][j];
+        }
+        j=maxj;
+        assign_list[i]=j;
+        ylen = len_vec[j];
+        seqy = new char[ylen+1];
+        secy = new char[ylen+1];
+        NewArray(&ya, ylen, 3);
+        copy_chain_data(a_vec[j],seq_vec[j],sec_vec[j], ylen,ya,seqy,secy);
+
+        sequence[0]=seqxA_mat[i][j];
+        sequence[1]=seqyA_mat[i][j];
+        //cout<<"tm_idx="<<tm_idx<<"\ti="<<i<<"\tj="<<j<<endl;
+        //cout<<"superpose "<<xname_vec[i]<<" to "<<xname_vec[j]<<endl;
 
         /* declare variable specific to this pair of TMalign */
         double t0[3], u0[3][3];
@@ -1498,13 +1528,23 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         delete[]seqx;
         delete[]secx;
         DeleteArray(&xa,xlen);
+        
+        delete[]seqy;
+        delete[]secy;
+        DeleteArray(&ya,ylen);
     }
-    //delete[]seqy;
-    //delete[]secy;
-    //DeleteArray(&ya,ylen);
+    ylen = len_vec[repr_idx];
+    seqy = new char[ylen+1];
+    secy = new char[ylen+1];
+    NewArray(&ya, ylen, 3);
+    copy_chain_data(a_vec[repr_idx],seq_vec[repr_idx],sec_vec[repr_idx], ylen,ya,seqy,secy);
 
-    if (m_opt) output_dock_rotation_matrix(fname_matrix.c_str(),
-        xname_vec,yname_vec, ut_mat, assign_list);
+    if (m_opt)
+    {
+        assign_list[repr_idx]=-1;
+        output_dock_rotation_matrix(fname_matrix.c_str(),
+             xname_vec,yname_vec, ut_mat, assign_list);
+    }
 
     if (o_opt) output_dock(chain_list, ter_opt, split_opt, infmt_opt, atom_opt,
         false, het_opt, ut_mat, fname_super);
@@ -1519,9 +1559,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     for (r=0;r<ylen;r++) msa[r]=seqy[r];
     //for (r=0;r<msa.size();r++) cout<<"["<<r<<"]\t"<<msa[r]<<endl;
     //cout<<"start recover"<<endl;
-    sort(TM_pair_vec.begin(),TM_pair_vec.end());
     assign_list[repr_idx]=0;
-    int tm_idx;
     for (tm_idx=0; tm_idx<TM_pair_vec.size(); tm_idx++)
     {
         i=TM_pair_vec[tm_idx].second;
