@@ -82,6 +82,9 @@ void print_extra_help()
 //"   -full  Whether to show full MM-align results, including alignment of\n"
 //"          individual chains. T or F, (default F)\n"
 //"\n"
+"   -se    Do not perform superposition. Useful for extracting alignment from\n"
+"          superposed structure pairs\n"
+"\n"
 " -infmt1  Input format for structure_11\n"
 " -infmt2  Input format for structure_2\n"
 "          -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -198,7 +201,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
     const int cp_opt, const int mirror_opt, const int het_opt,
     const string &atom_opt, const string &mol_opt, const string &dir_opt,
     const string &dir1_opt, const string &dir2_opt, const int byresi_opt,
-    const vector<string> &chain1_list, const vector<string> &chain2_list)
+    const vector<string> &chain1_list, const vector<string> &chain2_list,
+    const bool se_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -330,6 +334,37 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
+                    else if (se_opt)
+                    {
+                        int *invmap = new int[ylen+1];
+                        u0[0][0]=u0[1][1]=u0[2][2]=1;
+                        u0[0][1]=         u0[0][2]=
+                        u0[1][0]=         u0[1][2]=
+                        u0[2][0]=         u0[2][1]=
+                        t0[0]   =t0[1]   =t0[2]   =0;
+                        se_main(
+                            xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                            d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                            seqM, seqxA, seqyA,
+                            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                            xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                            i_opt, a_opt, u_opt, d_opt,
+                            mol_vec1[chain_i]+mol_vec2[chain_j], 
+                            outfmt_opt, invmap);
+                        if (outfmt_opt>=2) 
+                        {
+                            Liden=L_ali=0;
+                            int r1,r2;
+                            for (r2=0;r2<ylen;r2++)
+                            {
+                                r1=invmap[r2];
+                                if (r1<0) continue;
+                                L_ali+=1;
+                                Liden+=(seqx[r1]==seqy[r2]);
+                            }
+                        }
+                        delete [] invmap;
+                    }
                     else TMalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
@@ -1945,6 +1980,7 @@ int main(int argc, char *argv[])
 
     bool   full_opt  = false;// do not show chain level alignment
     double TMcut     =-1;
+    bool   se_opt    =false;
     int    infmt1_opt=-1;    // PDB or PDBx/mmCIF format for chain_1
     int    infmt2_opt=-1;    // PDB or PDBx/mmCIF format for chain_2
     int    ter_opt   =2;     // END, or different chainID
@@ -2063,6 +2099,10 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-fast"))
         {
             fast_opt = true;
+        }
+        else if (!strcmp(argv[i], "-se"))
+        {
+            se_opt = true;
         }
         else if ( !strcmp(argv[i],"-infmt1") )
         {
@@ -2303,7 +2343,7 @@ int main(int argc, char *argv[])
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
         atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
-        chain1_list, chain2_list);
+        chain1_list, chain2_list, se_opt);
     else if (mm_opt==1) MMalign(xname, yname, fname_super, fname_lign,
         fname_matrix, sequence, d0_scale, m_opt, o_opt,
         a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
