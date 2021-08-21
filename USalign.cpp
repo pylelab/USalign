@@ -97,7 +97,7 @@ void print_extra_help()
 "Advanced usage 2 (search query.pdb against I-TASSER PDB library by fTM-align):\n"
 "    wget https://zhanglab.ccmb.med.umich.edu/library/PDB.tar.bz2\n"
 "    tar -xjvf PDB.tar.bz2\n"
-"    USalign -dir1 PDB/ PDB/list -suffix .pdb query.pdb -outfmt 2 -fast\n"
+"    USalign query.pdb -dir2 PDB/ PDB/list -suffix .pdb -outfmt 2 -fast\n"
     <<endl;
 }
 
