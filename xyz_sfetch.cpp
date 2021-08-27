@@ -84,15 +84,27 @@ int main(int argc, char *argv[])
 
     /* read entry list */
     vector<string> chain_list;
-    ifstream fp(list_opt.c_str());
-    while (fp.good())
+    ifstream fp;
+    if (list_opt=="-")
     {
-        getline(fp, line);
-        for (i=0;i<line.size();i++)
-            if (line[i]==' '||line[i]=='\t') break;
-        if (line.size() && i) chain_list.push_back(line.substr(0,i));
+        while (cin.good())
+        {
+            getline(cin, line);
+            for (i=0;i<line.size();i++) if (line[i]==' '||line[i]=='\t') break;
+            if (line.size() && i) chain_list.push_back(line.substr(0,i));
+        }
     }
-    fp.close();
+    else
+    {
+        fp.open(list_opt.c_str(),ios::in);
+        while (fp.good())
+        {
+            getline(fp, line);
+            for (i=0;i<line.size();i++) if (line[i]==' '||line[i]=='\t') break;
+            if (line.size() && i) chain_list.push_back(line.substr(0,i));
+        }
+        fp.close();
+    }
 
     /* read xyz index */
     /* In xyz file, each line has 28 chacters plus an additional '\n'. In PDB
@@ -128,6 +140,6 @@ int main(int argc, char *argv[])
     delete[]buf;
     filename.clear();
     list_opt.clear();
-    chain_list.clear();
+    vector<string>().swap(chain_list);
     return 0;
 }
