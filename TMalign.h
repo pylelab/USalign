@@ -3012,7 +3012,7 @@ int TMalign_main(double **xa, double **ya,
     //************************************************//
     //    get initial alignment from user's input:    //
     //************************************************//
-    if (i_opt>=1)// if input has set parameter for "-i"
+    if (i_opt>=1 && i_opt<=2)// if input has set parameter for "-i"
     {
         for (int j = 0; j < ylen; j++)// Set aligned position to be "-1"
             invmap[j] = -1;
