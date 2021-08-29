@@ -1091,7 +1091,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                     seqM, seqxA, seqyA,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen_trim, sequence, Lnorm_tmp, d0_scale,
-                    0, false, true, false, fast_opt,
+                    0, false, true, false, true,
                     mol_vec1[i]+mol_vec2[j],TMcut);
                 seqxA.clear();
                 seqyA.clear();
@@ -1108,6 +1108,20 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                     xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                     0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
                 delete[]invmap;
+
+                if (sequence.size()<2) sequence.push_back("");
+                if (sequence.size()<2) sequence.push_back("");
+                sequence[0]=seqxA;
+                sequence[1]=seqyA;
+
+                TMalign_main(xt, ya, seqx, seqy, secx, secy,
+                    t0, u0, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+                    2, false, true, false, fast_opt,
+                    mol_vec1[i]+mol_vec2[j],TMcut);
                 DeleteArray(&xt, xlen);
             }
             else
