@@ -961,8 +961,12 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
             seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
             n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0, d0A, d0B,
             Lnorm_ass, d0_scale, d0a, d0u, (m_opt?fname_matrix:"").c_str(),
-            outfmt_opt, ter_opt, true, split_opt, o_opt, fname_super,
+            (outfmt_opt==2?outfmt_opt:3), ter_opt, true, split_opt, o_opt, fname_super,
             0, a_opt, false, d_opt, mirror_opt, resi_vec1, resi_vec2);
+        if (outfmt_opt==2) printf("%s%s\t%s%s\t%.4f\n",
+            xname.substr(dir1_opt.size()).c_str(), chainID_list1[0].c_str(), 
+            yname.substr(dir2_opt.size()).c_str(), chainID_list2[0].c_str(),
+            sqrt((TM1*TM1+TM2*TM2)/2));
 
         /* clean up */
         seqM.clear();
@@ -1108,12 +1112,11 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                     xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                     0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
                 delete[]invmap;
-
+                
                 if (sequence.size()<2) sequence.push_back("");
                 if (sequence.size()<2) sequence.push_back("");
                 sequence[0]=seqxA;
                 sequence[1]=seqyA;
-
                 TMalign_main(xt, ya, seqx, seqy, secx, secy,
                     t0, u0, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
@@ -1175,18 +1178,20 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     int ui,uj;
     vector<string>xname_vec;
     vector<string>yname_vec;
+    vector<double>TM_vec;
     for (i=0;i<chain1_num;i++)
     {
         j=assign1_list[i];
         xname_vec.push_back(xname+chainID_list1[i]);
         if (j<0)
         {
-            cerr<<"Warning! "<<chainID_list1[j]<<" cannot be alighed"<<endl;
+            cerr<<"Warning! "<<chainID_list1[i]<<" cannot be alighed"<<endl;
             for (ui=0;ui<3;ui++)
             {
                 for (uj=0;uj<4;uj++) ut_mat[i][ui*3+uj]=0;
                 ut_mat[i][ui*3+ui]=1;
             }
+            yname_vec.push_back(yname);
             continue;
         }
         yname_vec.push_back(yname+chainID_list2[j]);
@@ -1237,7 +1242,10 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) ut_mat[i][ui*3+uj]=u0[ui][uj];
         for (uj=0;uj<3;uj++) ut_mat[i][9+uj]=t0[uj];
 
-        output_results(
+        TM_vec.push_back(TM1);
+        TM_vec.push_back(TM2);
+
+        if (outfmt_opt<2) output_results(
             xname.c_str(), yname.c_str(),
             chainID_list1[i], chainID_list2[j],
             xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
@@ -1263,6 +1271,24 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         delete[]secx;
         DeleteArray(&xa,xlen);
     }
+    if (outfmt_opt==2)
+    {
+        double TM=0;
+        for (i=0;i<TM_vec.size();i++) TM+=TM_vec[i]*TM_vec[i];
+        TM=sqrt(TM/TM_vec.size());
+        string query_name=xname;
+        string template_name=yname;
+        for (i=0;i<chain1_num;i++)
+        {
+            j=assign1_list[i];
+            if (j<0) continue;
+            query_name   +=chainID_list1[i];
+            template_name+=chainID_list2[j];
+        }
+        printf("%s\t%s\t%.4f\n",query_name.c_str(),template_name.c_str(),TM);
+        query_name.clear();
+        template_name.clear();
+    }
 
     if (m_opt) output_dock_rotation_matrix(fname_matrix.c_str(),
         xname_vec,yname_vec, ut_mat, assign1_list);
@@ -1272,6 +1298,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
 
 
     /* clean up everything */
+    vector<double>().swap(TM_vec);
     vector<string>().swap(xname_vec);
     vector<string>().swap(yname_vec);
     delete [] assign1_list;
@@ -2347,8 +2374,11 @@ int main(int argc, char *argv[])
     else file2chainlist(chain2_list, yname, dir2_opt, suffix_opt);
 
     if (outfmt_opt==2)
-        cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
+    {
+        if (mm_opt==2) cout<<"#Query\tTemplate\tTM"<<endl;
+        else cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
             <<"RMSD\tID1\tID2\tIDali\tL1\tL2\tLali"<<endl;
+    }
 
     /* real alignment. entry functions are MMalign_main and 
      * TMalign_main */
