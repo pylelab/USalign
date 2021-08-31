@@ -1095,7 +1095,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                     seqM, seqxA, seqyA,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen_trim, sequence, Lnorm_tmp, d0_scale,
-                    0, false, true, false, true,
+                    0, false, true, false, fast_opt,
                     mol_vec1[i]+mol_vec2[j],TMcut);
                 seqxA.clear();
                 seqyA.clear();
