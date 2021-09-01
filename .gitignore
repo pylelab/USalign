@@ -5,6 +5,7 @@
 .*.sw*
 
 # binary executables
+cif2pdb
 TMalign
 TMalignc
 pdb2xyz
