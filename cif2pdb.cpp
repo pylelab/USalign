@@ -103,7 +103,7 @@ void write_mmcif_to_pdb(const string filename,
             if (PDB_lines[c].size()==0) continue;
             cout<<     filename+Trim(chainID_list[c])+".pdb"<<endl;
             fout.open((filename+Trim(chainID_list[c])+".pdb").c_str());
-            fout<<"REMARK cif2pdb "<<PDB_lines[c][0].substr(20,2)<<" "<<chainID_list[c]<<endl;
+            fout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
             for (r=0;r<PDB_lines[c].size();r++) fout<<PDB_lines[c][r];
             fout<<"TER\nEND"<<endl;
             fout.close();
@@ -115,7 +115,7 @@ void write_mmcif_to_pdb(const string filename,
         for (c=0;c<PDB_lines.size();c++)
         {
             if (PDB_lines[c].size()==0) continue;
-            fout<<"REMARK cif2pdb "<<PDB_lines[c][0].substr(20,2)<<" "<<chainID_list[c]<<endl;
+            fout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
         }
         for (c=0;c<PDB_lines.size();c++)
         {
@@ -144,28 +144,27 @@ size_t resolve_chainID_for_mmcif(vector<vector<string> >&PDB_lines,
     for (c=0;c<PDB_lines.size();c++)
     {
         if (PDB_lines[c].size()==0) continue;
-        chainID=PDB_lines[c][0].substr(20,2);
-        if (chainID[0]!=' ') continue;
+        chainID=PDB_lines[c][0][21];
+        if (chainID!=chainID_list[c]) continue;
         chainID_accept[c]=true;
         for (i=0;i<chainID_string.size();i++)
         {
-            if (chainID_string[i]!=chainID[1]) continue;
+            if (chainID_string[i]!=chainID[0]) continue;
             if (chainID_taken[i]) chainID_accept[c]=false;
             else chainID_taken[i]=true;
             break;
         }
     }
 
-    /* accept all remaining non-duplicated two-character chain ID */
+    /* accept all remaining non-conflicting chain ID */
     for (c=0;c<PDB_lines.size();c++)
     {
         if (PDB_lines[c].size()==0 || chainID_accept[c]) continue;
-        chainID=PDB_lines[c][0].substr(20,2);
-        if (chainID[0]==' ') continue;
+        chainID=PDB_lines[c][0][21];
         chainID_accept[c]=true;
         for (i=0;i<chainID_string.size();i++)
         {
-            if (chainID_string[i]!=chainID[1]) continue;
+            if (chainID_string[i]!=chainID[0]) continue;
             if (chainID_taken[i]) chainID_accept[c]=false;
             else chainID_taken[i]=true;
             break;
@@ -209,7 +208,7 @@ size_t resolve_chainID_for_mmcif(vector<vector<string> >&PDB_lines,
     return changed_chains;
 }
 
-size_t get_all_mmcif_lines(const string filename,
+size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
     const bool dna_opt, const bool rna_opt, const bool protein_opt,
     const bool hoh_opt,  const bool lig_opt, const bool mse_opt)
@@ -372,7 +371,8 @@ size_t get_all_mmcif_lines(const string filename,
              asym_id=line_vec[_atom_site["auth_asym_id"]];
         else asym_id=line_vec[_atom_site["label_asym_id"]];
         if (asym_id==".") asym_id=" ";
-        if (asym_id.size()==1) asym_id=" "+asym_id;
+        if (chain_opt.size() && asym_id!=chain_opt &&
+            !(asym_id==" " && (chain_opt=="_" || chain_opt=="."))) continue;
             
         if (_atom_site.count("pdbx_PDB_model_num") && 
             model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])
@@ -391,7 +391,7 @@ size_t get_all_mmcif_lines(const string filename,
         a++;
         a%=100000;
         i8_stream<<group_PDB
-            <<setw(5)<<a<<" "<<atom<<" "<<resn<<asym_id.substr(0,2)
+            <<setw(5)<<a<<" "<<atom<<" "<<resn<<" "<<asym_id[asym_id.size()-1]
             <<setw(5)<<resi<<"   "
             <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
             <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
     /* parse structure */
     vector<vector<string> >PDB_lines;
     vector<string> chainID_list;
-    get_all_mmcif_lines(xname, PDB_lines, chainID_list,
+    get_all_mmcif_lines(xname, chain_opt, PDB_lines, chainID_list,
         dna_opt, rna_opt, protein_opt, hoh_opt, lig_opt, mse_opt);
     if (!split_opt) resolve_chainID_for_mmcif(PDB_lines,chainID_list);
     write_mmcif_to_pdb(yname, PDB_lines, chainID_list, split_opt);
@@ -486,5 +486,6 @@ int main(int argc, char *argv[])
     /* clean up */
     vector<vector<string> >().swap(PDB_lines);
     vector<string>().swap(chainID_list);
+    chain_opt.clear();
     return 0;
 }
