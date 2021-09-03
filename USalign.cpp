@@ -802,17 +802,20 @@ int MMalign(const string &xname, const string &yname,
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_init, seqyA_init, assign1_init,  assign2_init,  TMave_init);
     double max_total_score_cross=max_total_score;
-    MMalign_dimer(max_total_score_cross, xa_vec, ya_vec, seqx_vec, seqy_vec,
-        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
-        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
-        TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init, sequence_init,
-        d0_scale, fast_opt);
-    if (max_total_score_cross>max_total_score) 
+    if (len_aa+len_na<10000)
     {
-        max_total_score=max_total_score_cross;
-        copy_chain_assign_data(chain1_num, chain2_num, sequence,
-            seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init,
-            seqxA_mat,  seqyA_mat,  assign1_list, assign2_list, TMave_mat);
+        MMalign_dimer(max_total_score_cross, xa_vec, ya_vec, seqx_vec, seqy_vec,
+            secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+            xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
+            TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init,
+            sequence_init, d0_scale, fast_opt);
+        if (max_total_score_cross>max_total_score) 
+        {
+            max_total_score=max_total_score_cross;
+            copy_chain_assign_data(chain1_num, chain2_num, sequence,
+                seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init,
+                seqxA_mat,  seqyA_mat,  assign1_list, assign2_list, TMave_mat);
+        }
     } 
 
     /* final alignment */
