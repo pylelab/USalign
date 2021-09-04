@@ -105,7 +105,7 @@ void write_mmcif_to_pdb(const string filename,
             fout.open((filename+Trim(chainID_list[c])+".pdb").c_str());
             fout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
             for (r=0;r<PDB_lines[c].size();r++) fout<<PDB_lines[c][r];
-            fout<<"TER\nEND"<<endl;
+            fout<<"TER"<<endl;
             fout.close();
         }
     }
