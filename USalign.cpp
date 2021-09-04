@@ -323,6 +323,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                     double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
                     int n_ali=0;
                     int n_ali8=0;
+                    bool force_fast_opt=(getmin(xlen,ylen)>1500)?true:fast_opt;
 
                     /* entry function for structure alignment */
                     if (cp_opt) CPalign_main(
@@ -332,7 +333,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, a_opt, u_opt, d_opt, fast_opt,
+                        i_opt, a_opt, u_opt, d_opt, force_fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
                     else if (se_opt)
                     {
@@ -372,7 +373,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         seqM, seqxA, seqyA,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                        i_opt, a_opt, u_opt, d_opt, fast_opt,
+                        i_opt, a_opt, u_opt, d_opt, force_fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],TMcut);
 
                     /* print result */
