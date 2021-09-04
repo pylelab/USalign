@@ -360,8 +360,8 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
         if (_atom_site.count("pdbx_PDB_ins_code") && 
             line_vec[_atom_site["pdbx_PDB_ins_code"]]!="?")
             resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
-        if (resi.size()==4) resi+=" ";
-        else if (resi.size()>5)
+        else resi+=" ";
+        if (resi.size()>5)
         {
             cerr<<"WARNING! Cannot parse line due to long residue index\n"<<line<<endl;
             continue;
@@ -395,7 +395,14 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
             <<setw(5)<<resi<<"   "
             <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
             <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
-            <<setw(8)<<line_vec[_atom_site["Cartn_z"]].substr(0,8)<<'\n';
+            <<setw(8)<<line_vec[_atom_site["Cartn_z"]].substr(0,8);
+        if (_atom_site.count("B_iso_or_equiv"))
+        {
+            i8_stream<<"  1.00"<<setw(6)<<line_vec[_atom_site["B_iso_or_equiv"]].substr(0,6);
+            if (_atom_site.count("type_symbol"))
+                i8_stream<<setw(12)<<line_vec[_atom_site["type_symbol"]].substr(0,12);
+        }
+        i8_stream<<endl;
         PDB_lines.back().push_back(i8_stream.str());
         i8_stream.str(string());
     }
