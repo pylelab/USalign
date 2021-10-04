@@ -95,5 +95,3 @@ You can run the program without arguments to obtain a brief instruction
 A full list of available options can be explored by:
 
     ./USalign -h
-
-2021/08/17
