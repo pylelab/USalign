@@ -176,7 +176,7 @@ void print_help(bool h_opt=false)
 "\n"
 "      -h  Print the full help message, including additional options\n"
 "\n"
-"Example usages ('zcat' program is needed to read .gz compressed files):\n"
+"Example usages ('gunzip' program is needed to read .gz compressed files):\n"
 "    USalign 101m.cif.gz 1mba.pdb             # TM-align for monomers\n"
 "    USalign 1qf6.cif 5yyn.pdb.gz -mol RNA    # RNA-align for monomers\n"
 "    USalign model.pdb native.pdb -byresi 1   # TM-score for monomers\n"

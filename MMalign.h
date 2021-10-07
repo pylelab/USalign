@@ -707,7 +707,7 @@ size_t get_full_PDB_lines(const string filename,
     if (filename.size()>=3 && 
         filename.substr(filename.size()-3,3)==".gz")
     {
-        fin_gz.open("zcat '"+filename+"'");
+        fin_gz.open("gunzip -c '"+filename+"'");
         compress_type=1;
     }
     else if (filename.size()>=4 && 

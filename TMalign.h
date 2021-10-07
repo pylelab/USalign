@@ -1473,7 +1473,7 @@ void output_pymol(const string xname, const string yname,
     if (xname.size()>=3 && 
         xname.substr(xname.size()-3,3)==".gz")
     {
-        fin_gz.open("zcat "+xname);
+        fin_gz.open("gunzip -c "+xname);
         compress_type=1;
     }
     else if (xname.size()>=4 && 

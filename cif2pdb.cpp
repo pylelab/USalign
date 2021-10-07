@@ -225,7 +225,7 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     if (filename.size()>=3 && 
         filename.substr(filename.size()-3,3)==".gz")
     {
-        fin_gz.open("zcat '"+filename+"'");
+        fin_gz.open("gunzip -c '"+filename+"'");
         compress_type=1;
     }
     else if (filename.size()>=4 && 
