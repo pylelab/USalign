@@ -1469,6 +1469,9 @@ void output_pymol(const string xname, const string yname,
 {
     int compress_type=0; // uncompressed file
     ifstream fin;
+#ifndef REDI_PSTREAM_H_SEEN
+    ifstream fin_gz;
+#else
     redi::ipstream fin_gz; // if file is compressed
     if (xname.size()>=3 && 
         xname.substr(xname.size()-3,3)==".gz")
@@ -1482,7 +1485,9 @@ void output_pymol(const string xname, const string yname,
         fin_gz.open("bzcat "+xname);
         compress_type=2;
     }
-    else fin.open(xname.c_str());
+    else
+#endif
+        fin.open(xname.c_str());
 
     stringstream buf;
     stringstream buf_pymol;

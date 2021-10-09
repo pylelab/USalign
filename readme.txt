@@ -62,6 +62,7 @@
    2021/05/29: Remove unnecessary depedency on malloc.h, which prevent
                compilation on Mac OS
    2021/08/17: Complete implementation of MMalign
+   2021/10/03: Support Windows
 ===============================================================================
 
 =========================
@@ -73,14 +74,16 @@ To compile the program in your Linux computer, simply enter
 
 or
 
-    g++ -static -O3 -ffast-math -lm -o TMalign TMalign.cpp
+    g++ -static -O3 -ffast-math -lm -o USalign USalign.cpp
 
 The '-static' flag should be removed on Mac OS, which does not support
 building static executables.
 
-US-align cannot compile natively on Windows OS due to the lack of POSIX support
-on Windows. Nonetheless, it is fully tested and known to work on Linux
-Subsystem for Windows (WSL2) on Windows 10 onwards.
+USalign compiled on Linux, Mac OS and Linux Subsystem for Windows (WSL2) on
+Windows 10 onwards can read both uncompressed files and gz compressed
+files, provided that the "zcat" command is available. On the other hand, due
+to the lack of POSIX support on Windows, US-align natively compiled on Windows
+without WSL2 cannot parse gz compressed files.
 
 =====================
  How to use US-align
@@ -92,5 +95,3 @@ You can run the program without arguments to obtain a brief instruction
 A full list of available options can be explored by:
 
     ./USalign -h
-
-2021/08/17

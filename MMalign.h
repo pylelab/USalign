@@ -703,6 +703,9 @@ size_t get_full_PDB_lines(const string filename,
     
     int compress_type=0; // uncompressed file
     ifstream fin;
+#ifndef REDI_PSTREAM_H_SEEN
+    ifstream fin_gz;
+#else
     redi::ipstream fin_gz; // if file is compressed
     if (filename.size()>=3 && 
         filename.substr(filename.size()-3,3)==".gz")
@@ -716,7 +719,9 @@ size_t get_full_PDB_lines(const string filename,
         fin_gz.open("bzcat '"+filename+"'");
         compress_type=2;
     }
-    else fin.open(filename.c_str());
+    else
+#endif
+        fin.open(filename.c_str());
 
     if (infmt_opt==0||infmt_opt==-1) // PDB format
     {

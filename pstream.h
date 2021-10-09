@@ -15,6 +15,11 @@
  * and redi::rpstream.
  */
 
+/* do not compile on windows, which does not have cygwin */
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) && !defined(__CYGWIN__)
+#define NO_PSTREAM
+#else
+
 #ifndef REDI_PSTREAM_H_SEEN
 #define REDI_PSTREAM_H_SEEN
 
@@ -2250,6 +2255,6 @@ namespace redi
  */
 
 #endif  // REDI_PSTREAM_H_SEEN
-
+#endif  // WIN32
 // vim: ts=2 sw=2 expandtab
 
