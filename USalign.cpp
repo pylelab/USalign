@@ -148,7 +148,7 @@ void print_help(bool h_opt=false)
 "\n"
 "      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
-"      -i  Use lignment specified by 'align.txt' as an initial alignment\n"
+"      -i  Use alignment specified by 'align.txt' as an initial alignment\n"
 "\n"
 "      -m  Output rotation matrix for superposition\n"
 "\n"
