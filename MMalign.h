@@ -975,8 +975,7 @@ size_t get_full_PDB_lines(const string filename,
 
 void output_dock(const vector<string>&chain_list, const int ter_opt,
     const int split_opt, const int infmt_opt, const string atom_opt,
-    const int mirror_opt, const int het_opt, double **ut_mat,
-    const string&fname_super)
+    const int mirror_opt, double **ut_mat, const string&fname_super)
 {
     size_t i;
     int chain_i,a;
@@ -992,6 +991,7 @@ void output_dock(const vector<string>&chain_list, const int ter_opt,
     int ui,uj;
     stringstream buf;
     string filename;
+    int het_opt=1;
     for (i=0;i<chain_list.size();i++)
     {
         name=chain_list[i];

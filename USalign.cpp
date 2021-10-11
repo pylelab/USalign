@@ -1297,8 +1297,8 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     if (m_opt) output_dock_rotation_matrix(fname_matrix.c_str(),
         xname_vec,yname_vec, ut_mat, assign1_list);
 
-    if (o_opt) output_dock(chain1_list, ter_opt, split_opt, infmt1_opt, atom_opt,
-        mirror_opt, het_opt, ut_mat, fname_super);
+    if (o_opt) output_dock(chain1_list, ter_opt, split_opt, infmt1_opt,
+        atom_opt, mirror_opt, ut_mat, fname_super);
 
 
     /* clean up everything */
@@ -1972,7 +1972,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         }
 
         if (o_opt) output_dock(chain_list, ter_opt, split_opt, 
-                infmt_opt, atom_opt, false, het_opt, ut_mat, fname_super);
+                infmt_opt, atom_opt, false, ut_mat, fname_super);
         
         DeleteArray(&ut_mat,chain_num);
     }
