@@ -854,6 +854,11 @@ void make_sec(char *seq, double **x, int len, char *sec,const string atom_opt)
             if (i>0 && j+1<len && bp[i-1][j+1]) continue;
             if (!bp[i+1][j-1]) continue;
             sec_str(len,seq, bp, i,j,ii,jj);
+            if (jj<i || j<ii)
+            {
+                ii=i;
+                jj=j;
+            }
             A0.push_back(i);
             B0.push_back(j);
             C0.push_back(ii);
