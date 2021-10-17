@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
                         outfmt_opt, invmap);
 
                     if (outfmt_opt>=2) 
-                        get_seqID(invmap, seqx, seqy, ylen, Liden, n_ali8);
+                        get_seqID(invmap, seqx, seqy, ylen, Liden, n_ali);
 
                     /* print result */
                     output_results(
