@@ -589,12 +589,17 @@ size_t get_FASTA_lines(const string filename,
     }
     else 
 #endif
-        fin.open(filename.c_str());
-
-    while (compress_type?fin_gz.good():fin.good())
     {
-        if (compress_type) getline(fin_gz, line);
-        else               getline(fin, line);
+        if (filename=="-") compress_type=-1;
+        else fin.open(filename.c_str());
+    }
+
+    while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
+    {
+        if  (compress_type==-1) getline(cin, line);
+        else if (compress_type) getline(fin_gz, line);
+        else                    getline(fin, line);
+
         if (line.size()==0 || line[0]=='#') continue;
 
         if (line[0]=='>')
@@ -623,8 +628,8 @@ size_t get_FASTA_lines(const string filename,
     }
 
     line.clear();
-    if (compress_type) fin_gz.close();
-    else               fin.close();
+    if      (compress_type>=1) fin_gz.close();
+    else if (compress_type==0) fin.close();
     return FASTA_lines.size();
 }
 
