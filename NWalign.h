@@ -502,7 +502,7 @@ void output_NWalign_results(
         printf(">%s%s\tL=%d\tseqID=%.3f\n",
             yname.c_str(), chainID2, ylen, Liden/ylen);
         printf("%s\n", seqyA);
-        printf("# Lali=%d\tseqID_ali=%.3f\n", L_ali, Liden/L_ali);
+        printf("#score=%d\tLali=%d\tseqID_ali=%.3f\n", aln_score, L_ali, Liden/L_ali);
         printf("$$$$\n");
     }
     else if (outfmt_opt==2)
