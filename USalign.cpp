@@ -179,8 +179,8 @@ void print_help(bool h_opt=false)
 "Example usages ('gunzip' program is needed to read .gz compressed files):\n"
 "    USalign 101m.cif.gz 1mba.pdb             # pairwise monomeric protein alignment\n"
 "    USalign 1qf6.cif 5yyn.pdb.gz -mol RNA    # pairwise monomeric RNA alignment\n"
-"    USalign model.pdb native.pdb -byresi 1   # calculate TM-score between two different conformations of a monomer\n"
-"    USalign 4v4a.cif 4v49.cif -mm 1 -ter 1   # oligomeric alignment for asymetic units\n"
+"    USalign model.pdb native.pdb -byresi 1   # calculate TM-score between two conformations of a monomer\n"
+"    USalign 4v4a.cif 4v49.cif -mm 1 -ter 1   # oligomeric alignment for asymmetic units\n"
 "    USalign 3ksc.pdb1 4lej.pdb1 -mm 1 -ter 0 # oligomeric alignment for biological units\n"
 "    USalign 1ajk.pdb.gz 2ayh.pdb.gz -mm 3    # circular permutation alignment\n"
     <<endl;
