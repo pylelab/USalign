@@ -8,6 +8,7 @@
    Please report issues to yangzhanglab@umich.edu
 
    References to cite:
+   C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.
    S Gong, C Zhang, Y Zhang. Bioinformatics, btz282 (2019)
    Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
 
