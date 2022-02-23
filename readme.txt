@@ -8,6 +8,7 @@
    Please report issues to yangzhanglab@umich.edu
 
    References to cite:
+   C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.
    S Gong, C Zhang, Y Zhang. Bioinformatics, btz282 (2019)
    Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
 
@@ -85,12 +86,15 @@ files, provided that the "zcat" command is available. On the other hand, due
 to the lack of POSIX support on Windows, US-align natively compiled on Windows
 without WSL2 cannot parse gz compressed files.
 
+US-align is known to be compilable by g++ version 4.8.5 or later, clang++
+version 12.0.5 or later and mingw-w64 version 9.3 or later.
+
 =====================
  How to use US-align
 =====================
 You can run the program without arguments to obtain a brief instruction
 
-    ./USalign structure1.pdb structure2.pdb
+    ./USalign PDB1.pdb PDB2.pdb
 
 A full list of available options can be explored by:
 
