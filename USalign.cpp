@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220126)                                      *\n"
+" * US-align (Version 20220226)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * References: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
