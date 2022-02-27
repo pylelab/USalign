@@ -6,6 +6,7 @@
 #include "param_set.h"
 #include "NW.h"
 #include "Kabsch.h"
+#include "NWalign.h"
 
 //     1, collect those residues with dis<d;
 //     2, calculate TMscore

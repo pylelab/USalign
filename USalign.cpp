@@ -136,15 +136,21 @@ void print_help(bool h_opt=false)
 "          0: align all chains from all models (recommended for aligning\n"
 "             biological assemblies, i.e. biounits)\n"
 "\n"
-" -byresi  Whether to assume residue index correspondence between the\n" 
-"          two structures.\n"
-"          0: (default) sequence independent alignment\n"
-"          1: (same as the TMscore program) sequence-dependent superposition,\n"
-"             i.e., align by residue index\n"
-"          2: (same as TMscore '-c' option; used with -ter 0 or 1)\n"
-"             align by residue index and chain ID\n"
+" -TMscore Whether to perform TM-score superposition without structure-based\n"
+"          alignment. The same as -byresi.\n"
+"          0: (default) sequence independent structure alignment\n"
+"          1: superpose two structures by assuming that a pair of residues\n"
+"             with the same residue index are equivalent between the two\n"
+"             structures\n"
+"          2: superpose two structures, assuming that a pair of residues\n"
+"             with the same residue index and the same chain ID are\n"
+"             equivalent between the two structures\n"
 //"          3: (similar to TMscore '-c' option; used with -ter 0 or 1)\n"
 //"             align by residue index and order of chain\n"
+"          4: sequence dependent alignment: perform Needleman-Wunsch\n"
+"             global sequence alignment, followed by TM-score superposition\n"
+"          5: sequence dependent alignment: perform glocal sequence\n"
+"             alignment followed by TM-score superposition\n"
 "\n"
 "      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
@@ -179,7 +185,7 @@ void print_help(bool h_opt=false)
 "Example usages ('gunzip' program is needed to read .gz compressed files):\n"
 "    USalign 101m.cif.gz 1mba.pdb             # pairwise monomeric protein alignment\n"
 "    USalign 1qf6.cif 5yyn.pdb.gz -mol RNA    # pairwise monomeric RNA alignment\n"
-"    USalign model.pdb native.pdb -byresi 1   # calculate TM-score between two conformations of a monomer\n"
+"    USalign model.pdb native.pdb -TMscore 1  # calculate TM-score between two conformations of a monomer\n"
 "    USalign 4v4a.cif 4v49.cif -mm 1 -ter 1   # oligomeric alignment for asymmetic units\n"
 "    USalign 3ksc.pdb1 4lej.pdb1 -mm 1 -ter 0 # oligomeric alignment for biological units\n"
 "    USalign 1ajk.pdb.gz 2ayh.pdb.gz -mm 3    # circular permutation alignment\n"
@@ -2235,7 +2241,9 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -TMcut");
             TMcut=atof(argv[i + 1]); i++;
         }
-        else if ( !strcmp(argv[i],"-byresi") )
+        else if ( !strcmp(argv[i],"-byresi")  || 
+                  !strcmp(argv[i],"-tmscore") ||
+                  !strcmp(argv[i],"-TMscore"))
         {
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -byresi");
@@ -2312,10 +2320,10 @@ int main(int argc, char *argv[])
     {
         if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
-        if (byresi_opt<0 || byresi_opt>3)
-            PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
-        if (byresi_opt>=2 && ter_opt>=2)
-            PrintErrorAndQuit("-byresi >=2 must be used with -ter <=1");
+        if (byresi_opt<0 || byresi_opt>5)
+            PrintErrorAndQuit("-byresi can only be 0, 1, 2, 4, or 5");
+        if (byresi_opt>=2 && byresi_opt<=3 && ter_opt>=2)
+            PrintErrorAndQuit("-byresi 2 must be used with -ter <=1");
     }
     //if (split_opt==1 && ter_opt!=0)
         //PrintErrorAndQuit("-split 1 should be used with -ter 0");
