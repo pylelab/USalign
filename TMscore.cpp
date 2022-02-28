@@ -107,7 +107,7 @@ void print_help(bool h_opt=false)
 "     $ TMscore model.pdb native.pdb -d 5\n"
 "\n"
 " 3. TM-score normalized by a specific length, e.g. 120 residues:\n"
-"     $ TMscore model.pdb native.pdv -l 120\n"
+"     $ TMscore model.pdb native.pdb -l 120\n"
 "\n"
 " 4. TM-score with superposition output, e.g. 'TM_sup.pdb':\n"
 "     $ TMscore model.pdb native.pdb -o TM_sup.pdb\n"
