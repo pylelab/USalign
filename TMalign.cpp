@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * TM-align (Version 20210520): protein and RNA structure alignment   *\n"
+" * TM-align (Version 20220227): protein and RNA structure alignment   *\n"
 " * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
 " *             S Gong, C Zhang, Y Zhang. Bioinformatics, bz282 (2019) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
@@ -67,7 +67,7 @@ void print_extra_help()
 "            -1: full output, but without version or citation information\n"
 "\n"
 "    -byresi  Whether to assume residue index correspondence between the\n" 
-"             two structures.\n"
+"             two structures. The same as -TMscore.\n"
 "             0: (default) sequence independent alignment\n"
 "             1: (same as TMscore program) sequence-dependent superposition,\n"
 "                i.e. align by residue index\n"
@@ -75,6 +75,11 @@ void print_extra_help()
 "                align by residue index and chain ID\n"
 "             3: (similar to TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and order of chain\n"
+//"             4: sequence dependent alignment: perform Needleman-Wunsch\n"
+//"                global sequence alignment, followed by TM-score superposition\n"
+"             5: sequence dependent alignment: perform glocal sequence\n"
+"                alignment followed by TM-score superposition.\n"
+"                -byresi 5 is thee same as -seq\n"
 "\n"
 "    -TMcut   -1: (default) do not consider TMcut\n"
 "             Values in [0.5,1): Do not proceed with TM-align for this\n"
@@ -308,9 +313,14 @@ int main(int argc, char *argv[])
         {
             TMcut=atof(argv[i + 1]); i++;
         }
-        else if ( !strcmp(argv[i],"-byresi") && i < (argc-1) )
+        else if ((!strcmp(argv[i],"-byresi") || !strcmp(argv[i],"-tmscore") ||
+                  !strcmp(argv[i],"-TMscore")) && i < (argc-1) )
         {
             byresi_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-seq") )
+        {
+            byresi_opt=5;
         }
         else if ( !strcmp(argv[i],"-cp") )
         {
@@ -374,10 +384,10 @@ int main(int argc, char *argv[])
     {
         if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
-        if (byresi_opt<0 || byresi_opt>3)
-            PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
-        if (byresi_opt>=2 && ter_opt>=2)
-            PrintErrorAndQuit("-byresi >=2 should be used with -ter <=1");
+        if (byresi_opt<0 || byresi_opt>5)
+            PrintErrorAndQuit("-byresi can only be 0, 1, 2, 3, 4, or 5");
+        if (byresi_opt>=2 && byresi_opt<=3 && ter_opt>=2)
+            PrintErrorAndQuit("-byresi 2 and -byresi 3 should be used with -ter <=1");
     }
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");

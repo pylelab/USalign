@@ -48,12 +48,17 @@ void print_extra_help()
 "             2: tabular format very compact output\n"
 "\n"
 "    -byresi  Whether to align two structures by residue index.\n"
+"             The same as -TMscore.\n"
 "             0: (default) do not align by residue index\n"
 "             1: (same as TMscore program) align by residue index\n"
 "             2: (same as TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and chain ID\n"
 "             3: (similar to TMscore -c, should be used with -ter <=1)\n"
 "                align by residue index and order of chain\n"
+"             4: sequence dependent alignment: perform Needleman-Wunsch\n"
+"                global sequence alignment\n"
+"             5: sequence dependent alignment: perform glocal sequence\n"
+"                alignment\n"
 "\n"
 "    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
@@ -208,7 +213,8 @@ int main(int argc, char *argv[])
         {
             outfmt_opt=atoi(argv[i + 1]); i++;
         }
-        else if ( !strcmp(argv[i],"-byresi") && i < (argc-1) )
+        else if ( (!strcmp(argv[i],"-byresi") || !strcmp(argv[i],"-TMscore") ||
+                   !strcmp(argv[i],"-tmscore") ) && i < (argc-1) )
         {
             byresi_opt=atoi(argv[i + 1]); i++;
         }
@@ -255,10 +261,10 @@ int main(int argc, char *argv[])
     {
         if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
-        if (byresi_opt<0 || byresi_opt>3)
-            PrintErrorAndQuit("-byresi can only be 0, 1, 2 or 3");
-        if (byresi_opt>=2 && ter_opt>=2)
-            PrintErrorAndQuit("-byresi >=2 should be used with -ter <=1");
+        if (byresi_opt<0 || byresi_opt>5)
+            PrintErrorAndQuit("-byresi can only be 0, 1, 2, 3, 4, or 5");
+        if (byresi_opt>=2 && byresi_opt<=3 && ter_opt>=2)
+            PrintErrorAndQuit("-byresi 2 and -byresi 3 should be used with -ter <=1");
     }
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");

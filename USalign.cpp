@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220226)                                      *\n"
+" * US-align (Version 20220227)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * References: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -147,10 +147,11 @@ void print_help(bool h_opt=false)
 "             equivalent between the two structures\n"
 //"          3: (similar to TMscore '-c' option; used with -ter 0 or 1)\n"
 //"             align by residue index and order of chain\n"
-"          4: sequence dependent alignment: perform Needleman-Wunsch\n"
-"             global sequence alignment, followed by TM-score superposition\n"
+//"          4: sequence dependent alignment: perform Needleman-Wunsch\n"
+//"             global sequence alignment, followed by TM-score superposition\n"
 "          5: sequence dependent alignment: perform glocal sequence\n"
-"             alignment followed by TM-score superposition\n"
+"             alignment followed by TM-score superposition.\n"
+"             -byresi 5 is the same as -seq\n"
 "\n"
 "      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
@@ -2249,10 +2250,14 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -byresi");
             byresi_opt=atoi(argv[i + 1]); i++;
         }
-        //else if ( !strcmp(argv[i],"-cp") )
-        //{
-            //cp_opt=1;
-        //}
+        else if ( !strcmp(argv[i],"-seq") )
+        {
+            byresi_opt=5;
+        }
+        else if ( !strcmp(argv[i],"-cp") )
+        {
+            mm_opt==3;
+        }
         else if ( !strcmp(argv[i],"-mirror") )
         {
             if (i>=(argc-1)) 

@@ -64,6 +64,8 @@
                compilation on Mac OS
    2021/08/17: Complete implementation of MMalign
    2021/10/03: Support Windows
+   2022/02/27: Add -seq (-byresi 4 & 5) for TM-score superimposition guided by
+               sequence alignment.
 ===============================================================================
 
 =========================

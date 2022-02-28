@@ -5,22 +5,22 @@ PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta
 
 all: ${PROGRAM}
 
-qTMclust: qTMclust.cpp HwRMSD.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+qTMclust: qTMclust.cpp HwRMSD.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-USalign: USalign.cpp MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h
+USalign: USalign.cpp MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-TMscore: TMscore.cpp TMscore.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+TMscore: TMscore.cpp TMscore.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-MMalign: MMalign.cpp MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+MMalign: MMalign.cpp MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-se: se.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
+se: se.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 pdb2ss: pdb2ss.cpp se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h
@@ -38,7 +38,7 @@ pdb2fasta: pdb2fasta.cpp basic_fun.h pstream.h
 NWalign: NWalign.cpp NWalign.h basic_fun.h pstream.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h
+HwRMSD: HwRMSD.cpp HwRMSD.h NWalign.h BLOSUM.h se.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 cif2pdb: cif2pdb.cpp pstream.h

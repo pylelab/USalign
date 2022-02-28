@@ -34,15 +34,15 @@ void print_extra_help()
 "    -dir     Perform all-against-all alignment among the list of PDB\n"
 "             chains listed by 'chain_list' under 'chain_folder'. Note\n"
 "             that the slash is necessary.\n"
-"             $ TMalign -dir chain_folder/ chain_list\n"
+"             $ TMscore -dir chain_folder/ chain_list\n"
 "\n"
 "    -dir1    Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
 "             under 'chain1_folder'. Note that the slash is necessary.\n"
-"             $ TMalign -dir1 chain1_folder/ chain1_list chain2\n"
+"             $ TMscore -dir1 chain1_folder/ chain1_list chain2\n"
 "\n"
 "    -dir2    Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
 "             under 'chain2_folder'\n"
-"             $ TMalign chain1 -dir2 chain2_folder/ chain2_list\n"
+"             $ TMscore chain1 -dir2 chain2_folder/ chain2_list\n"
 "\n"
 "    -suffix  (Only when -dir1 and/or -dir2 are set, default is empty)\n"
 "             add file name suffix to files listed by chain1_list or chain2_list\n"
@@ -106,13 +106,21 @@ void print_help(bool h_opt=false)
 " 2. TM-score normalized with an assigned scale d0 e.g. 5 A:\n"
 "     $ TMscore model.pdb native.pdb -d 5\n"
 "\n"
-" 3. TM-score normalized by a specific length, e.g. 120 AA:\n"
+" 3. TM-score normalized by a specific length, e.g. 120 residues:\n"
 "     $ TMscore model.pdb native.pdv -l 120\n"
 "\n"
 " 4. TM-score with superposition output, e.g. 'TM_sup.pdb':\n"
 "     $ TMscore model.pdb native.pdb -o TM_sup.pdb\n"
 "    To view superimposed atomic model by PyMOL:\n"
 "     $ pymol TM_sup.pdb native.pdb\n"
+"\n"
+" 5. By default, this program assumes that residue pair with the same\n"
+"    residue index accross the two structure files are equivalent. This\n"
+"    often requires that the residue index in the input structures are\n"
+"    renumbered beforehand. Alternatively, residue equivalence can be\n"
+"    established by sequence alignment:\n"
+"     $ TMscore model.pdb native.pdb -seq\n"
+"\n"
     <<endl;
 
     if (h_opt) print_extra_help();
@@ -253,6 +261,10 @@ int main(int argc, char *argv[])
         {
             byresi_opt=2;
         }
+        else if ( !strcmp(argv[i],"-seq") )
+        {
+            byresi_opt=5;
+        }
         else if ( !strcmp(argv[i],"-mirror") && i < (argc-1) )
         {
             mirror_opt=atoi(argv[i + 1]); i++;
@@ -307,8 +319,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("Wrong value for option -d!  It should be >0");
     if (outfmt_opt>=2 && (a_opt || u_opt || d_opt))
         PrintErrorAndQuit("-outfmt 2 cannot be used with -a, -u, -L, -d");
-    if (byresi_opt>=2 && ter_opt>=2)
-        PrintErrorAndQuit("-byresi >=2 should be used with -ter <=1");
+    if (byresi_opt>=2 && byresi_opt<=3 && ter_opt>=2)
+        PrintErrorAndQuit("-c should be used with -ter <=1");
     if (split_opt==1 && ter_opt!=0)
         PrintErrorAndQuit("-split 1 should be used with -ter 0");
     else if (split_opt==2 && ter_opt!=0 && ter_opt!=1)
@@ -328,6 +340,11 @@ int main(int argc, char *argv[])
             chain2_list.push_back(chain1_list[i]);
     else if (dir2_opt.size()==0) chain2_list.push_back(yname);
     else file2chainlist(chain2_list, yname, dir2_opt, suffix_opt);
+
+    if (byresi_opt>=4)
+        cerr<<"WARNING! The residue correspondence between the two structures"
+            <<" are automatically established by sequence alignment. Results"
+            <<" may be unreliable."<<endl;
 
     if (outfmt_opt==2)
         cout<<"#PDBchain1\tPDBchain2\tTM1\tTM2\t"
