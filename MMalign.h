@@ -2422,7 +2422,7 @@ int TMalign_dimer_main(double **xa, double **ya,
     }
     if(!flag)
     {
-        cout << "There is no alignment between the two proteins! "
+        cout << "There is no alignment between the two structures! "
              << "Program stop with no result!" << endl;
         TM1=TM2=TM3=TM4=TM5=0;
         return 1;
