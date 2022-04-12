@@ -629,7 +629,7 @@ int TMscore_main(double **xa, double **ya,
     }
     if(!flag)
     {
-        cout << "There is no alignment between the two proteins! "
+        cout << "There is no alignment between the two structures! "
              << "Program stop with no result!" << endl;
         return 1;
     }
