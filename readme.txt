@@ -66,6 +66,7 @@
    2021/10/03: Support Windows
    2022/02/27: Add -seq (-byresi 4 & 5) for TM-score superimposition guided by
                sequence alignment.
+   2022/04/12: Support AlphaFold CIF
 ===============================================================================
 
 =========================

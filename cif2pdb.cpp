@@ -101,6 +101,13 @@ void write_mmcif_to_pdb(const string filename,
         for (c=0;c<PDB_lines.size();c++)
         {
             if (PDB_lines[c].size()==0) continue;
+            if (filename=="-")
+            {
+                cout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
+                for (r=0;r<PDB_lines[c].size();r++) cout<<PDB_lines[c][r];
+                cout<<"TER"<<endl;
+                continue;    
+            }
             cout<<     filename+Trim(chainID_list[c])+".pdb"<<endl;
             fout.open((filename+Trim(chainID_list[c])+".pdb").c_str());
             fout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
@@ -108,6 +115,21 @@ void write_mmcif_to_pdb(const string filename,
             fout<<"TER"<<endl;
             fout.close();
         }
+    }
+    else if (filename=="-")
+    {
+        for (c=0;c<PDB_lines.size();c++)
+        {
+            if (PDB_lines[c].size()==0) continue;
+            cout<<"REMARK cif2pdb "<<PDB_lines[c][0][21]<<" "<<chainID_list[c]<<endl;
+        }
+        for (c=0;c<PDB_lines.size();c++)
+        {
+            if (PDB_lines[c].size()==0) continue;
+            for (r=0;r<PDB_lines[c].size();r++) cout<<PDB_lines[c][r];
+            cout<<"TER"<<endl;
+        }
+        cout<<"END"<<endl;
     }
     else
     {
@@ -234,7 +256,11 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
         fin_gz.open("bzcat '"+filename+"'");
         compress_type=2;
     }
-    else fin.open(filename.c_str());
+    else
+    {
+        if (filename=="-") compress_type=-1;
+        else fin.open(filename.c_str());
+    }
 
     bool loop_ = false; // not reading following content
     map<string,int> _atom_site;
@@ -251,18 +277,24 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     string atom="";
     string model_index=""; // the same as model_idx but type is string
     stringstream i8_stream;
-    while (compress_type?fin_gz.good():fin.good())
+    while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
     {
-        if (compress_type) getline(fin_gz, line);
-        else               getline(fin, line);
+        if  (compress_type==-1) getline(cin, line);
+        else if (compress_type) getline(fin_gz, line);
+        else                    getline(fin, line);
         if (line.size()==0) continue;
-        if (loop_) loop_ = line.compare(0,2,"# ");
+        if (loop_) loop_ = (line.size()>=2)?(line.compare(0,2,"# ")):(line.compare(0,1,"#"));
         if (!loop_)
         {
             if (line.compare(0,5,"loop_")) continue;
             while(1)
             {
-                if (compress_type)
+                if (compress_type==-1)
+                {
+                    if (cin.good()) getline(cin, line);
+                    else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
+                }
+                else if (compress_type)
                 {
                     if (fin_gz.good()) getline(fin_gz, line);
                     else PrintErrorAndQuit("ERROR! Unexpected end of "+filename);
@@ -279,15 +311,16 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
             loop_=true;
             _atom_site.clear();
             atom_site_pos=0;
-            _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+            _atom_site[Trim(line.substr(11))]=atom_site_pos;
 
             while(1)
             {
-                if (compress_type) getline(fin_gz, line);
-                else               getline(fin, line);
+                if  (compress_type==-1) getline(cin, line);
+                else if (compress_type) getline(fin_gz, line);
+                else                    getline(fin, line);
                 if (line.size()==0) continue;
                 if (line.compare(0,11,"_atom_site.")) break;
-                _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                _atom_site[Trim(line.substr(11))]=++atom_site_pos;
             }
 
             if (_atom_site.count("group_PDB")*
@@ -413,8 +446,11 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     asym_id.clear();
     resn.clear();
 
-    if (compress_type) fin_gz.close();
-    else               fin.close();
+    if (compress_type>=0)
+    {
+        if (compress_type) fin_gz.close();
+        else               fin.close();
+    }
     line.clear();
     chainID_list.push_back("");
     return PDB_lines.size();
@@ -463,8 +499,7 @@ int main(int argc, char *argv[])
     {
         if (xname.size()==0)
             PrintErrorAndQuit("Please provide input structures");
-        else if (yname.size()==0)
-            PrintErrorAndQuit("Please provide output structure");
+        else if (yname.size()==0) yname="-";
     }
 
     bool dna_opt=(mol_opt>=4);

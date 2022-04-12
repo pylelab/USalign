@@ -837,7 +837,7 @@ size_t get_full_PDB_lines(const string filename,
             if (compress_type) getline(fin_gz, line);
             else               getline(fin, line);
             if (line.size()==0) continue;
-            if (loop_) loop_ = line.compare(0,2,"# ");
+            if (loop_) loop_ = (line.size()>=2)?(line.compare(0,2,"# ")):(line.compare(0,1,"#"));
             if (!loop_)
             {
                 if (line.compare(0,5,"loop_")) continue;
@@ -860,7 +860,7 @@ size_t get_full_PDB_lines(const string filename,
                 loop_=true;
                 _atom_site.clear();
                 atom_site_pos=0;
-                _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+                _atom_site[Trim(line.substr(11))]=atom_site_pos;
 
                 while(1)
                 {
@@ -868,7 +868,7 @@ size_t get_full_PDB_lines(const string filename,
                     else               getline(fin, line);
                     if (line.size()==0) continue;
                     if (line.compare(0,11,"_atom_site.")) break;
-                    _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                    _atom_site[Trim(line.substr(11))]=++atom_site_pos;
                 }
 
 

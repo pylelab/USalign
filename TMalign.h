@@ -1547,7 +1547,7 @@ void output_pymol(const string xname, const string yname,
             if (line.compare(0,11,"_atom_site.")) continue;
             _atom_site.clear();
             atom_site_pos=0;
-            _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+            _atom_site[Trim(line.substr(11))]=atom_site_pos;
             while(1)
             {
                 while(1)
@@ -1565,7 +1565,7 @@ void output_pymol(const string xname, const string yname,
                     if (line.size()) break;
                 }
                 if (line.compare(0,11,"_atom_site.")) break;
-                _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                _atom_site[Trim(line.substr(11))]=++atom_site_pos;
                 buf<<line<<'\n';
             }
 

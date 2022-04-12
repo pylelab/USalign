@@ -137,6 +137,17 @@ void split(const string &line, vector<string> &line_vec,
     }
 }
 
+/* strip white space at the begining or end of string */
+string Trim(const string &inputString)
+{
+    string result = inputString;
+    int idxBegin = inputString.find_first_not_of(" \n\r\t");
+    int idxEnd = inputString.find_last_not_of(" \n\r\t");
+    if (idxBegin >= 0 && idxEnd >= 0)
+        result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
+    return result;
+}
+
 size_t get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
     vector<int> &mol_vec, const int ter_opt, const int infmt_opt,
@@ -372,7 +383,7 @@ size_t get_PDB_lines(const string filename,
             else if (compress_type) getline(fin_gz, line);
             else                    getline(fin, line);
             if (line.size()==0) continue;
-            if (loop_) loop_ = line.compare(0,2,"# ");
+            if (loop_) loop_ = (line.size()>=2)?(line.compare(0,2,"# ")):(line.compare(0,1,"#"));
             if (!loop_)
             {
                 if (line.compare(0,5,"loop_")) continue;
@@ -400,7 +411,7 @@ size_t get_PDB_lines(const string filename,
                 loop_=true;
                 _atom_site.clear();
                 atom_site_pos=0;
-                _atom_site[line.substr(11,line.size()-12)]=atom_site_pos;
+                _atom_site[Trim(line.substr(11))]=atom_site_pos;
 
                 while(1)
                 {
@@ -409,7 +420,7 @@ size_t get_PDB_lines(const string filename,
                     else                    getline(fin, line);
                     if (line.size()==0) continue;
                     if (line.compare(0,11,"_atom_site.")) break;
-                    _atom_site[line.substr(11,line.size()-12)]=++atom_site_pos;
+                    _atom_site[Trim(line.substr(11))]=++atom_site_pos;
                 }
 
 
@@ -679,17 +690,6 @@ void do_rotation(double **x, double **x1, int len, double t[3], double u[3][3])
     {
         transform(t, u, &x[i][0], &x1[i][0]);
     }    
-}
-
-/* strip white space at the begining or end of string */
-string Trim(const string &inputString)
-{
-    string result = inputString;
-    int idxBegin = inputString.find_first_not_of(" \n\r\t");
-    int idxEnd = inputString.find_last_not_of(" \n\r\t");
-    if (idxBegin >= 0 && idxEnd >= 0)
-        result = inputString.substr(idxBegin, idxEnd + 1 - idxBegin);
-    return result;
 }
 
 /* read user specified pairwise alignment from 'fname_lign' to 'sequence'.
