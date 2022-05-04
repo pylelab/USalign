@@ -214,6 +214,13 @@ size_t get_PDB_lines(const string filename,
                          select_atom=(line.compare(12,4," C3'")==0);
                     else select_atom=(line.compare(12,4," CA ")==0);
                 }
+                else if (atom_opt=="PC4'")
+                {
+                    if (line[17]==' ' && (line[18]=='D'||line[18]==' '))
+                         select_atom=(line.compare(12,4," P  ")==0
+                                  )||(line.compare(12,4," C4'")==0);
+                    else select_atom=(line.compare(12,4," CA ")==0);
+                }
                 else     select_atom=(line.compare(12,4,atom_opt)==0);
                 if (select_atom)
                 {
@@ -266,7 +273,7 @@ size_t get_PDB_lines(const string filename,
                         mol_vec.push_back(0);
                     }
 
-                    if (resi==line.substr(22,5))
+                    if (resi==line.substr(22,5) && atom_opt!="PC4'")
                         cerr<<"Warning! Duplicated residue "<<resi<<endl;
                     resi=line.substr(22,5); // including insertion code
 
@@ -476,6 +483,13 @@ size_t get_PDB_lines(const string filename,
                      select_atom=(atom==" C3'");
                 else select_atom=(atom==" CA ");
             }
+            else if (atom_opt=="PC4'")
+            {
+                if (line[17]==' ' && (line[18]=='D'||line[18]==' '))
+                     select_atom=(line.compare(12,4," P  ")==0
+                              )||(line.compare(12,4," C4'")==0);
+                else select_atom=(line.compare(12,4," CA ")==0);
+            }
             else     select_atom=(atom==atom_opt);
 
             if (!select_atom) continue;
@@ -538,7 +552,7 @@ size_t get_PDB_lines(const string filename,
                 resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
             else resi+=" ";
 
-            if (prev_resi==resi)
+            if (prev_resi==resi && atom_opt!="PC4'")
                 cerr<<"Warning! Duplicated residue "<<resi<<endl;
             prev_resi=resi;
 
