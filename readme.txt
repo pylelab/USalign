@@ -2,15 +2,9 @@
    US-align: universal structure alignment of monomeric and complex proteins
    and nucleic acids
 
-   This program was written by Chengxin Zhang at Yang Zhang lab,
-   Department of Computational Medicine and Bioinformatics,
-   University of Michigan, 100 Washtenaw Ave, Ann Arbor, MI 48109-2218.
-   Please report issues to yangzhanglab@umich.edu
-
    References to cite:
-   C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.
-   S Gong, C Zhang, Y Zhang. Bioinformatics, btz282 (2019)
-   Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)
+   Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang.
+   bioRxiv 2022.04.18.488565 (2022)
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
@@ -85,7 +79,7 @@ building static executables.
 
 USalign compiled on Linux, Mac OS and Linux Subsystem for Windows (WSL2) on
 Windows 10 onwards can read both uncompressed files and gz compressed
-files, provided that the "zcat" command is available. On the other hand, due
+files, provided that the "gunzip" command is available. On the other hand, due
 to the lack of POSIX support on Windows, US-align natively compiled on Windows
 without WSL2 cannot parse gz compressed files.
 
