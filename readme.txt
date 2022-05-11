@@ -92,7 +92,7 @@ version 12.0.5 or later and mingw-w64 version 9.3 or later.
 =====================
 You can run the program without arguments to obtain a brief instruction
 
-    ./USalign PDB1.pdb PDB2.pdb
+    ./USalign structure1.pdb structure2.pdb
 
 A full list of available options can be explored by:
 
