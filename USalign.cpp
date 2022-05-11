@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220412)                                      *\n"
+" * US-align (Version 20220511)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * References: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Submitted.*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -1488,6 +1488,12 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     int max_iter=5-(int)(total_len/200);
     if (max_iter<2) max_iter=2;
     int iter=0;
+    vector<double> TM_vec(chain_num,0);
+    vector<double> d0_vec(chain_num,0);
+    vector<double> seqID_vec(chain_num,0);
+    vector<vector<double> > TM_mat(chain_num,TM_vec);
+    vector<vector<double> > d0_mat(chain_num,d0_vec);
+    vector<vector<double> > seqID_mat(chain_num,seqID_vec);
     for (iter=0; iter<max_iter; iter++)
     {
         /* select representative */   
@@ -1859,6 +1865,12 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                     d0A_total+=d0B;
                     d0B_total+=d0A;
                 }
+                TM_mat[i][j]=TM2;
+                TM_mat[j][i]=TM1;
+                d0_mat[i][j]=d0B;
+                d0_mat[j][i]=d0A;
+                seqID_mat[i][j]=1.*Liden/xlen;
+                seqID_mat[j][i]=1.*Liden/ylen;
 
                 TM3_total+=TM3;
                 TM4_total+=TM4;
@@ -1892,11 +1904,25 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         if (TM4_total<=TM4_total_max) break;
         TM4_total_max=TM4_total;
     }
+    for (i=0;i<chain_num;i++)
+    {
+        for (j=0;j<chain_num;j++)
+        {
+            if (i==j) continue;
+            TM_vec[i]+=TM_mat[i][j];
+            d0_vec[i]+=d0_mat[i][j];
+            seqID_vec[i]+=seqID_mat[i][j];
+        }
+        TM_vec[i]/=(chain_num-1);
+        d0_vec[i]/=(chain_num-1);
+        seqID_vec[i]/=(chain_num-1);
+    }
     xlen_total    /=compare_num;
     ylen_total    /=compare_num;
     TM1_total     /=compare_num;
     TM2_total     /=compare_num;
     d0A_total     /=compare_num;
+    d0B_total     /=compare_num;
     TM3_total     /=compare_num;
     TM4_total     /=compare_num;
     TM5_total     /=compare_num;
@@ -1922,8 +1948,11 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     for (i=0; i<chain_num; i++)
     {
         if (assign_list[i]<0) continue;
-        buf<<">"<<xname_vec[i]<<" (L="<<len_vec[i]<<")";
-        if (i==repr_idx) buf<<" *";
+        buf <<">"<<xname_vec[i]<<"\tL="<<len_vec[i]
+            <<"\td0="<<setiosflags(ios::fixed)<<setprecision(2)<<d0_vec[i]
+            <<"\tseqID="<<setiosflags(ios::fixed)<<setprecision(3)<<seqID_vec[i]
+            <<"\tTM-score="<<setiosflags(ios::fixed)<<setprecision(5)<<TM_vec[i];
+        if (i==repr_idx) buf<<"\t*";
         buf<<'\n'<<seqxA_mat[i][i]<<endl;
     }
     seqM=buf.str();
@@ -1931,7 +1960,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     buf.str(string());
     //MergeAlign(seqxA_mat,seqyA_mat,repr_idx,xname_vec,chain_num,seqM);
     if (outfmt_opt==0) print_version();
-    output_results( xname,yname, "","",
+    output_mTMalign_results( xname,yname, "","",
         xlen_total, ylen_total, t0, u0, TM1_total, TM2_total, 
         TM3_total, TM4_total, TM5_total, rmsd0_total, d0_out_total,
         seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden_total,
@@ -1999,6 +2028,12 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     vector<int>().swap(mol_vec);           // molecule type of complex1, RNA if >0
     vector<string>().swap(chainID_list);   // list of chainID
     vector<int>().swap(len_vec);           // length of complex
+    vector<double>().swap(TM_vec);
+    vector<double>().swap(d0_vec);
+    vector<double>().swap(seqID_vec);
+    vector<vector<double> >().swap(TM_mat);
+    vector<vector<double> >().swap(d0_mat);
+    vector<vector<double> >().swap(seqID_mat);
     return 1;
 }
 

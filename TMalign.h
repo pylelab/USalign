@@ -2573,6 +2573,82 @@ void output_results(const string xname, const string yname,
             xlen, ylen, d0A, n_ali8, rmsd, TM1, Liden);
 }
 
+void output_mTMalign_results(const string xname, const string yname,
+    const string chainID1, const string chainID2,
+    const int xlen, const int ylen, double t[3], double u[3][3],
+    const double TM1, const double TM2,
+    const double TM3, const double TM4, const double TM5,
+    const double rmsd, const double d0_out, const char *seqM,
+    const char *seqxA, const char *seqyA, const double Liden,
+    const int n_ali8, const int L_ali, const double TM_ali,
+    const double rmsd_ali, const double TM_0, const double d0_0,
+    const double d0A, const double d0B, const double Lnorm_ass,
+    const double d0_scale, const double d0a, const double d0u,
+    const char* fname_matrix, const int outfmt_opt, const int ter_opt,
+    const int mm_opt, const int split_opt, const int o_opt,
+    const string fname_super, const int i_opt, const int a_opt,
+    const bool u_opt, const bool d_opt, const int mirror_opt,
+    const vector<string>&resi_vec1, const vector<string>&resi_vec2)
+{
+    if (outfmt_opt<=0)
+    {
+        printf("Average aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
+        printf("Average TM-score= %6.5f (normalized by length of longer structure: L=%d, d0=%.2f)\n", TM2, xlen, d0B);
+        printf("Average TM-score= %6.5f (normalized by length of shorter structure: L=%d, d0=%.2f)\n", TM1, ylen, d0A);
+
+        if (a_opt==1)
+            printf("Average TM-score= %6.5f (if normalized by average length of two structures: L=%.1f, d0=%.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
+        if (u_opt)
+            printf("Average TM-score= %6.5f (normalized by average L=%.2f and d0=%.2f)\n", TM4, Lnorm_ass, d0u);
+        if (d_opt)
+            printf("Average TM-score= %6.5f (scaled by user-specified d0=%.2f, and L=%d)\n", TM5, d0_scale, ylen);
+    
+        //output alignment
+        printf("In the following, seqID=n_identical/L.\n\n%s\n", seqM);
+    }
+    else if (outfmt_opt==1)
+    {
+        printf("%s\n", seqM);
+
+        printf("# Lali=%d\tRMSD=%.2f\tseqID_ali=%.3f\n",
+            n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
+
+        if (i_opt)
+            printf("# User-specified initial alignment: TM=%.5lf\tLali=%4d\trmsd=%.3lf\n", TM_ali, L_ali, rmsd_ali);
+
+        if(a_opt)
+            printf("# TM-score=%.5f (normalized by average length of two structures: L=%.1f\td0=%.2f)\n", TM3, (xlen+ylen)*0.5, d0a);
+
+        if(u_opt)
+            printf("# TM-score=%.5f (normalized by average L=%.2f\td0=%.2f)\n", TM4, Lnorm_ass, d0u);
+
+        if(d_opt)
+            printf("# TM-score=%.5f (scaled by user-specified d0=%.2f\tL=%d)\n", TM5, d0_scale, ylen);
+
+        printf("$$$$\n");
+    }
+    else if (outfmt_opt==2)
+    {
+        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
+            xname.c_str(), chainID1.c_str(), yname.c_str(), chainID2.c_str(),
+            TM2, TM1, rmsd, Liden/xlen, Liden/ylen, (n_ali8>0)?Liden/n_ali8:0,
+            xlen, ylen, n_ali8);
+    }
+    cout << endl;
+
+    if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
+
+    if (o_opt==1)
+        output_pymol(xname, yname, fname_super, t, u, ter_opt,
+            mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
+            resi_vec1, resi_vec2, chainID1, chainID2);
+    else if (o_opt==2)
+        output_rasmol(xname, yname, fname_super, t, u, ter_opt,
+            mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
+            resi_vec1, resi_vec2, chainID1, chainID2,
+            xlen, ylen, d0A, n_ali8, rmsd, TM1, Liden);
+}
+
 double standard_TMscore(double **r1, double **r2, double **xtm, double **ytm,
     double **xt, double **x, double **y, int xlen, int ylen, int invmap[],
     int& L_ali, double& RMSD, double D0_MIN, double Lnorm, double d0,
