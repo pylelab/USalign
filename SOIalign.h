@@ -604,6 +604,11 @@ int SOIalign_main(double **xa, double **ya,
     TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
         invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
         false, Lnorm, score_d8, d0);
+    
+    double rmsd;
+    simplify_step=1;
+    score_sum_method=0;
+    double Lnorm_0=ylen;
 
     //select pairs with dis<d8 for final TMscore computation and output alignment
     int k=0;
@@ -611,17 +616,23 @@ int SOIalign_main(double **xa, double **ya,
     double d;
     m1=new int[xlen]; //alignd index in x
     m2=new int[ylen]; //alignd index in y
+    copy_t_u(t, u, t0, u0);
+    
+    //****************************************//
+    //              Final TMscore 1           //
+    //****************************************//
+
     do_rotation(xa, xt, xlen, t, u);
     k=0;
     n_ali=0;
-    for(int j=0; j<ylen; j++)
+    for (i=0; i<xlen; i++)
     {
-        i=invmap0[j];
-        if(i>=0)//aligned
+        j=fwdmap0[i];
+        if(j>=0)//aligned
         {
             n_ali++;
             d=sqrt(dist(&xt[i][0], &ya[j][0]));
-            if (d <= score_d8 || (i_opt == 3))
+            if (d <= score_d8)
             {
                 m1[k]=i;
                 m2[k]=j;
@@ -649,19 +660,52 @@ int SOIalign_main(double **xa, double **ya,
 
     Kabsch(r1, r2, n_ali8, 0, &rmsd0, t, u);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
     rmsd0 = sqrt(rmsd0 / n_ali8);
-
-
-    //****************************************//
-    //              Final TMscore             //
-    //    Please set parameters for output    //
-    //****************************************//
-    double rmsd;
-    simplify_step=1;
-    score_sum_method=0;
-    double Lnorm_0=ylen;
-
-
+    
     //normalized by length of structure A
+    parameter_set4final(xlen+0.0, D0_MIN, Lnorm, d0, d0_search, mol_type);
+    d0B=d0;
+    local_d0_search = d0_search;
+    TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+
+    //****************************************//
+    //              Final TMscore 2           //
+    //****************************************//
+    
+    do_rotation(xa, xt, xlen, t0, u0);
+    k=0;
+    for (j=0; j<ylen; j++)
+    {
+        i=invmap0[j];
+        if(i>=0)//aligned
+        {
+            d=sqrt(dist(&xt[i][0], &ya[j][0]));
+            if (d <= score_d8)
+            {
+                m1[k]=i;
+                m2[k]=j;
+
+                xtm[k][0]=xa[i][0];
+                xtm[k][1]=xa[i][1];
+                xtm[k][2]=xa[i][2];
+
+                ytm[k][0]=ya[j][0];
+                ytm[k][1]=ya[j][1];
+                ytm[k][2]=ya[j][2];
+
+                r1[k][0] = xt[i][0];
+                r1[k][1] = xt[i][1];
+                r1[k][2] = xt[i][2];
+                r2[k][0] = ya[j][0];
+                r2[k][1] = ya[j][1];
+                r2[k][2] = ya[j][2];
+
+                k++;
+            }
+        }
+    }
+
+    //normalized by length of structure B
     parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
     d0A=d0;
     d0_0=d0A;
@@ -670,14 +714,6 @@ int SOIalign_main(double **xa, double **ya,
         score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
     TM_0 = TM1;
 
-    //normalized by length of structure B
-    parameter_set4final(xlen+0.0, D0_MIN, Lnorm, d0, d0_search, mol_type);
-    d0B=d0;
-    local_d0_search = d0_search;
-    TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
-        score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
-
-    double Lnorm_d0;
     if (a_opt>0)
     {
         //normalized by average length of structures A, B
@@ -713,7 +749,6 @@ int SOIalign_main(double **xa, double **ya,
         d0_out=d0_scale;
         d0_0=d0_scale;
         //Lnorm_0=ylen;
-        Lnorm_d0=Lnorm_0;
         local_d0_search = d0_search;
         TM5 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
             simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
