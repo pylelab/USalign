@@ -14,6 +14,39 @@ void print_invmap(int *invmap, const int ylen)
     cout<<endl;
 }
 
+void getCloseK(double **xa, const int xlen, const int closeK, double **xk)
+{
+    double **score;
+    NewArray(&score, xlen, xlen);
+    vector<pair<double,int> > close_idx_vec(xlen, make_pair(0,0));
+    int i,j,k;
+    for (i=0;i<xlen;i++)
+    {
+        score[i][i]=0;
+        for (j=i+1;j<xlen;j++) score[j][i]=score[i][j]=dist(xa[i], xa[j]);
+    }
+    for (i=0;i<xlen;i++)
+    {
+        for (j=0;j<xlen;j++)
+        {
+            close_idx_vec[j].first=score[i][j];
+            close_idx_vec[j].second=j;
+        }
+        sort(close_idx_vec.begin(), close_idx_vec.end());
+        for (k=0;k<closeK;k++)
+        {
+            j=close_idx_vec[k % xlen].second;
+            xk[i*closeK+k][0]=xa[j][0];
+            xk[i*closeK+k][1]=xa[j][1];
+            xk[i*closeK+k][2]=xa[j][2];
+        }
+    }
+
+    /* clean up */
+    vector<pair<double,int> >().swap(close_idx_vec);
+    DeleteArray(&score, xlen);
+}
+
 void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
 {
     int i,j;
@@ -239,6 +272,23 @@ int soi_se_main(
     return 0; // zero for no exception
 }
 
+inline void SOI_super2score(double **xt, double **ya, const int xlen,
+    const int ylen, double **score, double d0, double score_d8)
+{
+    int i,j;
+    double d02=d0*d0;
+    double score_d82=score_d8*score_d8;
+    double d2;
+    for (i=0; i<xlen; i++)
+    {
+        for(j=0; j<ylen; j++)
+        {
+            d2=dist(xt[i], ya[j]);
+            if (d2>score_d82) score[i][j]=0;
+            else score[i][j]=1./(1+ d2/d02);
+        }
+    }
+}
 
 //heuristic run of dynamic programing iteratively to find the best alignment
 //input: initial rotation matrix t, u
@@ -246,16 +296,15 @@ int soi_se_main(
 //output: best alignment that maximizes the TMscore, will be stored in invmap
 double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     double **xt, double **score, double **xa, double **ya,
-    int xlen, int ylen, double t[3], double u[3][3], int invmap0[],
+    int xlen, int ylen, double t[3], double u[3][3], int *invmap0,
     int iteration_max, double local_d0_search,
-    double D0_MIN, double Lnorm, double d0, double score_d8)
+    double Lnorm, double d0, double score_d8)
 {
     double rmsd; 
     int *invmap=new int[ylen+1];
     
     int iteration, i, j, k;
     double tmscore, tmscore_max, tmscore_old=0;    
-    int score_sum_method=8, simplify_step=40;
     tmscore_max=-1;
 
     //double d01=d0+1.5;
@@ -265,15 +314,6 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     for (iteration=0; iteration<iteration_max; iteration++)
     {           
         for (j=0; j<ylen; j++) invmap[j]=-1;
-        for (i=0; i<xlen; i++)
-        {
-            for(j=0; j<ylen; j++)
-            {
-                d2=dist(xt[i], ya[j]);
-                if (d2>score_d82) score[i][j]=0;
-                else score[i][j]=1./(1+ d2/d02);
-            }
-        }
         soi_egs(score, xlen, ylen, invmap);
         
         k=0;
@@ -293,18 +333,18 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
         }
 
         tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u,
-            simplify_step, score_sum_method, &rmsd, local_d0_search,
-            Lnorm, score_d8, d0);
+            40, 8, &rmsd, local_d0_search, Lnorm, score_d8, d0);
 
         if (tmscore>tmscore_max)
         {
             tmscore_max=tmscore;
             for (j=0; j<ylen; j++) invmap0[j]=invmap[j];
         }
-        do_rotation(xa, xt, xlen, t, u);
     
         if (iteration>0 && fabs(tmscore_old-tmscore)<0.000001) break;       
         tmscore_old=tmscore;
+        do_rotation(xa, xt, xlen, t, u);
+        SOI_super2score(xt, ya, xlen, ylen, score, d0, score_d8);
     }// for iteration
     
     
@@ -312,10 +352,97 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     return tmscore_max;
 }
 
+void get_SOI_initial_assign(double **xk, double **yk, const int closeK,
+    double **score, const int xlen, const int ylen,
+    double t[3], double u[3][3], int invmap[], 
+    double local_d0_search, double d0, double score_d8)
+{
+    int i,j,k;
+    double **xfrag;
+    double **xtran;
+    double **yfrag;
+    NewArray(&xfrag, closeK, 3);
+    NewArray(&xtran, closeK, 3);
+    NewArray(&yfrag, closeK, 3);
+    double rmsd;
+    double d02=d0*d0;
+    double score_d82=score_d8*score_d8;
+    double d2;
+
+    /* fill in score */
+    for (i=0;i<xlen;i++)
+    {
+        for (k=0;k<closeK;k++)
+        {
+            xfrag[k][0]=xk[i*closeK+k][0];
+            xfrag[k][1]=xk[i*closeK+k][1];
+            xfrag[k][2]=xk[i*closeK+k][2];
+        }
+
+        for (j=0;j<ylen;j++)
+        {
+            for (k=0;k<closeK;k++)
+            {
+                yfrag[k][0]=yk[j*closeK+k][0];
+                yfrag[k][1]=yk[j*closeK+k][1];
+                yfrag[k][2]=yk[j*closeK+k][2];
+            }
+            Kabsch(xfrag, yfrag, closeK, 1, &rmsd, t, u);
+            do_rotation(xfrag, xtran, closeK, t, u);
+            
+            for (k=0; k<closeK; k++)
+            {
+                d2=dist(xtran[k], yfrag[k]);
+                if (d2>score_d82) score[i][j]=0;
+                else score[i][j]=1./(1+d2/d02);
+            }
+        }
+    }
+
+    /* initial assignment */
+    for (j=0;j<ylen;j++) invmap[j]=-1;
+    soi_egs(score, xlen, ylen, invmap);
+
+    /* clean up */
+    DeleteArray(&xfrag, closeK);
+    DeleteArray(&xtran, closeK);
+    DeleteArray(&yfrag, closeK);
+}
+
+void SOI_assign2super(double **r1, double **r2, double **xtm, double **ytm,
+    double **xt, double **xa, double **ya,
+    const int xlen, const int ylen, double t[3], double u[3][3], int invmap[], 
+    double local_d0_search, double Lnorm, double d0, double score_d8)
+{
+    int i,j,k;
+    double rmsd;
+    double d02=d0*d0;
+    double score_d82=score_d8*score_d8;
+    double d2;
+
+    k=0;
+    for (j=0; j<ylen; j++)
+    {
+        i=invmap[j];
+        if (i<0) continue;
+        xtm[k][0]=xa[i][0];
+        xtm[k][1]=xa[i][1];
+        xtm[k][2]=xa[i][2];
+
+        ytm[k][0]=ya[j][0];
+        ytm[k][1]=ya[j][1];
+        ytm[k][2]=ya[j][2];
+        k++;
+    }
+    TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u,
+        40, 8, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+    do_rotation(xa, xt, xlen, t, u);
+}
 
 /* entry function for TM-align with circular permutation
  * i_opt, a_opt, u_opt, d_opt, TMcut are not implemented yet */
 int SOIalign_main(double **xa, double **ya,
+    double **xk, double **yk, const int closeK,
     const char *seqx, const char *seqy, const char *secx, const char *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -335,8 +462,10 @@ int SOIalign_main(double **xa, double **ya,
     double score_d8,d0,d0_search,dcu0;//for TMscore search
     double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
     double **score;       // Input score table for enhanced greedy search
+    double **scoret;      // Transposed score table for enhanced greedy search
     double **xtm, **ytm;  // for TMscore search engine
     double **xt;          //for saving the superposed version of r_1 or xtm
+    double **yt;          //for saving the superposed version of r_2 or ytm
     double **r1, **r2;    // for Kabsch rotation
 
     /***********************/
@@ -344,9 +473,11 @@ int SOIalign_main(double **xa, double **ya,
     /***********************/
     int minlen = min(xlen, ylen);
     NewArray(&score, xlen, ylen);
+    NewArray(&scoret,ylen, xlen);
     NewArray(&xtm, minlen, 3);
     NewArray(&ytm, minlen, 3);
     NewArray(&xt, xlen, 3);
+    NewArray(&yt, ylen, 3);
     NewArray(&r1, minlen, 3);
     NewArray(&r2, minlen, 3);
 
@@ -359,10 +490,12 @@ int SOIalign_main(double **xa, double **ya,
     int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
 
     int i,j;
+    int *fwdmap0         = new int[xlen+1];
     int *invmap0         = new int[ylen+1];
     
-    double TM=-1;
-    for(i=0; i<ylen; i++) invmap0[i]=-1;
+    double TMmax=-1, TM=-1;
+    for(i=0; i<xlen; i++) fwdmap0[i]=-1;
+    for(j=0; j<ylen; j++) invmap0[j]=-1;
     double local_d0_search = d0_search;
 
     /*************************************************************/
@@ -376,22 +509,79 @@ int SOIalign_main(double **xa, double **ya,
         i_opt, a_opt, u_opt, d_opt, fast_opt,
         mol_type,-1);
     do_rotation(xa, xt, xlen, t0, u0);
-    TM=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
-        xlen, ylen, t, u, invmap0, (fast_opt)?2:30,
-        local_d0_search, D0_MIN, Lnorm, d0, score_d8);
+    SOI_super2score(xt, ya, xlen, ylen, score, d0, score_d8);
+    for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j][i]=score[i][j];
+    TMmax=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
+        xlen, ylen, t0, u0, invmap0, (fast_opt)?2:30,
+        local_d0_search, Lnorm, d0, score_d8);
+    TM   =SOI_iter(r2, r1, ytm, xtm, yt,scoret, ya, xa,
+        ylen, xlen, t0, u0, fwdmap0, (fast_opt)?2:30,
+        local_d0_search, Lnorm, d0, score_d8);
+    //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+    if (TM>TMmax)
+    {
+        TMmax = TM;
+        for (j=0; j<ylen; j++) invmap0[j]=-1;
+        for (i=0; i<xlen; i++) 
+        {
+            j=fwdmap0[i];
+            if (j>=0) invmap0[j]=i;
+        }
+    }
     
+    /***************************************************************/
+    /* initial alignment with sequence order independent alignment */
+    /***************************************************************/
+    if (closeK>=3)
+    {
+        get_SOI_initial_assign(xk, yk, closeK, score, xlen, ylen, t, u, invmap,
+            local_d0_search, d0, score_d8);
+        for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j][i]=score[i][j];
+
+        SOI_assign2super(r1, r2, xtm, ytm, xt, xa, ya,
+            xlen, ylen, t, u, invmap, local_d0_search, Lnorm, d0, score_d8);
+        TM=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
+            xlen, ylen, t, u, invmap, (fast_opt)?2:30,
+            local_d0_search, Lnorm, d0, score_d8);
+        //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+        if (TM>TMmax)
+        {
+            TMmax = TM;
+            for (j = 0; j<ylen; j++) invmap0[j] = invmap[j];
+        }
+
+        for (i=0;i<xlen;i++) fwdmap0[i]=-1;
+        soi_egs(scoret, ylen, xlen, fwdmap0);
+        SOI_assign2super(r2, r1, ytm, xtm, yt, ya, xa,
+            ylen, xlen, t, u, fwdmap0, local_d0_search, Lnorm, d0, score_d8);
+        TM=SOI_iter(r2, r1, ytm, xtm, yt, scoret, ya, xa, ylen, xlen, t, u,
+            fwdmap0, (fast_opt)?2:30, local_d0_search, Lnorm, d0, score_d8);
+        //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+        if (TM>TMmax)
+        {
+            TMmax = TM;
+            for (j=0; j<ylen; j++) invmap0[j]=-1;
+            for (i=0; i<xlen; i++) 
+            {
+                j=fwdmap0[i];
+                if (j>=0) invmap0[j]=i;
+            }
+        }
+    }
 
     //*******************************************************************//
     //    The alignment will not be changed any more in the following    //
     //*******************************************************************//
     //check if the initial alignment is generated appropriately
     bool flag=false;
-    for(i=0; i<ylen; i++)
+    for (i=0; i<xlen; i++) fwdmap0[i]=-1;
+    for (j=0; j<ylen; j++)
     {
-        if(invmap0[i]>=0)
+        i=invmap0[j];
+        if (i>=0)
         {
+            fwdmap0[i]=j;
             flag=true;
-            break;
         }
     }
     if(!flag)
@@ -562,12 +752,15 @@ int SOIalign_main(double **xa, double **ya,
 
     /* clean up */
     DeleteArray(&score, xlen);
+    DeleteArray(&scoret, ylen);
     DeleteArray(&xtm, minlen);
     DeleteArray(&ytm, minlen);
     DeleteArray(&xt,xlen);
+    DeleteArray(&yt,ylen);
     DeleteArray(&r1, minlen);
     DeleteArray(&r2, minlen);
     delete[]invmap0;
+    delete[]fwdmap0;
     delete[]m1;
     delete[]m2;
     return 0;

@@ -2071,10 +2071,12 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
                                // --> superpose xa onto ya
+    double **xk, **yk;         // k closest residues
     vector<string> resi_vec1;  // residue index for chain1
     vector<string> resi_vec2;  // residue index for chain2
     int read_resi=0;  // whether to read residue index
     if (o_opt) read_resi=2;
+    int closeK=8;     // number of closest K residues, K>=3
 
     /* loop over file names */
     for (i=0;i<chain1_list.size();i++)
@@ -2106,6 +2108,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                 continue;
             }
             NewArray(&xa, xlen, 3);
+            if (closeK>=3) NewArray(&xk, xlen*closeK, 3);
             seqx = new char[xlen + 1];
             secx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
@@ -2113,6 +2116,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             if (mirror_opt) for (r=0;r<xlen;r++) xa[r][2]=-xa[r][2];
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
+            if (closeK>=3) getCloseK(xa, xlen, closeK, xk);
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -2147,6 +2151,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         continue;
                     }
                     NewArray(&ya, ylen, 3);
+                    if (closeK>=3) NewArray(&yk, ylen*closeK, 3);
                     seqy = new char[ylen + 1];
                     secy = new char[ylen + 1];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
@@ -2154,6 +2159,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     if (mol_vec2[chain_j]>0)
                          make_sec(seqy, ya, ylen, secy, atom_opt);
                     else make_sec(ya, ylen, secy);
+                    if (closeK>=3) getCloseK(ya, ylen, closeK, yk);
 
                     /* declare variable specific to this pair of TMalign */
                     double t0[3], u0[3][3];
@@ -2202,8 +2208,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             }
                         }
                     }
-                    else SOIalign_main(
-                        xa, ya, seqx, seqy, secx, secy,
+                    else SOIalign_main(xa, ya, xk, yk, closeK,
+                        seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                         seqM, seqxA, seqyA, invmap,
@@ -2248,6 +2254,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     seqxA.clear();
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
+                    if (closeK>=3) DeleteArray(&yk, ylen*closeK);
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
@@ -2264,6 +2271,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             } // j
             PDB_lines1[chain_i].clear();
             DeleteArray(&xa, xlen);
+            if (closeK>=3) DeleteArray(&xk, xlen*closeK);
             delete [] seqx;
             delete [] secx;
             resi_vec1.clear();
