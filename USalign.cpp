@@ -126,7 +126,7 @@ void print_help(bool h_opt=false)
 "          3: alignment of circularly permuted structure\n"
 "          4: alignment of multiple monomeric chains into a consensus alignment\n"
 "             $ USalign -dir chains/ list -suffix .pdb -mm 4\n"
-"          5: sequence order semi-independent alignment\n"
+"          5: sequence order independent alignment\n"
 "          To use -mm 1 or -mm 2, '-ter' option must be 0 or 1.\n"
 "\n"
 "    -ter  Number of chains to align.\n"
