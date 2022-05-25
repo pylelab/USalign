@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220511)                                      *\n"
+" * US-align (Version 20220524)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -126,7 +126,7 @@ void print_help(bool h_opt=false)
 "          3: alignment of circularly permuted structure\n"
 "          4: alignment of multiple monomeric chains into a consensus alignment\n"
 "             $ USalign -dir chains/ list -suffix .pdb -mm 4\n"
-//"          5: sequence order semi-independent alignment\n"
+"          5: sequence order semi-independent alignment\n"
 "          To use -mm 1 or -mm 2, '-ter' option must be 0 or 1.\n"
 "\n"
 "    -ter  Number of chains to align.\n"
@@ -2227,6 +2227,20 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         outfmt_opt, ter_opt, false, split_opt, o_opt,
                         fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
                         resi_vec1, resi_vec2);
+                    if (outfmt_opt<=0)
+                    {
+                        cout<<"##########\t##########"<<endl;
+                        cout<<"#Residue 1\tResidue 2#"<<endl;
+                        int r1,r2;
+                        for (r2=0;r2<ylen;r2++)
+                        {
+                            r1=invmap[r2];
+                            if (r1<0) continue;
+                            cout<<PDB_lines1[chain_i][r1].substr(17,10)<<'\t'
+                                <<PDB_lines2[chain_j][r2].substr(17,10)<<'\n';
+                        }
+                        cout<<"##########\t##########"<<endl;
+                    }
 
                     /* Done! Free memory */
                     delete [] invmap;

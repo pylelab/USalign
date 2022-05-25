@@ -62,6 +62,7 @@
                sequence alignment.
    2022/04/12: Support AlphaFold CIF
    2022/05/11: Update -mm 4 output format
+   2022/05/24: Limited support for sequence order independent alignment
 ===============================================================================
 
 =========================

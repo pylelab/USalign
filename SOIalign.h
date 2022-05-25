@@ -158,13 +158,15 @@ int soi_se_main(
     /* perform alignment */
     for(j=0; j<ylen; j++) invmap[j]=-1;
     double d02=d0*d0;
+    double score_d82=score_d8*score_d8;
+    double d2;
     for(i=0; i<xlen; i++)
     {
         for(j=0; j<ylen; j++)
         {
-            d=sqrt(dist(xa[i], ya[j]));
-            if (d>score_d8) score[i][j]=0;
-            else score[i][j]=1./(1+ d/d02);
+            d2=dist(xa[i], ya[j]);
+            if (d2>score_d82) score[i][j]=0;
+            else score[i][j]=1./(1+ d2/d02);
         }
     }
     soi_egs(score, xlen, ylen, invmap);
@@ -213,7 +215,7 @@ int soi_se_main(
 
     /* extract aligned sequence */
     seqxA.assign(n_ali8,'-');
-    seqM.assign( n_ali8,' ');
+    seqM.assign( n_ali8,'.');
     seqyA.assign(n_ali8,'-');
     
     k=0;
@@ -237,6 +239,80 @@ int soi_se_main(
     return 0; // zero for no exception
 }
 
+
+//heuristic run of dynamic programing iteratively to find the best alignment
+//input: initial rotation matrix t, u
+//       vectors x and y, d0
+//output: best alignment that maximizes the TMscore, will be stored in invmap
+double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
+    double **xt, double **score, double **xa, double **ya,
+    int xlen, int ylen, double t[3], double u[3][3], int invmap0[],
+    int iteration_max, double local_d0_search,
+    double D0_MIN, double Lnorm, double d0, double score_d8)
+{
+    double rmsd; 
+    int *invmap=new int[ylen+1];
+    
+    int iteration, i, j, k;
+    double tmscore, tmscore_max, tmscore_old=0;    
+    int score_sum_method=8, simplify_step=40;
+    tmscore_max=-1;
+
+    //double d01=d0+1.5;
+    double d02=d0*d0;
+    double score_d82=score_d8*score_d8;
+    double d2;
+    for (iteration=0; iteration<iteration_max; iteration++)
+    {           
+        for (j=0; j<ylen; j++) invmap[j]=-1;
+        for (i=0; i<xlen; i++)
+        {
+            for(j=0; j<ylen; j++)
+            {
+                d2=dist(xt[i], ya[j]);
+                if (d2>score_d82) score[i][j]=0;
+                else score[i][j]=1./(1+ d2/d02);
+            }
+        }
+        soi_egs(score, xlen, ylen, invmap);
+        
+        k=0;
+        for (j=0; j<ylen; j++) 
+        {
+            i=invmap[j];
+            if (i<0) continue;
+
+            xtm[k][0]=xa[i][0];
+            xtm[k][1]=xa[i][1];
+            xtm[k][2]=xa[i][2];
+                
+            ytm[k][0]=ya[j][0];
+            ytm[k][1]=ya[j][1];
+            ytm[k][2]=ya[j][2];
+            k++;
+        }
+
+        tmscore = TMscore8_search(r1, r2, xtm, ytm, xt, k, t, u,
+            simplify_step, score_sum_method, &rmsd, local_d0_search,
+            Lnorm, score_d8, d0);
+
+        if (tmscore>tmscore_max)
+        {
+            tmscore_max=tmscore;
+            for (j=0; j<ylen; j++) invmap0[j]=invmap[j];
+        }
+        do_rotation(xa, xt, xlen, t, u);
+    
+        if (iteration>0 && fabs(tmscore_old-tmscore)<0.000001) break;       
+        tmscore_old=tmscore;
+    }// for iteration
+    
+    
+    delete []invmap;
+    return tmscore_max;
+}
+
+
 /* entry function for TM-align with circular permutation
  * i_opt, a_opt, u_opt, d_opt, TMcut are not implemented yet */
 int SOIalign_main(double **xa, double **ya,
@@ -254,35 +330,246 @@ int SOIalign_main(double **xa, double **ya,
     const bool u_opt, const bool d_opt, const bool fast_opt,
     const int mol_type)
 {
+    double D0_MIN;        //for d0
+    double Lnorm;         //normalization length
+    double score_d8,d0,d0_search,dcu0;//for TMscore search
+    double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
+    double **score;       // Input score table for enhanced greedy search
+    double **xtm, **ytm;  // for TMscore search engine
+    double **xt;          //for saving the superposed version of r_1 or xtm
+    double **r1, **r2;    // for Kabsch rotation
+
+    /***********************/
+    /* allocate memory     */
+    /***********************/
+    int minlen = min(xlen, ylen);
+    NewArray(&score, xlen, ylen);
+    NewArray(&xtm, minlen, 3);
+    NewArray(&ytm, minlen, 3);
+    NewArray(&xt, xlen, 3);
+    NewArray(&r1, minlen, 3);
+    NewArray(&r2, minlen, 3);
+
+    /***********************/
+    /*    parameter set    */
+    /***********************/
+    parameter_set4search(xlen, ylen, D0_MIN, Lnorm, 
+        score_d8, d0, d0_search, dcu0);
+    int simplify_step    = 40; //for simplified search engine
+    int score_sum_method = 8;  //for scoring method, whether only sum over pairs with dis<score_d8
+
+    int i,j;
+    int *invmap0         = new int[ylen+1];
+    
+    double TM=-1;
+    for(i=0; i<ylen; i++) invmap0[i]=-1;
+    double local_d0_search = d0_search;
+
+    /*************************************************************/
+    /* initial alignment with sequence order dependent alignment */
+    /*************************************************************/
     CPalign_main(xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
-        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-        seqM, seqxA, seqyA,
+        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         i_opt, a_opt, u_opt, d_opt, fast_opt,
         mol_type,-1);
-
-    double **xa_cp;   // coordinates
-    NewArray(&xa_cp, xlen, 3);
-    for (int r=0; r<xlen; r++) transform(t0, u0, xa[r], xa_cp[r]);
+    do_rotation(xa, xt, xlen, t0, u0);
+    TM=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
+        xlen, ylen, t, u, invmap0, (fast_opt)?2:30,
+        local_d0_search, D0_MIN, Lnorm, d0, score_d8);
     
-    /* TODO: iterate between EGS and superimposition */
 
-    seqxA.clear();
-    seqM.clear();
-    seqyA.clear();
-    soi_se_main(
-        xa_cp, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
-        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-        seqM, seqxA, seqyA,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-        xlen, ylen, Lnorm_ass, d0_scale,
-        i_opt, a_opt, u_opt, d_opt,
-        mol_type, 0, invmap);
+    //*******************************************************************//
+    //    The alignment will not be changed any more in the following    //
+    //*******************************************************************//
+    //check if the initial alignment is generated appropriately
+    bool flag=false;
+    for(i=0; i<ylen; i++)
+    {
+        if(invmap0[i]>=0)
+        {
+            flag=true;
+            break;
+        }
+    }
+    if(!flag)
+    {
+        cout << "There is no alignment between the two structures! "
+             << "Program stop with no result!" << endl;
+        TM1=TM2=TM3=TM4=TM5=0;
+        return 1;
+    }
+
+
+    //********************************************************************//
+    //    Detailed TMscore search engine --> prepare for final TMscore    //
+    //********************************************************************//
+    //run detailed TMscore search engine for the best alignment, and
+    //extract the best rotation matrix (t, u) for the best alignment
+    simplify_step=1;
+    if (fast_opt) simplify_step=40;
+    score_sum_method=8;
+    TM = detailed_search_standard(r1, r2, xtm, ytm, xt, xa, ya, xlen, ylen,
+        invmap0, t, u, simplify_step, score_sum_method, local_d0_search,
+        false, Lnorm, score_d8, d0);
+
+    //select pairs with dis<d8 for final TMscore computation and output alignment
+    int k=0;
+    int *m1, *m2;
+    double d;
+    m1=new int[xlen]; //alignd index in x
+    m2=new int[ylen]; //alignd index in y
+    do_rotation(xa, xt, xlen, t, u);
+    k=0;
+    n_ali=0;
+    for(int j=0; j<ylen; j++)
+    {
+        i=invmap0[j];
+        if(i>=0)//aligned
+        {
+            n_ali++;
+            d=sqrt(dist(&xt[i][0], &ya[j][0]));
+            if (d <= score_d8 || (i_opt == 3))
+            {
+                m1[k]=i;
+                m2[k]=j;
+
+                xtm[k][0]=xa[i][0];
+                xtm[k][1]=xa[i][1];
+                xtm[k][2]=xa[i][2];
+
+                ytm[k][0]=ya[j][0];
+                ytm[k][1]=ya[j][1];
+                ytm[k][2]=ya[j][2];
+
+                r1[k][0] = xt[i][0];
+                r1[k][1] = xt[i][1];
+                r1[k][2] = xt[i][2];
+                r2[k][0] = ya[j][0];
+                r2[k][1] = ya[j][1];
+                r2[k][2] = ya[j][2];
+
+                k++;
+            }
+        }
+    }
+    n_ali8=k;
+
+    Kabsch(r1, r2, n_ali8, 0, &rmsd0, t, u);// rmsd0 is used for final output, only recalculate rmsd0, not t & u
+    rmsd0 = sqrt(rmsd0 / n_ali8);
+
+
+    //****************************************//
+    //              Final TMscore             //
+    //    Please set parameters for output    //
+    //****************************************//
+    double rmsd;
+    simplify_step=1;
+    score_sum_method=0;
+    double Lnorm_0=ylen;
+
+
+    //normalized by length of structure A
+    parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
+    d0A=d0;
+    d0_0=d0A;
+    local_d0_search = d0_search;
+    TM1 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+    TM_0 = TM1;
+
+    //normalized by length of structure B
+    parameter_set4final(xlen+0.0, D0_MIN, Lnorm, d0, d0_search, mol_type);
+    d0B=d0;
+    local_d0_search = d0_search;
+    TM2 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t, u, simplify_step,
+        score_sum_method, &rmsd, local_d0_search, Lnorm, score_d8, d0);
+
+    double Lnorm_d0;
+    if (a_opt>0)
+    {
+        //normalized by average length of structures A, B
+        Lnorm_0=(xlen+ylen)*0.5;
+        parameter_set4final(Lnorm_0, D0_MIN, Lnorm, d0, d0_search, mol_type);
+        d0a=d0;
+        d0_0=d0a;
+        local_d0_search = d0_search;
+
+        TM3 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
+        TM_0=TM3;
+    }
+    if (u_opt)
+    {
+        //normalized by user assigned length
+        parameter_set4final(Lnorm_ass, D0_MIN, Lnorm,
+            d0, d0_search, mol_type);
+        d0u=d0;
+        d0_0=d0u;
+        Lnorm_0=Lnorm_ass;
+        local_d0_search = d0_search;
+        TM4 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
+        TM_0=TM4;
+    }
+    if (d_opt)
+    {
+        //scaled by user assigned d0
+        parameter_set4scale(ylen, d0_scale, Lnorm, d0, d0_search);
+        d0_out=d0_scale;
+        d0_0=d0_scale;
+        //Lnorm_0=ylen;
+        Lnorm_d0=Lnorm_0;
+        local_d0_search = d0_search;
+        TM5 = TMscore8_search(r1, r2, xtm, ytm, xt, n_ali8, t0, u0,
+            simplify_step, score_sum_method, &rmsd, local_d0_search, Lnorm,
+            score_d8, d0);
+        TM_0=TM5;
+    }
+
+    /* derive alignment from superposition */
+    int ali_len=0;
+    for (j=0;j<ylen;j++)
+    {
+        i=invmap0[j];
+        invmap[j]=i;
+        ali_len+=(i>=0);
+    }
+    seqxA.assign(ali_len,'-');
+    seqM.assign( ali_len,'.');
+    seqyA.assign(ali_len,'-');
+    
+    //do_rotation(xa, xt, xlen, t, u);
+    do_rotation(xa, xt, xlen, t0, u0);
+
+    Liden=0;
+    k=0;
+    for (j=0;j<ylen;j++)
+    {
+        i=invmap[j];
+        if (i<0) continue;
+        if (sqrt(dist(xt[i], ya[j]))<d0_out) seqM[k]=':';
+        seqxA[k]=seqx[i];
+        seqyA[k]=seqy[j];
+        Liden+=(seqxA[k]==seqyA[k]);
+        k++;
+    }
+
 
     /* clean up */
-    DeleteArray(&xa_cp,xlen);
+    DeleteArray(&score, xlen);
+    DeleteArray(&xtm, minlen);
+    DeleteArray(&ytm, minlen);
+    DeleteArray(&xt,xlen);
+    DeleteArray(&r1, minlen);
+    DeleteArray(&r2, minlen);
+    delete[]invmap0;
+    delete[]m1;
+    delete[]m2;
     return 0;
 }
 #endif
