@@ -84,7 +84,7 @@ void print_extra_help()
 //"          individual chains. T or F, (default F)\n"
 //"\n"
 //" -closeK  Number of closest atoms used for sequence order independent\n"
-//"          initial alignment\n"
+//"          initial alignment. default: 5\n"
 "\n"
 "   -se    Do not perform superposition. Useful for extracting alignment from\n"
 "          superposed structure pairs\n"
@@ -2333,7 +2333,7 @@ int main(int argc, char *argv[])
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
-    int    closeK_opt=0;     // do not use fully SOI initial alignment
+    int    closeK_opt=5;     // number of atoms for fully SOI initial alignment
     int    mirror_opt=0;     // do not align mirror
     int    het_opt=0;        // do not read HETATM residues
     int    mm_opt=0;         // do not perform MM-align
