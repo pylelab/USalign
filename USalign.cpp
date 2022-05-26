@@ -2654,7 +2654,7 @@ int main(int argc, char *argv[])
         if (i_opt) PrintErrorAndQuit("-mm cannot be used with -i or -I");
         if (u_opt) PrintErrorAndQuit("-mm cannot be used with -u or -L");
         //if (cp_opt) PrintErrorAndQuit("-mm cannot be used with -cp");
-        if (dir_opt.size() && mm_opt!=4) PrintErrorAndQuit("-mm 1 to 3 cannot be used with -dir");
+        if (dir_opt.size() && (mm_opt==1||mm_opt==2)) PrintErrorAndQuit("-mm 1 or 2 cannot be used with -dir");
         if (byresi_opt) PrintErrorAndQuit("-mm cannot be used with -byresi");
         if (ter_opt>=2 && mm_opt!=4 && mm_opt!=5) PrintErrorAndQuit("-mm must be used with -ter 0 or -ter 1");
         if (mm_opt==4 && (yname.size() || dir2_opt.size()))
