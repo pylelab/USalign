@@ -14,7 +14,7 @@ void print_invmap(int *invmap, const int ylen)
     cout<<endl;
 }
 
-void getCloseK(double **xa, const int xlen, const int closeK, double **xk)
+void getCloseK(double **xa, const int xlen, const int closeK_opt, double **xk)
 {
     double **score;
     NewArray(&score, xlen, xlen);
@@ -33,12 +33,12 @@ void getCloseK(double **xa, const int xlen, const int closeK, double **xk)
             close_idx_vec[j].second=j;
         }
         sort(close_idx_vec.begin(), close_idx_vec.end());
-        for (k=0;k<closeK;k++)
+        for (k=0;k<closeK_opt;k++)
         {
             j=close_idx_vec[k % xlen].second;
-            xk[i*closeK+k][0]=xa[j][0];
-            xk[i*closeK+k][1]=xa[j][1];
-            xk[i*closeK+k][2]=xa[j][2];
+            xk[i*closeK_opt+k][0]=xa[j][0];
+            xk[i*closeK_opt+k][1]=xa[j][1];
+            xk[i*closeK_opt+k][2]=xa[j][2];
         }
     }
 
@@ -352,7 +352,7 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     return tmscore_max;
 }
 
-void get_SOI_initial_assign(double **xk, double **yk, const int closeK,
+void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
     double **score, const int xlen, const int ylen,
     double t[3], double u[3][3], int invmap[], 
     double local_d0_search, double d0, double score_d8)
@@ -361,9 +361,9 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK,
     double **xfrag;
     double **xtran;
     double **yfrag;
-    NewArray(&xfrag, closeK, 3);
-    NewArray(&xtran, closeK, 3);
-    NewArray(&yfrag, closeK, 3);
+    NewArray(&xfrag, closeK_opt, 3);
+    NewArray(&xtran, closeK_opt, 3);
+    NewArray(&yfrag, closeK_opt, 3);
     double rmsd;
     double d02=d0*d0;
     double score_d82=score_d8*score_d8;
@@ -372,25 +372,25 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK,
     /* fill in score */
     for (i=0;i<xlen;i++)
     {
-        for (k=0;k<closeK;k++)
+        for (k=0;k<closeK_opt;k++)
         {
-            xfrag[k][0]=xk[i*closeK+k][0];
-            xfrag[k][1]=xk[i*closeK+k][1];
-            xfrag[k][2]=xk[i*closeK+k][2];
+            xfrag[k][0]=xk[i*closeK_opt+k][0];
+            xfrag[k][1]=xk[i*closeK_opt+k][1];
+            xfrag[k][2]=xk[i*closeK_opt+k][2];
         }
 
         for (j=0;j<ylen;j++)
         {
-            for (k=0;k<closeK;k++)
+            for (k=0;k<closeK_opt;k++)
             {
-                yfrag[k][0]=yk[j*closeK+k][0];
-                yfrag[k][1]=yk[j*closeK+k][1];
-                yfrag[k][2]=yk[j*closeK+k][2];
+                yfrag[k][0]=yk[j*closeK_opt+k][0];
+                yfrag[k][1]=yk[j*closeK_opt+k][1];
+                yfrag[k][2]=yk[j*closeK_opt+k][2];
             }
-            Kabsch(xfrag, yfrag, closeK, 1, &rmsd, t, u);
-            do_rotation(xfrag, xtran, closeK, t, u);
+            Kabsch(xfrag, yfrag, closeK_opt, 1, &rmsd, t, u);
+            do_rotation(xfrag, xtran, closeK_opt, t, u);
             
-            for (k=0; k<closeK; k++)
+            for (k=0; k<closeK_opt; k++)
             {
                 d2=dist(xtran[k], yfrag[k]);
                 if (d2>score_d82) score[i][j]=0;
@@ -404,9 +404,9 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK,
     soi_egs(score, xlen, ylen, invmap);
 
     /* clean up */
-    DeleteArray(&xfrag, closeK);
-    DeleteArray(&xtran, closeK);
-    DeleteArray(&yfrag, closeK);
+    DeleteArray(&xfrag, closeK_opt);
+    DeleteArray(&xtran, closeK_opt);
+    DeleteArray(&yfrag, closeK_opt);
 }
 
 void SOI_assign2super(double **r1, double **r2, double **xtm, double **ytm,
@@ -442,7 +442,7 @@ void SOI_assign2super(double **r1, double **r2, double **xtm, double **ytm,
 /* entry function for TM-align with circular permutation
  * i_opt, a_opt, u_opt, d_opt, TMcut are not implemented yet */
 int SOIalign_main(double **xa, double **ya,
-    double **xk, double **yk, const int closeK,
+    double **xk, double **yk, const int closeK_opt,
     const char *seqx, const char *seqy, const char *secx, const char *secy,
     double t0[3], double u0[3][3],
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -532,9 +532,9 @@ int SOIalign_main(double **xa, double **ya,
     /***************************************************************/
     /* initial alignment with sequence order independent alignment */
     /***************************************************************/
-    if (closeK>=3)
+    if (closeK_opt>=3)
     {
-        get_SOI_initial_assign(xk, yk, closeK, score, xlen, ylen, t, u, invmap,
+        get_SOI_initial_assign(xk, yk, closeK_opt, score, xlen, ylen, t, u, invmap,
             local_d0_search, d0, score_d8);
         for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j][i]=score[i][j];
 
@@ -654,6 +654,7 @@ int SOIalign_main(double **xa, double **ya,
 
                 k++;
             }
+            else fwdmap0[i]=-1;
         }
     }
     n_ali8=k;
@@ -702,6 +703,7 @@ int SOIalign_main(double **xa, double **ya,
 
                 k++;
             }
+            else invmap0[j]=-1;
         }
     }
 
@@ -757,30 +759,32 @@ int SOIalign_main(double **xa, double **ya,
     }
 
     /* derive alignment from superposition */
-    int ali_len=0;
-    for (j=0;j<ylen;j++)
-    {
-        i=invmap0[j];
-        invmap[j]=i;
-        ali_len+=(i>=0);
-    }
+    int ali_len=xlen+ylen;
+    for (j=0;j<ylen;j++) ali_len-=(invmap0[j]>=0);
     seqxA.assign(ali_len,'-');
-    seqM.assign( ali_len,'.');
+    seqM.assign( ali_len,' ');
     seqyA.assign(ali_len,'-');
     
     //do_rotation(xa, xt, xlen, t, u);
     do_rotation(xa, xt, xlen, t0, u0);
 
     Liden=0;
-    k=0;
     for (j=0;j<ylen;j++)
     {
-        i=invmap[j];
+        seqyA[j]=seqy[j];
+        i=invmap0[j];
         if (i<0) continue;
-        if (sqrt(dist(xt[i], ya[j]))<d0_out) seqM[k]=':';
-        seqxA[k]=seqx[i];
-        seqyA[k]=seqy[j];
-        Liden+=(seqxA[k]==seqyA[k]);
+        if (sqrt(dist(xt[i], ya[j]))<d0_out) seqM[j]=':';
+        else seqM[j]='.';
+        seqxA[j]=seqx[i];
+        Liden+=(seqx[i]==seqy[j]);
+    }
+    k=0;
+    for (i=0;i<xlen;i++)
+    {
+        j=fwdmap0[i];
+        if (j>=0) continue;
+        seqxA[ylen+k]=seqx[i];
         k++;
     }
 

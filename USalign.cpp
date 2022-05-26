@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220524)                                      *\n"
+" * US-align (Version 20220526)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -83,6 +83,9 @@ void print_extra_help()
 //"   -full  Whether to show full MM-align results, including alignment of\n"
 //"          individual chains. T or F, (default F)\n"
 //"\n"
+//" -closeK  Number of closest atoms used for sequence order independent\n"
+//"          initial alignment\n"
+"\n"
 "   -se    Do not perform superposition. Useful for extracting alignment from\n"
 "          superposed structure pairs\n"
 "\n"
@@ -2051,7 +2054,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     const string &atom_opt, const string &mol_opt, const string &dir_opt,
     const string &dir1_opt, const string &dir2_opt, 
     const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const bool se_opt)
+    const bool se_opt, const int closeK_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -2076,7 +2079,6 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     vector<string> resi_vec2;  // residue index for chain2
     int read_resi=0;  // whether to read residue index
     if (o_opt) read_resi=2;
-    int closeK=8;     // number of closest K residues, K>=3
 
     /* loop over file names */
     for (i=0;i<chain1_list.size();i++)
@@ -2108,7 +2110,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                 continue;
             }
             NewArray(&xa, xlen, 3);
-            if (closeK>=3) NewArray(&xk, xlen*closeK, 3);
+            if (closeK_opt>=3) NewArray(&xk, xlen*closeK_opt, 3);
             seqx = new char[xlen + 1];
             secx = new char[xlen + 1];
             xlen = read_PDB(PDB_lines1[chain_i], xa, seqx, 
@@ -2116,7 +2118,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             if (mirror_opt) for (r=0;r<xlen;r++) xa[r][2]=-xa[r][2];
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
-            if (closeK>=3) getCloseK(xa, xlen, closeK, xk);
+            if (closeK_opt>=3) getCloseK(xa, xlen, closeK_opt, xk);
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -2151,7 +2153,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         continue;
                     }
                     NewArray(&ya, ylen, 3);
-                    if (closeK>=3) NewArray(&yk, ylen*closeK, 3);
+                    if (closeK_opt>=3) NewArray(&yk, ylen*closeK_opt, 3);
                     seqy = new char[ylen + 1];
                     secy = new char[ylen + 1];
                     ylen = read_PDB(PDB_lines2[chain_j], ya, seqy,
@@ -2159,7 +2161,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     if (mol_vec2[chain_j]>0)
                          make_sec(seqy, ya, ylen, secy, atom_opt);
                     else make_sec(ya, ylen, secy);
-                    if (closeK>=3) getCloseK(ya, ylen, closeK, yk);
+                    if (closeK_opt>=3) getCloseK(ya, ylen, closeK_opt, yk);
 
                     /* declare variable specific to this pair of TMalign */
                     double t0[3], u0[3][3];
@@ -2208,7 +2210,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             }
                         }
                     }
-                    else SOIalign_main(xa, ya, xk, yk, closeK,
+                    else SOIalign_main(xa, ya, xk, yk, closeK_opt,
                         seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
@@ -2254,7 +2256,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     seqxA.clear();
                     seqyA.clear();
                     DeleteArray(&ya, ylen);
-                    if (closeK>=3) DeleteArray(&yk, ylen*closeK);
+                    if (closeK_opt>=3) DeleteArray(&yk, ylen*closeK_opt);
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
@@ -2271,7 +2273,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             } // j
             PDB_lines1[chain_i].clear();
             DeleteArray(&xa, xlen);
-            if (closeK>=3) DeleteArray(&xk, xlen*closeK);
+            if (closeK_opt>=3) DeleteArray(&xk, xlen*closeK_opt);
             delete [] seqx;
             delete [] secx;
             resi_vec1.clear();
@@ -2331,6 +2333,7 @@ int main(int argc, char *argv[])
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
+    int    closeK_opt=0;     // do not use fully SOI initial alignment
     int    mirror_opt=0;     // do not align mirror
     int    het_opt=0;        // do not read HETATM residues
     int    mm_opt=0;         // do not perform MM-align
@@ -2408,6 +2411,12 @@ int main(int argc, char *argv[])
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -d");
             d0_scale = atof(argv[i + 1]); d_opt = true; i++;
+        }
+        else if ( !strcmp(argv[i],"-closeK") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -closeK");
+            closeK_opt = atoi(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-v") )
         {
@@ -2717,7 +2726,7 @@ int main(int argc, char *argv[])
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
         atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, 
-        chain1_list, chain2_list, se_opt);
+        chain1_list, chain2_list, se_opt, closeK_opt);
     else cerr<<"WARNING! -mm "<<mm_opt<<" not implemented"<<endl;
 
     /* clean up */
