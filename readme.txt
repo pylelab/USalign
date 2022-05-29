@@ -4,7 +4,7 @@
 
    References to cite:
    Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang.
-   bioRxiv 2022.04.18.488565 (2022)
+   Nat Methods (2022)
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 

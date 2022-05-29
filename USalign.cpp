@@ -2237,17 +2237,17 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         resi_vec1, resi_vec2);
                     if (outfmt_opt<=0)
                     {
-                        cout<<"##########\t##########"<<endl;
-                        cout<<"#Residue 1\tResidue 2#"<<endl;
+                        cout<<"###############\t###############"<<endl;
+                        cout<<"#Aligned atom 1\tAligned atom 2#"<<endl;
                         int r1,r2;
                         for (r2=0;r2<ylen;r2++)
                         {
                             r1=invmap[r2];
                             if (r1<0) continue;
-                            cout<<PDB_lines1[chain_i][r1].substr(17,10)<<'\t'
-                                <<PDB_lines2[chain_j][r2].substr(17,10)<<'\n';
+                            cout<<PDB_lines1[chain_i][r1].substr(12,15)<<'\t'
+                                <<PDB_lines2[chain_j][r2].substr(12,15)<<'\n';
                         }
-                        cout<<"##########\t##########"<<endl;
+                        cout<<"###############\t###############"<<endl;
                     }
 
                     /* Done! Free memory */
