@@ -578,6 +578,7 @@ int SOIalign_main(double **xa, double **ya,
     for (j=0; j<ylen; j++)
     {
         i=invmap0[j];
+        invmap[j]=i;
         if (i>=0)
         {
             fwdmap0[i]=j;
