@@ -703,7 +703,7 @@ int SOIalign_main(double **xa, double **ya,
 
                 k++;
             }
-            else invmap0[j]=-1;
+            else invmap[j]=invmap0[j]=-1;
         }
     }
 
