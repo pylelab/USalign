@@ -144,7 +144,7 @@ int soi_se_main(
     const int xlen, const int ylen, 
     const double Lnorm_ass, const double d0_scale, const bool i_opt,
     const bool a_opt, const int u_opt, const bool d_opt, const int mol_type,
-    const int outfmt_opt, int *invmap)
+    const int outfmt_opt, int *invmap, double *dist_list)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -211,10 +211,12 @@ int soi_se_main(
     for(j=0; j<ylen; j++)
     {
         i=invmap[j];
+        dist_list[j]=-1;
         if(i>=0)//aligned
         {
             n_ali++;
             d=sqrt(dist(&xa[i][0], &ya[j][0]));
+            dist_list[j]=d;
             if (score[i][j]>0)
             {
                 if (outfmt_opt<2)
@@ -247,25 +249,37 @@ int soi_se_main(
     }
 
     /* extract aligned sequence */
-    seqxA.assign(n_ali8,'-');
-    seqM.assign( n_ali8,'.');
-    seqyA.assign(n_ali8,'-');
+    int ali_len=xlen+ylen;
+    for (j=0;j<ylen;j++) ali_len-=(invmap[j]>=0);
+    seqxA.assign(ali_len,'-');
+    seqM.assign( ali_len,' ');
+    seqyA.assign(ali_len,'-');
+
+    int *fwdmap = new int [xlen+1];
+    for (i=0;i<xlen;i++) fwdmap[i]=-1;
     
-    k=0;
     for (j=0;j<ylen;j++)
     {
+        seqyA[j]=seqy[j];
         i=invmap[j];
         if (i<0) continue;
-        if (sqrt(dist(xa[i], ya[j]))<d0_out) seqM[k]=':';
-        seqxA[k]=seqx[i];
-        seqyA[k]=seqy[j];
+        if (sqrt(dist(xa[i], ya[j]))<d0_out) seqM[j]=':';
+        else seqM[j]='.';
+        fwdmap[i]=j;
+        seqxA[j]=seqx[i];
         Liden+=(seqxA[k]==seqyA[k]);
+    }
+    k=0;
+    for (i=0;i<xlen;i++)
+    {
+        j=fwdmap[i];
+        if (j>=0) continue;
+        seqxA[ylen+k]=seqx[i];
         k++;
     }
 
-
     /* free memory */
-    //delete [] invmap;
+    delete [] fwdmap;
     delete [] m1;
     delete [] m2;
     DeleteArray(&score, xlen);
@@ -455,7 +469,7 @@ int SOIalign_main(double **xa, double **ya,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt, const int a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt,
-    const int mol_type)
+    const int mol_type, double *dist_list)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -774,9 +788,12 @@ int SOIalign_main(double **xa, double **ya,
     {
         seqyA[j]=seqy[j];
         i=invmap0[j];
+        dist_list[j]=-1;
         if (i<0) continue;
-        if (sqrt(dist(xt[i], ya[j]))<d0_out) seqM[j]=':';
+        d=sqrt(dist(xt[i], ya[j]));
+        if (d<d0_out) seqM[j]=':';
         else seqM[j]='.';
+        dist_list[j]=d;
         seqxA[j]=seqx[i];
         Liden+=(seqx[i]==seqy[j]);
     }

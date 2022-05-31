@@ -2179,6 +2179,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     int n_ali8=0;
                     bool force_fast_opt=(getmin(xlen,ylen)>1500)?true:fast_opt;
                     int *invmap = new int[ylen+1];
+                    double *dist_list = new double[ylen+1];
 
                     /* entry function for structure alignment */
                     if (se_opt) 
@@ -2196,7 +2197,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             xlen, ylen, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt,
                             mol_vec1[chain_i]+mol_vec2[chain_j], 
-                            outfmt_opt, invmap);
+                            outfmt_opt, invmap, dist_list);
                         if (outfmt_opt>=2) 
                         {
                             Liden=L_ali=0;
@@ -2218,7 +2219,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j]);
+                        mol_vec1[chain_i]+mol_vec2[chain_j], dist_list);
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
@@ -2237,21 +2238,24 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         resi_vec1, resi_vec2);
                     if (outfmt_opt<=0)
                     {
-                        cout<<"###############\t###############"<<endl;
-                        cout<<"#Aligned atom 1\tAligned atom 2#"<<endl;
+                        cout<<"###############\t###############\t#########"<<endl;
+                        cout<<"#Aligned atom 1\tAligned atom 2 \tDistance#"<<endl;
                         int r1,r2;
                         for (r2=0;r2<ylen;r2++)
                         {
                             r1=invmap[r2];
                             if (r1<0) continue;
                             cout<<PDB_lines1[chain_i][r1].substr(12,15)<<'\t'
-                                <<PDB_lines2[chain_j][r2].substr(12,15)<<'\n';
+                                <<PDB_lines2[chain_j][r2].substr(12,15)<<'\t'
+                                <<setw(9)<<setiosflags(ios::fixed)<<setprecision(3)
+                                <<dist_list[r2]<<'\n';
                         }
-                        cout<<"###############\t###############"<<endl;
+                        cout<<"###############\t###############\t#########"<<endl;
                     }
 
                     /* Done! Free memory */
                     delete [] invmap;
+                    delete [] dist_list;
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
