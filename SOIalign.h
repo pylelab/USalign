@@ -17,19 +17,19 @@ void print_invmap(int *invmap, const int ylen)
 void getCloseK(double **xa, const int xlen, const int closeK_opt, double **xk)
 {
     double **score;
-    NewArray(&score, xlen, xlen);
+    NewArray(&score, xlen+1, xlen+1);
     vector<pair<double,int> > close_idx_vec(xlen, make_pair(0,0));
     int i,j,k;
     for (i=0;i<xlen;i++)
     {
-        score[i][i]=0;
-        for (j=i+1;j<xlen;j++) score[j][i]=score[i][j]=dist(xa[i], xa[j]);
+        score[i+1][i+1]=0;
+        for (j=i+1;j<xlen;j++) score[j+1][i+1]=score[i+1][j+1]=dist(xa[i], xa[j]);
     }
     for (i=0;i<xlen;i++)
     {
         for (j=0;j<xlen;j++)
         {
-            close_idx_vec[j].first=score[i][j];
+            close_idx_vec[j].first=score[i+1][j+1];
             close_idx_vec[j].second=j;
         }
         sort(close_idx_vec.begin(), close_idx_vec.end());
@@ -44,7 +44,7 @@ void getCloseK(double **xa, const int xlen, const int closeK_opt, double **xk)
 
     /* clean up */
     vector<pair<double,int> >().swap(close_idx_vec);
-    DeleteArray(&score, xlen);
+    DeleteArray(&score, xlen+1);
 }
 
 void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
@@ -70,11 +70,11 @@ void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
             if (fwdmap[i]>=0) continue;
             for (j=0;j<ylen;j++)
             {
-                if (invmap[j]==-1 && score[i][j]>max_score)
+                if (invmap[j]==-1 && score[i+1][j+1]>max_score)
                 {
                     maxi=i;
                     maxj=j;
-                    max_score=score[i][j];
+                    max_score=score[i+1][j+1];
                 }
             }
         }
@@ -87,7 +87,7 @@ void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
     for (j=0;j<ylen;j++)
     {
         i=invmap[j];
-        if (i>=0) total_score+=score[i][j];
+        if (i>=0) total_score+=score[i+1][j+1];
     }
 
     /* stage 2 - swap assignment until total score cannot be improved */
@@ -105,11 +105,11 @@ void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
             for (j=0;j<ylen;j++)
             {
                 oldi=invmap[j];
-                if (score[i][j]<=0 || oldi==i) continue;
-                delta_score=score[i][j];
-                if (oldi>=0 && oldj>=0) delta_score+=score[oldi][oldj];
-                if (oldi>=0) delta_score-=score[oldi][j];
-                if (oldj>=0) delta_score-=score[i][oldj];
+                if (score[i+1][j+1]<=0 || oldi==i) continue;
+                delta_score=score[i+1][j+1];
+                if (oldi>=0 && oldj>=0) delta_score+=score[oldi+1][oldj+1];
+                if (oldi>=0) delta_score-=score[oldi+1][j+1];
+                if (oldj>=0) delta_score-=score[i+1][oldj+1];
 
                 if (delta_score>0) // successful swap
                 {
@@ -144,12 +144,14 @@ int soi_se_main(
     const int xlen, const int ylen, 
     const double Lnorm_ass, const double d0_scale, const bool i_opt,
     const bool a_opt, const int u_opt, const bool d_opt, const int mol_type,
-    const int outfmt_opt, int *invmap, double *dist_list)
+    const int outfmt_opt, int *invmap, double *dist_list, const int mm_opt)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
     double score_d8,d0,d0_search,dcu0;//for TMscore search
     double **score;       // score for aligning a residue pair
+    bool   **path;        // for dynamic programming  
+    double **val;         // for dynamic programming  
 
     int *m1=NULL;
     int *m2=NULL;
@@ -164,7 +166,9 @@ int soi_se_main(
     /***********************/
     /* allocate memory     */
     /***********************/
-    NewArray(&score, xlen, ylen);
+    NewArray(&score, xlen+1, ylen+1);
+    NewArray(&path,  xlen+1, ylen+1);
+    NewArray(&val,   xlen+1, ylen+1);
     //int *invmap          = new int[ylen+1];
 
     /* set d0 */
@@ -198,10 +202,11 @@ int soi_se_main(
         for(j=0; j<ylen; j++)
         {
             d2=dist(xa[i], ya[j]);
-            if (d2>score_d82) score[i][j]=0;
-            else score[i][j]=1./(1+ d2/d02);
+            if (d2>score_d82) score[i+1][j+1]=0;
+            else score[i+1][j+1]=1./(1+ d2/d02);
         }
     }
+    if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
     soi_egs(score, xlen, ylen, invmap);
 
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
@@ -217,7 +222,7 @@ int soi_se_main(
             n_ali++;
             d=sqrt(dist(&xa[i][0], &ya[j][0]));
             dist_list[j]=d;
-            if (score[i][j]>0)
+            if (score[i+1][j+1]>0)
             {
                 if (outfmt_opt<2)
                 {
@@ -244,7 +249,7 @@ int soi_se_main(
 
     if (outfmt_opt>=2)
     {
-        DeleteArray(&score, xlen);
+        DeleteArray(&score, xlen+1);
         return 0;
     }
 
@@ -282,7 +287,9 @@ int soi_se_main(
     delete [] fwdmap;
     delete [] m1;
     delete [] m2;
-    DeleteArray(&score, xlen);
+    DeleteArray(&score, xlen+1);
+    DeleteArray(&path, xlen+1);
+    DeleteArray(&val, xlen+1);
     return 0; // zero for no exception
 }
 
@@ -298,8 +305,8 @@ inline void SOI_super2score(double **xt, double **ya, const int xlen,
         for(j=0; j<ylen; j++)
         {
             d2=dist(xt[i], ya[j]);
-            if (d2>score_d82) score[i][j]=0;
-            else score[i][j]=1./(1+ d2/d02);
+            if (d2>score_d82) score[i+1][j+1]=0;
+            else score[i+1][j+1]=1./(1+ d2/d02);
         }
     }
 }
@@ -309,10 +316,10 @@ inline void SOI_super2score(double **xt, double **ya, const int xlen,
 //       vectors x and y, d0
 //output: best alignment that maximizes the TMscore, will be stored in invmap
 double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
-    double **xt, double **score, double **xa, double **ya,
+    double **xt, double **score, bool **path, double **val, double **xa, double **ya,
     int xlen, int ylen, double t[3], double u[3][3], int *invmap0,
     int iteration_max, double local_d0_search,
-    double Lnorm, double d0, double score_d8)
+    double Lnorm, double d0, double score_d8, const int mm_opt)
 {
     double rmsd; 
     int *invmap=new int[ylen+1];
@@ -326,10 +333,11 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     double score_d82=score_d8*score_d8;
     double d2;
     for (iteration=0; iteration<iteration_max; iteration++)
-    {           
+    {
         for (j=0; j<ylen; j++) invmap[j]=-1;
+        if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
         soi_egs(score, xlen, ylen, invmap);
-        
+    
         k=0;
         for (j=0; j<ylen; j++) 
         {
@@ -339,7 +347,7 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
             xtm[k][0]=xa[i][0];
             xtm[k][1]=xa[i][1];
             xtm[k][2]=xa[i][2];
-                
+            
             ytm[k][0]=ya[j][0];
             ytm[k][1]=ya[j][1];
             ytm[k][2]=ya[j][2];
@@ -361,15 +369,14 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
         SOI_super2score(xt, ya, xlen, ylen, score, d0, score_d8);
     }// for iteration
     
-    
     delete []invmap;
     return tmscore_max;
 }
 
 void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
-    double **score, const int xlen, const int ylen,
+    double **score, bool **path, double **val, const int xlen, const int ylen,
     double t[3], double u[3][3], int invmap[], 
-    double local_d0_search, double d0, double score_d8)
+    double local_d0_search, double d0, double score_d8, const int mm_opt)
 {
     int i,j,k;
     double **xfrag;
@@ -407,14 +414,15 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
             for (k=0; k<closeK_opt; k++)
             {
                 d2=dist(xtran[k], yfrag[k]);
-                if (d2>score_d82) score[i][j]=0;
-                else score[i][j]=1./(1+d2/d02);
+                if (d2>score_d82) score[i+1][j+1]=0;
+                else score[i+1][j+1]=1./(1+d2/d02);
             }
         }
     }
 
     /* initial assignment */
     for (j=0;j<ylen;j++) invmap[j]=-1;
+    if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
     soi_egs(score, xlen, ylen, invmap);
 
     /* clean up */
@@ -469,7 +477,7 @@ int SOIalign_main(double **xa, double **ya,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt, const int a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt,
-    const int mol_type, double *dist_list)
+    const int mol_type, double *dist_list, const int mm_opt)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -477,6 +485,8 @@ int SOIalign_main(double **xa, double **ya,
     double t[3], u[3][3]; //Kabsch translation vector and rotation matrix
     double **score;       // Input score table for enhanced greedy search
     double **scoret;      // Transposed score table for enhanced greedy search
+    bool   **path;        // for dynamic programming  
+    double **val;         // for dynamic programming  
     double **xtm, **ytm;  // for TMscore search engine
     double **xt;          //for saving the superposed version of r_1 or xtm
     double **yt;          //for saving the superposed version of r_2 or ytm
@@ -486,8 +496,11 @@ int SOIalign_main(double **xa, double **ya,
     /* allocate memory     */
     /***********************/
     int minlen = min(xlen, ylen);
-    NewArray(&score, xlen, ylen);
-    NewArray(&scoret,ylen, xlen);
+    int maxlen = (xlen>ylen)?xlen:ylen;
+    NewArray(&score,  xlen+1, ylen+1);
+    NewArray(&scoret, ylen+1, xlen+1);
+    NewArray(&path, maxlen+1, maxlen+1);
+    NewArray(&val,  maxlen+1, maxlen+1);
     NewArray(&xtm, minlen, 3);
     NewArray(&ytm, minlen, 3);
     NewArray(&xt, xlen, 3);
@@ -511,6 +524,8 @@ int SOIalign_main(double **xa, double **ya,
     for(i=0; i<xlen; i++) fwdmap0[i]=-1;
     for(j=0; j<ylen; j++) invmap0[j]=-1;
     double local_d0_search = d0_search;
+    int iteration_max=(fast_opt)?2:30;
+    if (mm_opt==6) iteration_max=1;
 
     /*************************************************************/
     /* initial alignment with sequence order dependent alignment */
@@ -524,13 +539,13 @@ int SOIalign_main(double **xa, double **ya,
         mol_type,-1);
     do_rotation(xa, xt, xlen, t0, u0);
     SOI_super2score(xt, ya, xlen, ylen, score, d0, score_d8);
-    for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j][i]=score[i][j];
-    TMmax=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
-        xlen, ylen, t0, u0, invmap0, (fast_opt)?2:30,
-        local_d0_search, Lnorm, d0, score_d8);
-    TM   =SOI_iter(r2, r1, ytm, xtm, yt,scoret, ya, xa,
-        ylen, xlen, t0, u0, fwdmap0, (fast_opt)?2:30,
-        local_d0_search, Lnorm, d0, score_d8);
+    for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j+1][i+1]=score[i+1][j+1];
+    TMmax=SOI_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+        xlen, ylen, t0, u0, invmap0, iteration_max,
+        local_d0_search, Lnorm, d0, score_d8, mm_opt);
+    TM   =SOI_iter(r2, r1, ytm, xtm, yt,scoret, path, val, ya, xa,
+        ylen, xlen, t0, u0, fwdmap0, iteration_max,
+        local_d0_search, Lnorm, d0, score_d8, mm_opt);
     //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
     if (TM>TMmax)
     {
@@ -548,15 +563,15 @@ int SOIalign_main(double **xa, double **ya,
     /***************************************************************/
     if (closeK_opt>=3)
     {
-        get_SOI_initial_assign(xk, yk, closeK_opt, score, xlen, ylen, t, u, invmap,
-            local_d0_search, d0, score_d8);
-        for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j][i]=score[i][j];
+        get_SOI_initial_assign(xk, yk, closeK_opt, score, path, val, xlen, ylen, t, u, invmap,
+            local_d0_search, d0, score_d8, mm_opt);
+        for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j+1][i+1]=score[i+1][j+1];
 
         SOI_assign2super(r1, r2, xtm, ytm, xt, xa, ya,
             xlen, ylen, t, u, invmap, local_d0_search, Lnorm, d0, score_d8);
-        TM=SOI_iter(r1, r2, xtm, ytm, xt, score, xa, ya,
-            xlen, ylen, t, u, invmap, (fast_opt)?2:30,
-            local_d0_search, Lnorm, d0, score_d8);
+        TM=SOI_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
+            xlen, ylen, t, u, invmap, iteration_max,
+            local_d0_search, Lnorm, d0, score_d8, mm_opt);
         //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
         if (TM>TMmax)
         {
@@ -565,11 +580,12 @@ int SOIalign_main(double **xa, double **ya,
         }
 
         for (i=0;i<xlen;i++) fwdmap0[i]=-1;
+        if (mm_opt==6) NWDP_TM(scoret, path, val, ylen, xlen, -0.6, fwdmap0);
         soi_egs(scoret, ylen, xlen, fwdmap0);
         SOI_assign2super(r2, r1, ytm, xtm, yt, ya, xa,
             ylen, xlen, t, u, fwdmap0, local_d0_search, Lnorm, d0, score_d8);
-        TM=SOI_iter(r2, r1, ytm, xtm, yt, scoret, ya, xa, ylen, xlen, t, u,
-            fwdmap0, (fast_opt)?2:30, local_d0_search, Lnorm, d0, score_d8);
+        TM=SOI_iter(r2, r1, ytm, xtm, yt, scoret, path, val, ya, xa, ylen, xlen, t, u,
+            fwdmap0, iteration_max, local_d0_search, Lnorm, d0, score_d8, mm_opt);
         //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
         if (TM>TMmax)
         {
@@ -808,8 +824,10 @@ int SOIalign_main(double **xa, double **ya,
 
 
     /* clean up */
-    DeleteArray(&score, xlen);
-    DeleteArray(&scoret, ylen);
+    DeleteArray(&score, xlen+1);
+    DeleteArray(&scoret,ylen+1);
+    DeleteArray(&path,maxlen+1);
+    DeleteArray(&val, maxlen+1);
     DeleteArray(&xtm, minlen);
     DeleteArray(&ytm, minlen);
     DeleteArray(&xt,xlen);

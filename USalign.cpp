@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220530)                                      *\n"
+" * US-align (Version 20220607)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -129,7 +129,8 @@ void print_help(bool h_opt=false)
 "          3: alignment of circularly permuted structure\n"
 "          4: alignment of multiple monomeric chains into a consensus alignment\n"
 "             $ USalign -dir chains/ list -suffix .pdb -mm 4\n"
-"          5: sequence order independent alignment\n"
+"          5: sequence order fully-independent alignment\n"
+"          6: sequence order semi-independent alignment\n"
 "          To use -mm 1 or -mm 2, '-ter' option must be 0 or 1.\n"
 "\n"
 "    -ter  Number of chains to align.\n"
@@ -2054,7 +2055,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     const string &atom_opt, const string &mol_opt, const string &dir_opt,
     const string &dir1_opt, const string &dir2_opt, 
     const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const bool se_opt, const int closeK_opt)
+    const bool se_opt, const int closeK_opt, const int mm_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -2197,7 +2198,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             xlen, ylen, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt,
                             mol_vec1[chain_i]+mol_vec2[chain_j], 
-                            outfmt_opt, invmap, dist_list);
+                            outfmt_opt, invmap, dist_list, mm_opt);
                         if (outfmt_opt>=2) 
                         {
                             Liden=L_ali=0;
@@ -2219,7 +2220,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j], dist_list);
+                        mol_vec1[chain_i]+mol_vec2[chain_j], dist_list, mm_opt);
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
@@ -2337,7 +2338,8 @@ int main(int argc, char *argv[])
     int    outfmt_opt=0;     // set -outfmt to full output
     bool   fast_opt  =false; // flags for -fast, fTM-align algorithm
     int    cp_opt    =0;     // do not check circular permutation
-    int    closeK_opt=5;     // number of atoms for fully SOI initial alignment
+    int    closeK_opt=-1;    // number of atoms for SOI initial alignment.
+                             // 5 and 0 for -mm 5 and 6
     int    mirror_opt=0;     // do not align mirror
     int    het_opt=0;        // do not read HETATM residues
     int    mm_opt=0;         // do not perform MM-align
@@ -2660,7 +2662,7 @@ int main(int argc, char *argv[])
         //if (cp_opt) PrintErrorAndQuit("-mm cannot be used with -cp");
         if (dir_opt.size() && (mm_opt==1||mm_opt==2)) PrintErrorAndQuit("-mm 1 or 2 cannot be used with -dir");
         if (byresi_opt) PrintErrorAndQuit("-mm cannot be used with -byresi");
-        if (ter_opt>=2 && mm_opt!=4 && mm_opt!=5) PrintErrorAndQuit("-mm must be used with -ter 0 or -ter 1");
+        if (ter_opt>=2 && (mm_opt==1 || mm_opt==2)) PrintErrorAndQuit("-mm 1 or 2 must be used with -ter 0 or -ter 1");
         if (mm_opt==4 && (yname.size() || dir2_opt.size()))
             cerr<<"WARNING! structure_2 is ignored for -mm 4"<<endl;
     }
@@ -2673,6 +2675,12 @@ int main(int argc, char *argv[])
             <<"When -mm is used, -o is recommended over -rasmol"<<endl;
         else if (mm_opt==0) cerr<<"WARNING! Only the superposition of the"
             <<"last aligned chain pair will be generated"<<endl;
+    }
+
+    if (closeK_opt<0)
+    {
+        if (mm_opt==5) closeK_opt=5;
+        else closeK_opt=0;
     }
 
     /* read initial alignment file from 'align.txt' */
@@ -2725,12 +2733,12 @@ int main(int argc, char *argv[])
         u_opt, d_opt, TMcut, infmt1_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, het_opt,
         atom_opt, mol_opt, dir_opt, byresi_opt, chain1_list);
-    else if (mm_opt==5) SOIalign(xname, yname, fname_super, fname_lign,
+    else if (mm_opt==5 || mm_opt==6) SOIalign(xname, yname, fname_super, fname_lign,
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
         atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, 
-        chain1_list, chain2_list, se_opt, closeK_opt);
+        chain1_list, chain2_list, se_opt, closeK_opt, mm_opt);
     else cerr<<"WARNING! -mm "<<mm_opt<<" not implemented"<<endl;
 
     /* clean up */

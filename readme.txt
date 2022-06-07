@@ -64,6 +64,7 @@
    2022/05/11: Update -mm 4 output format
    2022/05/24: Limited support for sequence order independent alignment
    2022/05/30: Correct atom pair output for -mm 5
+   2022/06/07: Sequence order semi-independent alignment
 ===============================================================================
 
 =========================
