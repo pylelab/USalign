@@ -3328,6 +3328,7 @@ int TMalign_main(double **xa, double **ya,
     int kk=0, i_old=0, j_old=0;
     d=0;
     Liden=0;
+    //double SO=0;
     for(int k=0; k<n_ali8; k++)
     {
         for(int i=i_old; i<m1[k]; i++)
@@ -3354,10 +3355,16 @@ int TMalign_main(double **xa, double **ya,
         d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
         if(d<d0_out) seqM[kk]=':';
         else         seqM[kk]='.';
+        //SO+=(d<3.5);
         kk++;  
         i_old=m1[k]+1;
         j_old=m2[k]+1;
     }
+    //SO/=getmin(xlen,ylen);
+    //cout<<n_ali8<<'\t'
+        //<<rmsd0<<'\t'
+        //<<100.*SO<<endl;
+
 
     //tail
     for(int i=i_old; i<xlen; i++)
