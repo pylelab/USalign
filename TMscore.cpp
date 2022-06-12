@@ -464,6 +464,7 @@ int main(int argc, char *argv[])
                     int L_lt_d=0;
                     double GDT_list[5]={0,0,0,0,0}; // 0.5, 1, 2, 4, 8
                     double maxsub=0;
+                    TM1=TM2=TM3=TM4=TM5=0;
 
                     /* entry function for structure alignment */
                     TMscore_main(
