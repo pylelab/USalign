@@ -14,6 +14,47 @@ void print_invmap(int *invmap, const int ylen)
     cout<<endl;
 }
 
+void assign_sec_bond(int **secx_bond, const char *secx, const int xlen)
+{
+    int i,j;
+    int starti=-1;
+    int endi=-1;
+    char ss;
+    char prev_ss=0;
+    for (i=0; i<xlen; i++)
+    {
+        ss=secx[i];
+        secx_bond[i][0]=secx_bond[i][1]=-1;
+        if (ss!=prev_ss && !(ss=='C' && prev_ss=='T') 
+                        && !(ss=='T' && prev_ss=='C'))
+        {
+            if (starti>=0) // previous SSE end
+            {
+                endi=i;
+                for (j=starti;j<endi;j++)
+                {
+                    secx_bond[j][0]=starti;
+                    secx_bond[j][1]=endi;
+                }
+            }
+            if (ss=='H' || ss=='E' || ss=='<' || ss=='>') starti=i;
+            else starti=-1;
+        }
+        prev_ss=secx[i];
+    }
+    if (starti>=0) // previous SSE end
+    {
+        endi=i;
+        for (j=starti;j<endi;j++)
+        {
+            secx_bond[j][0]=starti;
+            secx_bond[j][1]=endi;
+        }
+    }
+    for (i=0;i<xlen;i++) if (secx_bond[i][1]-secx_bond[i][0]==1)
+        secx_bond[i][0]=secx_bond[i][1]=-1;
+}
+
 void getCloseK(double **xa, const int xlen, const int closeK_opt, double **xk)
 {
     double **score;
@@ -47,7 +88,33 @@ void getCloseK(double **xa, const int xlen, const int closeK_opt, double **xk)
     DeleteArray(&score, xlen+1);
 }
 
-void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
+/* check if pairing i to j conform to sequantiality within the SSE */
+inline bool sec2sq(const int i, const int j,
+    int **secx_bond, int **secy_bond, int *fwdmap, int *invmap)
+{
+    if (i<0 || j<0) return true;
+    int ii,jj;
+    if (secx_bond[i][0]>=0)
+    {
+        for (ii=secx_bond[i][0];ii<secx_bond[i][1];ii++)
+        {
+            jj=fwdmap[ii];
+            if (jj>=0 && (i-ii)*(j-jj)<=0) return false;
+        }
+    }
+    if (secy_bond[j][0]>=0)
+    {
+        for (jj=secy_bond[j][0];jj<secy_bond[j][1];jj++)
+        {
+            ii=invmap[jj];
+            if (ii>=0 && (i-ii)*(j-jj)<=0) return false;
+        }
+    }
+    return true;
+}
+
+void soi_egs(double **score, const int xlen, const int ylen, int *invmap,
+    int **secx_bond, int **secy_bond, const int mm_opt)
 {
     int i,j;
     int *fwdmap=new int[xlen]; // j=fwdmap[i];
@@ -70,12 +137,12 @@ void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
             if (fwdmap[i]>=0) continue;
             for (j=0;j<ylen;j++)
             {
-                if (invmap[j]==-1 && score[i+1][j+1]>max_score)
-                {
-                    maxi=i;
-                    maxj=j;
-                    max_score=score[i+1][j+1];
-                }
+                if (invmap[j]>=0 || score[i+1][j+1]<=max_score) continue;
+                if (mm_opt==6 && !sec2sq(i,j,secx_bond,secy_bond,
+                    fwdmap,invmap)) continue;
+                maxi=i;
+                maxj=j;
+                max_score=score[i+1][j+1];
             }
         }
         if (maxi<0) break; // no assignment;
@@ -106,6 +173,9 @@ void soi_egs(double **score, const int xlen, const int ylen, int *invmap)
             {
                 oldi=invmap[j];
                 if (score[i+1][j+1]<=0 || oldi==i) continue;
+                if (mm_opt==6 && (!sec2sq(i,j,secx_bond,secy_bond,fwdmap,invmap) ||
+                            !sec2sq(oldi,oldj,secx_bond,secy_bond,fwdmap,invmap)))
+                    continue;
                 delta_score=score[i+1][j+1];
                 if (oldi>=0 && oldj>=0) delta_score+=score[oldi+1][oldj+1];
                 if (oldi>=0) delta_score-=score[oldi+1][j+1];
@@ -144,7 +214,8 @@ int soi_se_main(
     const int xlen, const int ylen, 
     const double Lnorm_ass, const double d0_scale, const bool i_opt,
     const bool a_opt, const int u_opt, const bool d_opt, const int mol_type,
-    const int outfmt_opt, int *invmap, double *dist_list, const int mm_opt)
+    const int outfmt_opt, int *invmap, double *dist_list,
+    int **secx_bond, int **secy_bond, const int mm_opt)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -207,7 +278,7 @@ int soi_se_main(
         }
     }
     if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
-    soi_egs(score, xlen, ylen, invmap);
+    soi_egs(score, xlen, ylen, invmap, secx_bond, secy_bond, mm_opt);
 
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
     int k=0;
@@ -319,7 +390,8 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     double **xt, double **score, bool **path, double **val, double **xa, double **ya,
     int xlen, int ylen, double t[3], double u[3][3], int *invmap0,
     int iteration_max, double local_d0_search,
-    double Lnorm, double d0, double score_d8, const int mm_opt)
+    double Lnorm, double d0, double score_d8,
+    int **secx_bond, int **secy_bond, const int mm_opt, const bool init_invmap=false)
 {
     double rmsd; 
     int *invmap=new int[ylen+1];
@@ -334,9 +406,14 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
     double d2;
     for (iteration=0; iteration<iteration_max; iteration++)
     {
-        for (j=0; j<ylen; j++) invmap[j]=-1;
-        if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
-        soi_egs(score, xlen, ylen, invmap);
+        if (iteration==0 && init_invmap) 
+            for (j=0;j<ylen;j++) invmap[j]=invmap0[j];
+        else
+        {
+            for (j=0; j<ylen; j++) invmap[j]=-1;
+            if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
+        }
+        soi_egs(score, xlen, ylen, invmap, secx_bond, secy_bond, mm_opt);
     
         k=0;
         for (j=0; j<ylen; j++) 
@@ -376,7 +453,8 @@ double SOI_iter(double **r1, double **r2, double **xtm, double **ytm,
 void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
     double **score, bool **path, double **val, const int xlen, const int ylen,
     double t[3], double u[3][3], int invmap[], 
-    double local_d0_search, double d0, double score_d8, const int mm_opt)
+    double local_d0_search, double d0, double score_d8,
+    int **secx_bond, int **secy_bond, const int mm_opt)
 {
     int i,j,k;
     double **xfrag;
@@ -411,19 +489,24 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
             Kabsch(xfrag, yfrag, closeK_opt, 1, &rmsd, t, u);
             do_rotation(xfrag, xtran, closeK_opt, t, u);
             
-            for (k=0; k<closeK_opt; k++)
-            {
-                d2=dist(xtran[k], yfrag[k]);
-                if (d2>score_d82) score[i+1][j+1]=0;
-                else score[i+1][j+1]=1./(1+d2/d02);
-            }
+            //for (k=0; k<closeK_opt; k++)
+            //{
+                //d2=dist(xtran[k], yfrag[k]);
+                //if (d2>score_d82) score[i+1][j+1]=0;
+                //else score[i+1][j+1]=1./(1+d2/d02);
+            //}
+            k=closeK_opt-1;
+            d2=dist(xtran[k], yfrag[k]);
+            if (d2>score_d82) score[i+1][j+1]=0;
+            else score[i+1][j+1]=1./(1+d2/d02);
         }
     }
 
     /* initial assignment */
     for (j=0;j<ylen;j++) invmap[j]=-1;
     if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
-    soi_egs(score, xlen, ylen, invmap);
+    for (j=0; j<ylen;j++) i=invmap[j];
+    soi_egs(score, xlen, ylen, invmap, secx_bond, secy_bond, mm_opt);
 
     /* clean up */
     DeleteArray(&xfrag, closeK_opt);
@@ -477,7 +560,8 @@ int SOIalign_main(double **xa, double **ya,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt, const int a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt,
-    const int mol_type, double *dist_list, const int mm_opt)
+    const int mol_type, double *dist_list, 
+    int **secx_bond, int **secy_bond, const int mm_opt)
 {
     double D0_MIN;        //for d0
     double Lnorm;         //normalization length
@@ -525,28 +609,55 @@ int SOIalign_main(double **xa, double **ya,
     for(j=0; j<ylen; j++) invmap0[j]=-1;
     double local_d0_search = d0_search;
     int iteration_max=(fast_opt)?2:30;
-    if (mm_opt==6) iteration_max=1;
+    //if (mm_opt==6) iteration_max=1;
 
     /*************************************************************/
     /* initial alignment with sequence order dependent alignment */
     /*************************************************************/
-    CPalign_main(xa, ya, seqx, seqy, secx, secy,
+    CPalign_main(
+        xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         i_opt, a_opt, u_opt, d_opt, fast_opt,
         mol_type,-1);
+    if (mm_opt==6)
+    {
+        i=0;
+        j=0;
+        for (int r=0;r<seqxA.size();r++)
+        {
+            if (seqxA[r]=='*') // circular permutation point
+            {
+                for (int jj=0;jj<j;jj++) if (invmap0[jj]>=0)
+                    invmap0[jj]+=xlen - i;
+                i=0;
+                continue;
+            }
+            if (seqyA[r]!='-')
+            {
+                if (seqxA[r]!='-') invmap0[j]=i;
+                j++;
+            }
+            if (seqxA[r]!='-') i++;
+        }
+        for (j=0;j<ylen;j++)
+        {
+            i=invmap0[j];
+            if (i>=0) fwdmap0[i]=j;
+        }
+    }
     do_rotation(xa, xt, xlen, t0, u0);
     SOI_super2score(xt, ya, xlen, ylen, score, d0, score_d8);
     for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j+1][i+1]=score[i+1][j+1];
     TMmax=SOI_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
         xlen, ylen, t0, u0, invmap0, iteration_max,
-        local_d0_search, Lnorm, d0, score_d8, mm_opt);
+        local_d0_search, Lnorm, d0, score_d8, secx_bond, secy_bond, mm_opt, true);
     TM   =SOI_iter(r2, r1, ytm, xtm, yt,scoret, path, val, ya, xa,
         ylen, xlen, t0, u0, fwdmap0, iteration_max,
-        local_d0_search, Lnorm, d0, score_d8, mm_opt);
-    //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+        local_d0_search, Lnorm, d0, score_d8, secy_bond, secx_bond, mm_opt, true);
+    //cout<<"TM2="<<TM2<<"\tTM1="<<TM1<<"\tTMmax="<<TMmax<<"\tTM="<<TM<<endl;
     if (TM>TMmax)
     {
         TMmax = TM;
@@ -563,16 +674,16 @@ int SOIalign_main(double **xa, double **ya,
     /***************************************************************/
     if (closeK_opt>=3)
     {
-        get_SOI_initial_assign(xk, yk, closeK_opt, score, path, val, xlen, ylen, t, u, invmap,
-            local_d0_search, d0, score_d8, mm_opt);
+        get_SOI_initial_assign(xk, yk, closeK_opt, score, path, val,
+            xlen, ylen, t, u, invmap, local_d0_search, d0, score_d8,
+            secx_bond, secy_bond, mm_opt);
         for (i=0;i<xlen;i++) for (j=0;j<ylen;j++) scoret[j+1][i+1]=score[i+1][j+1];
 
         SOI_assign2super(r1, r2, xtm, ytm, xt, xa, ya,
             xlen, ylen, t, u, invmap, local_d0_search, Lnorm, d0, score_d8);
         TM=SOI_iter(r1, r2, xtm, ytm, xt, score, path, val, xa, ya,
             xlen, ylen, t, u, invmap, iteration_max,
-            local_d0_search, Lnorm, d0, score_d8, mm_opt);
-        //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+            local_d0_search, Lnorm, d0, score_d8, secx_bond, secy_bond, mm_opt);
         if (TM>TMmax)
         {
             TMmax = TM;
@@ -581,12 +692,11 @@ int SOIalign_main(double **xa, double **ya,
 
         for (i=0;i<xlen;i++) fwdmap0[i]=-1;
         if (mm_opt==6) NWDP_TM(scoret, path, val, ylen, xlen, -0.6, fwdmap0);
-        soi_egs(scoret, ylen, xlen, fwdmap0);
+        soi_egs(scoret, ylen, xlen, fwdmap0, secy_bond, secx_bond, mm_opt);
         SOI_assign2super(r2, r1, ytm, xtm, yt, ya, xa,
             ylen, xlen, t, u, fwdmap0, local_d0_search, Lnorm, d0, score_d8);
         TM=SOI_iter(r2, r1, ytm, xtm, yt, scoret, path, val, ya, xa, ylen, xlen, t, u,
-            fwdmap0, iteration_max, local_d0_search, Lnorm, d0, score_d8, mm_opt);
-        //cout<<"TMmax="<<TMmax<<"\tTM="<<TM<<endl;
+            fwdmap0, iteration_max, local_d0_search, Lnorm, d0, score_d8,secy_bond, secx_bond, mm_opt);
         if (TM>TMmax)
         {
             TMmax = TM;

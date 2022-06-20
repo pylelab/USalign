@@ -65,6 +65,8 @@
    2022/05/24: Limited support for sequence order independent alignment
    2022/05/30: Correct atom pair output for -mm 5
    2022/06/07: Sequence order semi-independent alignment
+   2022/06/20: Sequentiality within SSE in sequence order semi-independent
+               alignment
 ===============================================================================
 
 =========================

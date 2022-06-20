@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220607)                                      *\n"
+" * US-align (Version 20220620)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -2071,6 +2071,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     int    xchainnum,ychainnum;// number of chains in a PDB file
     char   *seqx, *seqy;       // for the protein sequence 
     char   *secx, *secy;       // for the secondary structure 
+    int    **secx_bond;        // boundary of secondary structure
+    int    **secy_bond;        // boundary of secondary structure
     double **xa, **ya;         // for input vectors xa[0...xlen-1][0..2] and
                                // ya[0...ylen-1][0..2], in general,
                                // ya is regarded as native structure 
@@ -2120,6 +2122,11 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             if (mol_vec1[chain_i]>0) make_sec(seqx,xa, xlen, secx,atom_opt);
             else make_sec(xa, xlen, secx); // secondary structure assignment
             if (closeK_opt>=3) getCloseK(xa, xlen, closeK_opt, xk);
+            if (mm_opt==6) 
+            {
+                NewArray(&secx_bond, xlen, 2);
+                assign_sec_bond(secx_bond, secx, xlen);
+            }
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
@@ -2163,6 +2170,11 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                          make_sec(seqy, ya, ylen, secy, atom_opt);
                     else make_sec(ya, ylen, secy);
                     if (closeK_opt>=3) getCloseK(ya, ylen, closeK_opt, yk);
+                    if (mm_opt==6) 
+                    {
+                        NewArray(&secy_bond, ylen, 2);
+                        assign_sec_bond(secy_bond, secy, ylen);
+                    }
 
                     /* declare variable specific to this pair of TMalign */
                     double t0[3], u0[3][3];
@@ -2198,7 +2210,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             xlen, ylen, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt,
                             mol_vec1[chain_i]+mol_vec2[chain_j], 
-                            outfmt_opt, invmap, dist_list, mm_opt);
+                            outfmt_opt, invmap, dist_list,
+                            secx_bond, secy_bond, mm_opt);
                         if (outfmt_opt>=2) 
                         {
                             Liden=L_ali=0;
@@ -2220,7 +2233,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
-                        mol_vec1[chain_i]+mol_vec2[chain_j], dist_list, mm_opt);
+                        mol_vec1[chain_i]+mol_vec2[chain_j], dist_list,
+                        secx_bond, secy_bond, mm_opt);
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
@@ -2265,6 +2279,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
+                    if (mm_opt==6) DeleteArray(&secy_bond, ylen);
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -2282,6 +2297,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
             delete [] seqx;
             delete [] secx;
             resi_vec1.clear();
+            if (mm_opt==6) DeleteArray(&secx_bond, xlen);
         } // chain_i
         xname.clear();
         PDB_lines1.clear();
