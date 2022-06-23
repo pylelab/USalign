@@ -67,6 +67,7 @@
    2022/06/07: Sequence order semi-independent alignment
    2022/06/20: Sequentiality within SSE in sequence order semi-independent
                alignment
+   2022/06/22: fix infinite loop for mal-formatted PDB
 ===============================================================================
 
 =========================

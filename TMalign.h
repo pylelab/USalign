@@ -543,6 +543,10 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
    
    //second iteration 
     double d002t=d002;
+    vector<double> dis_vec(dis, dis+n_ali);
+    sort(dis_vec.begin(), dis_vec.end());
+    if (d002t<dis_vec[2]) d002t=dis_vec[2];
+    dis_vec.clear();
     while(1)
     {
         j=0;
@@ -580,7 +584,10 @@ double get_score_fast( double **r1, double **r2, double **xtm, double **ytm,
         
         //third iteration
         d002t=d002+1;
-       
+        vector<double> dis_vec(dis, dis+n_ali);
+        sort(dis_vec.begin(), dis_vec.end());
+        if (d002t<dis_vec[2]) d002t=dis_vec[2];
+        dis_vec.clear();
         while(1)
         {
             j=0;
