@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220622)                                      *\n"
+" * US-align (Version 20220623)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -404,7 +404,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         seqxA.c_str(), seqyA.c_str(), Liden,
                         n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
                         d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
-                        (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
+                        (m_opt?fname_matrix:"").c_str(),
                         outfmt_opt, ter_opt, false, split_opt, o_opt,
                         fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
                         resi_vec1, resi_vec2);
@@ -2247,7 +2247,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         seqxA.c_str(), seqyA.c_str(), Liden,
                         n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
                         d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
-                        (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
+                        (m_opt?fname_matrix:"").c_str(),
                         outfmt_opt, ter_opt, false, split_opt, o_opt,
                         fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
                         resi_vec1, resi_vec2);

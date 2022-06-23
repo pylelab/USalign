@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * TM-align (Version 20220412): protein and RNA structure alignment   *\n"
+" * TM-align (Version 20220623): protein and RNA structure alignment   *\n"
 " * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
 " *             S Gong, C Zhang, Y Zhang. Bioinformatics, bz282 (2019) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
@@ -576,9 +576,9 @@ int main(int argc, char *argv[])
                         n_ali8, L_ali, TM_ali, rmsd_ali,
                         TM_0, d0_0, d0A, d0B,
                         Lnorm_ass, d0_scale, d0a, d0u, 
-                        (m_opt?fname_matrix+chainID_list1[chain_i]:"").c_str(),
+                        (m_opt?fname_matrix:"").c_str(),
                         outfmt_opt, ter_opt, 0, split_opt, o_opt,
-                        (o_opt?fname_super+chainID_list1[chain_i]:"").c_str(),
+                        (o_opt?fname_super:"").c_str(),
                         i_opt, a_opt, u_opt, d_opt,mirror_opt,
                         resi_vec1, resi_vec2 );
 

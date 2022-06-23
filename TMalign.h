@@ -2458,30 +2458,37 @@ void output_rasmol(const string xname, const string yname,
 void output_rotation_matrix(const char* fname_matrix,
     const double t[3], const double u[3][3])
 {
-    fstream fout;
-    fout.open(fname_matrix, ios::out | ios::trunc);
-    if (fout)// succeed
+    stringstream ss;
+    ss << "------ The rotation matrix to rotate Structure_1 to Structure_2 ------\n";
+    char dest[1000];
+    sprintf(dest, "m %18s %14s %14s %14s\n", "t[m]", "u[m][0]", "u[m][1]", "u[m][2]");
+    ss << string(dest);
+    for (int k = 0; k < 3; k++)
     {
-        fout << "------ The rotation matrix to rotate Structure_1 to Structure_2 ------\n";
-        char dest[1000];
-        sprintf(dest, "m %18s %14s %14s %14s\n", "t[m]", "u[m][0]", "u[m][1]", "u[m][2]");
-        fout << string(dest);
-        for (int k = 0; k < 3; k++)
-        {
-            sprintf(dest, "%d %18.10f %14.10f %14.10f %14.10f\n", k, t[k], u[k][0], u[k][1], u[k][2]);
-            fout << string(dest);
-        }
-        fout << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
-                "for(i=0; i<L; i++)\n"
-                "{\n"
-                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
-                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
-                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
-                "}\n";
-        fout.close();
+        sprintf(dest, "%d %18.10f %14.10f %14.10f %14.10f\n", k, t[k], u[k][0], u[k][1], u[k][2]);
+        ss << string(dest);
     }
+    ss << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
+            "for(i=0; i<L; i++)\n"
+            "{\n"
+            "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
+            "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
+            "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
+            "}\n";
+    if (strcmp(fname_matrix,(char *)("-"))==0)
+       cout<<ss.str();
     else
-        cout << "Open file to output rotation matrix fail.\n";
+    {
+        fstream fout;
+        fout.open(fname_matrix, ios::out | ios::trunc);
+        if (fout)
+        {
+            fout<<ss.str();
+            fout.close();
+        }
+        else cout << "Open file to output rotation matrix fail.\n";
+    }
+    ss.str(string());
 }
 
 //output the final results

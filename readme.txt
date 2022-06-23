@@ -67,7 +67,8 @@
    2022/06/07: Sequence order semi-independent alignment
    2022/06/20: Sequentiality within SSE in sequence order semi-independent
                alignment
-   2022/06/22: fix infinite loop for mal-formatted PDB
+   2022/06/22: Fix infinite loop for mal-formatted PDB
+   2022/06/23: Fix -m for Windows. Add pymol plugin.
 ===============================================================================
 
 =========================
