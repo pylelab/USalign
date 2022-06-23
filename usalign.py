@@ -1,18 +1,23 @@
 '''
 PyMOL plugin for US-align
 
-Usage: 
+USAGE: 
+
     usalign mobile, fix [,args [,exe]]
 
-This script is partly based on tmalign plugin by Thomas Holder available at
-https://github.com/Pymol-Scripts/Pymol-script-repo/blob/master/tmalign.py
+INSTALLATION
 
-This plugin depends on the binary executable of US-align, which must be
-available within a directory specified by PATH. You can get the PATH value
-within PyMOL by the following command:
+    Install this script as a PyMOL plugin by 
+    "Plugin" - "Plugin Manager" - "Install New Plugin"
 
+    This plugin depends on the binary executable of US-align, which must be
+    available within a directory specified by PATH. You can get the PATH
+    value within PyMOL by the following command:
+    
     print(os.getenv('PATH'))
 '''
+#This script is partly based on tmalign plugin by Thomas Holder available at
+#https://github.com/Pymol-Scripts/Pymol-script-repo/blob/master/tmalign.py
 
 from __future__ import print_function
 
