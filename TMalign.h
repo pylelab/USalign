@@ -2607,8 +2607,8 @@ void output_mTMalign_results(const string xname, const string yname,
     if (outfmt_opt<=0)
     {
         printf("Average aligned length= %d, RMSD= %6.2f, Seq_ID=n_identical/n_aligned= %4.3f\n", n_ali8, rmsd, (n_ali8>0)?Liden/n_ali8:0);
-        printf("Average TM-score= %6.5f (normalized by length of longer structure: L=%d, d0=%.2f)\n", TM2, xlen, d0B);
-        printf("Average TM-score= %6.5f (normalized by length of shorter structure: L=%d, d0=%.2f)\n", TM1, ylen, d0A);
+        printf("Average TM-score= %6.5f (normalized by length of shorter structure: L=%d, d0=%.2f)\n", TM2, xlen, d0B);
+        printf("Average TM-score= %6.5f (normalized by length of longer structure: L=%d, d0=%.2f)\n", TM1, ylen, d0A);
 
         if (a_opt==1)
             printf("Average TM-score= %6.5f (if normalized by average length of two structures: L=%.1f, d0=%.2f)\n", TM3, (xlen+ylen)*0.5, d0a);

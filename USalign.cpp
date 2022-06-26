@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20220623)                                      *\n"
+" * US-align (Version 20220626)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
@@ -80,8 +80,8 @@ void print_extra_help()
 "           1: align both 'ATOM  ' and 'HETATM' residues\n"
 "           2: align both 'ATOM  ' and MSE residues\n"
 "\n"
-//"   -full  Whether to show full MM-align results, including alignment of\n"
-//"          individual chains. T or F, (default F)\n"
+"   -full  Whether to show full pairwise alignment of individual chains for\n"
+"          -mm 2 or 4. T or F, (default F)\n"
 //"\n"
 //" -closeK  Number of closest atoms used for sequence order independent\n"
 //"          initial alignment. default: 5\n"
@@ -1346,7 +1346,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     const string &fname_matrix,
     vector<string> &sequence, double Lnorm_ass, const double d0_scale,
     const bool m_opt, const int  i_opt, const int o_opt, const int a_opt,
-    bool u_opt, const bool d_opt, const double TMcut,
+    bool u_opt, const bool d_opt, const bool full_opt, const double TMcut,
     const int infmt_opt, const int ter_opt,
     const int split_opt, const int outfmt_opt, bool fast_opt,
     const int het_opt,
@@ -1447,6 +1447,14 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             seqyA_mat[i][j]=seqxA_mat[j][i]=seqyA;
             //cout<<chain_list[i]<<':'<<chainID_list[i]
                 //<<chain_list[j]<<':'<<chainID_list[j]<<"\tTM4="<<TM4<<endl;
+            if (full_opt) output_results(
+                chain_list[i],chain_list[j], chainID_list[i], chainID_list[j],
+                xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5, rmsd0, d0_out,
+                seqM.c_str(), seqxA.c_str(), seqyA.c_str(), Liden,
+                n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0, d0A, d0B,
+                Lnorm_ass, d0_scale, d0a, d0u, "",
+                outfmt_opt, ter_opt, true, split_opt, o_opt, "",
+                0, a_opt, false, d_opt, false, resi_vec, resi_vec);
 
             /* clean up */
             seqM.clear();
@@ -2746,7 +2754,7 @@ int main(int argc, char *argv[])
     else if (mm_opt==3) ; // should be changed to mm_opt=0, cp_opt=true
     else if (mm_opt==4) mTMalign(xname, yname, fname_super, fname_matrix,
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,
-        u_opt, d_opt, TMcut, infmt1_opt, ter_opt,
+        u_opt, d_opt, full_opt, TMcut, infmt1_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, het_opt,
         atom_opt, mol_opt, dir_opt, byresi_opt, chain1_list);
     else if (mm_opt==5 || mm_opt==6) SOIalign(xname, yname, fname_super, fname_lign,
