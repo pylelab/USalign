@@ -1,4 +1,5 @@
 CC=g++
+MINGW=x86_64-w64-mingw32-g++ -static
 CFLAGS=-O3 -ffast-math
 LDFLAGS=#-static# -lm
 PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign HwRMSD cif2pdb
@@ -8,8 +9,11 @@ all: ${PROGRAM}
 qTMclust: qTMclust.cpp HwRMSD.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-USalign: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h
+USalign: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
+USalign.exe: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
+	${MINGW} ${CFLAGS} USalign.cpp -o $@ ${LDFLAGS}
 
 TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}

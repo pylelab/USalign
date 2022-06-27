@@ -259,6 +259,100 @@ void NWDP_SE(bool **path, double **val, double **x, double **y,
     }
 }
 
+void NWDP_SE(bool **path, double **val, double **x, double **y,
+    int len1, int len2, double d02, double gap_open, int j2i[],
+    const int hinge)
+{
+    if (hinge==0)
+    {
+        NWDP_SE(path, val, x, y, len1, len2, d02, gap_open, j2i);
+        return;
+    }
+    int i, j;
+    double h, v, d;
+
+    int L=(len2>len1)?len2:len1;
+    int int_min=L*(gap_open-1);
+
+    for (i=0; i<=len1; i++)
+    {
+        for (j=0; j<=len2; j++)
+        {
+            val[i][j]=0;
+            path[i][j]=false;
+        }
+    }
+
+    /* fill in old j2i */
+    int k=0;
+    for (j=0; j<len2; j++)
+    {
+        i=j2i[j];
+        if (i<0) continue;
+        path[i+1][j+1]=true;
+        val[i+1][j+1]=0;
+    }
+
+    double dij;
+
+    //decide matrix and path
+    for(i=1; i<=len1; i++)
+    {
+        for(j=1; j<=len2; j++)
+        {
+            dij=0;
+            if (path[i][j]==false) dij=dist(&x[i-1][0], &y[j-1][0]);    
+            d=val[i-1][j-1] +  1.0/(1+dij/d02);
+
+            //symbol insertion in horizontal (= a gap in vertical)
+            h=val[i-1][j];
+            if(path[i-1][j]) h += gap_open; //aligned in last position
+
+            //symbol insertion in vertical
+            v=val[i][j-1];
+            if(path[i][j-1]) v += gap_open; //aligned in last position
+
+
+            if(d>=h && d>=v && val[i][j]==0)
+            {
+                path[i][j]=true; //from diagonal
+                val[i][j]=d;
+            }
+            else 
+            {
+                path[i][j]=false; //from horizontal
+                if(v>=h) val[i][j]=v;
+                else val[i][j]=h;
+            }
+        } //for i
+    } //for j
+
+    //trace back to extract the alignment
+    for (j=0;j<=len2;j++) j2i[j]=-1;
+    i=len1;
+    j=len2;
+    while(i>0 && j>0)
+    {
+        if(path[i][j]) //from diagonal
+        {
+            j2i[j-1]=i-1;
+            i--;
+            j--;
+        }
+        else 
+        {
+            h=val[i-1][j];
+            if(path[i-1][j]) h +=gap_open;
+
+            v=val[i][j-1];
+            if(path[i][j-1]) v +=gap_open;
+
+            if(v>=h) j--;
+            else i--;
+        }
+    }
+}
+
 /* +ss
  * Input: secondary structure secx, secy, and gap_open
  * Output: j2i[1:len2] \in {1:len1} U {-1}
