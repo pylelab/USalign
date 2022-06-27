@@ -2476,11 +2476,11 @@ int flexalign(string &xname, string &yname, const string &fname_super,
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
-                    output_results(
+                    output_flexalign_results(
                         xname.substr(dir1_opt.size()+dir_opt.size()),
                         yname.substr(dir2_opt.size()+dir_opt.size()),
                         chainID_list1[chain_i], chainID_list2[chain_j],
-                        xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
+                        xlen, ylen, t0, u0, tu_vec, TM1, TM2, TM3, TM4, TM5,
                         rmsd0, d0_out, seqM.c_str(),
                         seqxA.c_str(), seqyA.c_str(), Liden,
                         n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
