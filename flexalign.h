@@ -150,8 +150,6 @@ int flexalign_main(double **xa, double **ya,
             xlen_h, ylen_h, sequence, Lnorm_ass,
             d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
         
-        t_u2tu(t0,u0,tu_tmp);
-        tu_vec.push_back(tu_tmp);
         do_rotation(xa, xt, xlen, t0, u0);
         
         TM1_h=TM1;
@@ -171,9 +169,10 @@ int flexalign_main(double **xa, double **ya,
             d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h,
             rmsd0_h, L_ali, Liden, TM_ali, rmsd_ali, n_ali_h, n_ali8_h,
             xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
-            a_opt, u_opt, d_opt, mol_type, 0, invmap, hinge+1);
+            a_opt, u_opt, d_opt, mol_type, 0, invmap_h, hinge+1);
         int new_ali=0;
         for (r=0;r<seqM_h.size();r++) new_ali+=(seqM_h[r]==hinge+'1');
+        if (n_ali8_h - n_ali8<5) new_ali=0;
         if (new_ali>=5)
         {
             TM1=TM1_h;
@@ -187,6 +186,9 @@ int flexalign_main(double **xa, double **ya,
             rmsd0=rmsd0_h;
             n_ali=n_ali_h;
             n_ali8=n_ali8_h;
+            t_u2tu(t0,u0,tu_tmp);
+            tu_vec.push_back(tu_tmp);
+            for (j=0;j<ylen+1;j++) invmap[j]=invmap_h[j];
         }
         
         /* clean up */
@@ -203,6 +205,13 @@ int flexalign_main(double **xa, double **ya,
         delete [] seqy_h;
         delete [] secy_h;
         if (new_ali<5) break;
+    }
+
+    if (tu_vec.size()<=1)
+    {
+        DeleteArray(&xt, xlen);
+        delete[] invmap;
+        return tu_vec.size();
     }
     
     /* re-derive alignment based on tu_vec */
@@ -270,7 +279,7 @@ int flexalign_main(double **xa, double **ya,
     di_vec.clear();
     DeleteArray(&xt, xlen);
     delete[] invmap;
-    return 0; // zero for no exception
+    return tu_vec.size();
 }
 
 /* extract rotation matrix based on TMscore8 */
