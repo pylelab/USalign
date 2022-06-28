@@ -295,6 +295,8 @@ int flexalign_main(double **xa, double **ya,
     
     /* recalculate all scores */
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
+    Liden=0;
+    for (r=0;r<seqM.size();r++) if (seqM[r]!=' ') Liden+=seqxA[r]==seqyA[r];
     for(j=0; j<ylen; j++)
     {
         i=invmap[j];
