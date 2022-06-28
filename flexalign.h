@@ -75,11 +75,24 @@ int flexalign_main(double **xa, double **ya,
     t_u2tu(t0,u0,tu_tmp);
     tu_vec.push_back(tu_tmp);
     
+    int i,j,r;
     int* invmap=new int[ylen+1];
-    aln2invmap(seqxA, seqyA, invmap);
+    for (j=0;j<ylen+1;j++) invmap[j]=-1;
     double **xt;
     NewArray(&xt, xlen, 3);
-    for (int r=0;r<seqM.size();r++) if (seqM[r]!=' ') seqM[r]='0';
+    do_rotation(xa, xt, xlen, t0, u0);
+
+    TM1= TM2= TM3= TM4= TM5=rmsd0=0;
+    seqM="";
+    seqxA="";
+    seqyA="";
+    n_ali=n_ali8=0;
+    se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
+        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+        a_opt, u_opt, d_opt, mol_type, 0, invmap, 1);
+    for (r=0;r<seqM.size();r++) if (seqM[r]=='1') seqM[r]='0';
 
     int minlen = min(xlen, ylen);
     int hinge;
@@ -100,7 +113,6 @@ int flexalign_main(double **xa, double **ya,
         vector<int> r1toi(xlen_h,0);
         vector<int> r2toj(ylen_h,0);
 
-        int i,j,r;
         int r1,r2;
         i=j=-1;
         r1=r2=0;
@@ -189,6 +201,10 @@ int flexalign_main(double **xa, double **ya,
             t_u2tu(t0,u0,tu_tmp);
             tu_vec.push_back(tu_tmp);
             for (j=0;j<ylen+1;j++) invmap[j]=invmap_h[j];
+            //cout<<">hinge="<<hinge<<'\n'
+                //<<seqxA<<'\n'<<seqM<<'\n'<<seqyA<<endl;
+            //for (j=0;j<ylen;j++) if ((i=invmap[j])>=0) cout<<"("<<i<<","<<j<<")";
+            //cout<<endl;
         }
         
         /* clean up */
@@ -217,12 +233,10 @@ int flexalign_main(double **xa, double **ya,
     /* re-derive alignment based on tu_vec */
     vector<char> seqM_char(ylen,' ');
     vector<double> di_vec(ylen,-1);
-    int i,j,r;
     double d;
     for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
     {
         tu2t_u(tu_vec[hinge],t0,u0);
-        //output_rotation_matrix("-", t0, u0); 
         do_rotation(xa, xt, xlen, t0, u0);
         for (j=0;j<ylen;j++)
         {
@@ -243,7 +257,43 @@ int flexalign_main(double **xa, double **ya,
         j++;
         seqM[r]=seqM_char[j];
     }
+
+    /* smooth out AFP assignment */
+    for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
+    {
+        j=-1;
+        for (r=0;r<seqM.size();r++)
+        {
+            if (seqyA[r]=='-') continue;
+            j++;
+            if (seqM_char[j]!=hinge+'0') continue;
+            if (r<seqM.size()-1 && (seqM[r+1]==hinge+'0' || seqM[r+1]==' '))
+                continue;
+            if (r>0 && (seqM[r-1]==hinge+'0' || seqM[r-1]==' ')) continue;
+            if (r<seqM.size()-1 && r>0 && seqM[r-1]!=seqM[r+1]) continue;
+            if (r>0) seqM[r]=seqM_char[j]=seqM[r-1];
+            else     seqM[r]=seqM_char[j]=seqM[r+1];
+        }
+    }
+    for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
+    {
+        tu2t_u(tu_vec[hinge],t0,u0);
+        do_rotation(xa, xt, xlen, t0, u0);
+        for (j=0;j<ylen;j++)
+        {
+            i=invmap[j];
+            if (i<0) continue;
+            if (seqM_char[j]!=hinge+'0') continue;
+            d=sqrt(dist(xt[i], ya[j]));
+            if (di_vec[j]<0 || d<=di_vec[j])
+            {
+                di_vec[j]=d;
+                seqM_char[j]=hinge+'0';
+            }
+        }
+    }
     
+    /* recalculate all scores */
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
     for(j=0; j<ylen; j++)
     {

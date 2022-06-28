@@ -135,6 +135,7 @@ int se_main(
                 if (d_opt) TM5+=1/(1+(d/d0_scale)*(d/d0_scale)); // -d
                 rmsd0+=d*d;
             }
+            else if (hinge) invmap[j]=-1;
         }
     }
     n_ali8=k;
