@@ -258,7 +258,7 @@ int flexalign_main(double **xa, double **ya,
         seqM[r]=seqM_char[j];
     }
 
-    /* smooth out AFP assignment */
+    /* smooth out AFP assignment: remove singleton */
     for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
     {
         j=-1;
@@ -275,6 +275,65 @@ int flexalign_main(double **xa, double **ya,
             else     seqM[r]=seqM_char[j]=seqM[r+1];
         }
     }
+    /* smooth out AFP assignment: remove singleton at the end of fragment */
+    char left_hinge=' ';
+    char right_hinge=' ';
+    for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
+    {
+        j=-1;
+        for (r=0;r<seqM.size();r++)
+        {
+            if (seqyA[r]=='-') continue;
+            j++;
+            if (seqM[r]!=hinge+'0') continue;
+            if (r>0 && seqM[r-1]==' ' && r<seqM.size()-1 && seqM[r+1]==' ')
+                continue;
+            
+            left_hinge=' ';
+            for (i=r-1;i>=0;i--)
+            {
+                if (seqM[i]==' ') continue;
+                left_hinge=seqM[i];
+                break;
+            }
+            if (left_hinge==hinge+'0') continue;
+            
+            right_hinge=' ';
+            for (i=r+1;i<seqM.size();i++)
+            {
+                if (seqM[i]==' ') continue;
+                right_hinge=seqM[i];
+                break;
+            }
+            if (right_hinge==hinge+'0') continue;
+            if (left_hinge!=right_hinge && left_hinge!=' ' && right_hinge!=' ')
+                continue;
+            
+            if     (right_hinge!=' ') seqM[r]=seqM_char[j]=right_hinge;
+            else if (left_hinge!=' ') seqM[r]=seqM_char[j]=left_hinge;
+        }
+    }
+    /* smooth out AFP assignment: remove dimer */
+    for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
+    {
+        j=-1;
+        for (r=0;r<seqM.size()-1;r++)
+        {
+            if (seqyA[r]=='-') continue;
+            j++;
+            if (seqM[r]  !=hinge+'0'|| seqM[r+1]!=hinge+'0') continue;
+            
+            if (r<seqM.size()-2 && (seqM[r+2]==' ' || seqM[r+2]==hinge+'0'))
+                continue;
+            if (r>0 && (seqM[r-1]==' ' || seqM[r-1]==hinge+'0')) continue;
+            if (r<seqM.size()-2 && r>0 && seqM[r-1]!=seqM[r+2]) continue;
+
+            if (r>0) seqM[r]=seqM_char[j]=seqM[r+1]=seqM_char[j+1]=seqM[r-1];
+            else     seqM[r]=seqM_char[j]=seqM[r+1]=seqM_char[j+1]=seqM[r+2];
+        }
+    }
+    
+    /* recalculate all scores */
     for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
     {
         tu2t_u(tu_vec[hinge],t0,u0);
@@ -292,8 +351,6 @@ int flexalign_main(double **xa, double **ya,
             }
         }
     }
-    
-    /* recalculate all scores */
     rmsd0=TM1=TM2=TM3=TM4=TM5=0;
     Liden=0;
     for (r=0;r<seqM.size();r++) if (seqM[r]!=' ') Liden+=seqxA[r]==seqyA[r];
