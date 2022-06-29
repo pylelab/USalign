@@ -362,8 +362,6 @@ int flexalign_main(double **xa, double **ya,
                 break;
             }
             if (right_hinge==hinge+'0') continue;
-            if (left_hinge!=right_hinge && left_hinge!=' ' && right_hinge!=' ')
-                continue;
             
             if (right_hinge==' ') seqM[r]=seqM_char[j]=left_hinge;
             else if (left_hinge==' ') seqM[r]=seqM_char[j]=right_hinge;
