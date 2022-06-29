@@ -258,7 +258,7 @@ int flexalign_main(double **xa, double **ya,
         seqM[r]=seqM_char[j];
     }
 
-    /* smooth out AFP assignment: remove singleton */
+    /* smooth out AFP assignment: remove singleton insert */
     for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
     {
         j=-1;
@@ -313,7 +313,7 @@ int flexalign_main(double **xa, double **ya,
             else if (left_hinge!=' ') seqM[r]=seqM_char[j]=left_hinge;
         }
     }
-    /* smooth out AFP assignment: remove dimer */
+    /* smooth out AFP assignment: remove dimer insert */
     for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
     {
         j=-1;
@@ -330,6 +330,48 @@ int flexalign_main(double **xa, double **ya,
 
             if (r>0) seqM[r]=seqM_char[j]=seqM[r+1]=seqM_char[j+1]=seqM[r-1];
             else     seqM[r]=seqM_char[j]=seqM[r+1]=seqM_char[j+1]=seqM[r+2];
+        }
+    }
+    /* smooth out AFP assignment: remove disconnected singleton */
+    int i1,i2;
+    for (hinge=tu_vec.size()-1;hinge>=0;hinge--)
+    {
+        j=-1;
+        for (r=0;r<seqM.size();r++)
+        {
+            if (seqyA[r]=='-') continue;
+            j++;
+            if (seqM[r]!=hinge+'0') continue;
+            
+            left_hinge=' ';
+            for (i=r-1;i>=0;i--)
+            {
+                if (seqM[i]==' ') continue;
+                left_hinge=seqM[i];
+                i1=(r-i);
+                break;
+            }
+            if (left_hinge==hinge+'0') continue;
+            
+            right_hinge=' ';
+            for (i=r+1;i<seqM.size();i++)
+            {
+                if (seqM[i]==' ') continue;
+                right_hinge=seqM[i];
+                i2=(i-r);
+                break;
+            }
+            if (right_hinge==hinge+'0') continue;
+            if (left_hinge!=right_hinge && left_hinge!=' ' && right_hinge!=' ')
+                continue;
+            
+            if (right_hinge==' ') seqM[r]=seqM_char[j]=left_hinge;
+            else if (left_hinge==' ') seqM[r]=seqM_char[j]=right_hinge;
+            else
+            {
+                if (i1<i2) seqM[r]=seqM_char[j]=left_hinge;
+                else       seqM[r]=seqM_char[j]=right_hinge;
+            }
         }
     }
     
