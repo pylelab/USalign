@@ -2464,7 +2464,7 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                     vector<vector<double> >tu_vec;
 
                     /* entry function for structure alignment */
-                    flexalign_main(
+                    int hingeNum=flexalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, tu_vec, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
@@ -2473,6 +2473,66 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j],hinge_opt);
+                    
+                    if (hinge_opt && hingeNum<=1 &&
+                        n_ali8<0.6*getmin(xlen,ylen))
+                    {
+                        double t0_h[3], u0_h[3][3];
+                        double TM1_h, TM2_h;
+                        double TM3_h, TM4_h, TM5_h;
+                        double d0_0_h, TM_0_h;
+                        double d0_out_h=5.0;
+                        string seqM_h, seqxA_h, seqyA_h;
+                        double rmsd0_h = 0.0;
+                        int L_ali_h;
+                        double Liden_h=0;
+                        double TM_ali_h, rmsd_ali_h;
+                        int n_ali_h=0;
+                        int n_ali8_h=0;
+                        vector<vector<double> >tu_vec_h(1,tu_vec[0]);
+                        tu2t_u(tu_vec[0],t0_h,u0_h);
+
+                        int hingeNum_h=flexalign_main(
+                            xa, ya, seqx, seqy, secx, secy,
+                            t0_h, u0_h, tu_vec_h,
+                            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h,
+                            d0_0_h, TM_0_h, d0A, d0B, d0u, d0a, d0_out_h,
+                            seqM_h, seqxA_h, seqyA_h, rmsd0_h, L_ali_h,
+                            Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
+                            xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+                            a_opt, u_opt, d_opt, force_fast_opt,
+                            mol_vec1[chain_i]+mol_vec2[chain_j],hinge_opt);
+                        
+                        double TM  =(TM1  >TM2  )?TM1  :TM2;
+                        double TM_h=(TM1_h>TM2_h)?TM1_h:TM2_h;
+                        if (TM_h>TM)
+                        {
+                            hingeNum=hingeNum_h;
+                            tu2t_u(tu_vec_h[0],t0,u0);
+                            TM1=TM1_h;
+                            TM2=TM2_h;
+                            TM3=TM3_h;
+                            TM4=TM4_h;
+                            TM5=TM5_h;
+                            d0_0=d0_0_h;
+                            TM_0=TM_0_h;
+                            d0_out=d0_out_h;
+                            seqM=seqM_h;
+                            seqxA=seqxA_h;
+                            seqyA=seqyA_h;
+                            rmsd0=rmsd0_h;
+                            L_ali=L_ali_h;
+                            Liden=Liden_h;
+                            TM_ali=TM_ali_h;
+                            rmsd_ali=rmsd_ali_h;
+                            n_ali=n_ali_h;
+                            n_ali8=n_ali8_h;
+                            tu_vec.clear();
+                            for (int hinge=0;hinge<tu_vec_h.size();hinge++)
+                                tu_vec.push_back(tu_vec_h[hinge]);
+                        }
+                        else tu2t_u(tu_vec[0],t0,u0);
+                    }
 
                     /* print result */
                     if (outfmt_opt==0) print_version();

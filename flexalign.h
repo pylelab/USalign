@@ -45,10 +45,6 @@ void aln2invmap(const string &seqxA, const string &seqyA, int *invmap)
     }
 }
 
-/* Entry function for TM-align. Return TM-score calculation status:
- * 0   - full TM-score calculation 
- * 1   - terminated due to exception
- * 2-7 - pre-terminated due to low TM-score */
 int flexalign_main(double **xa, double **ya,
     const char *seqx, const char *seqy, const char *secx, const char *secy,
     double t0[3], double u0[3][3], vector<vector<double> >&tu_vec,
@@ -64,16 +60,20 @@ int flexalign_main(double **xa, double **ya,
     const bool u_opt, const bool d_opt, const bool fast_opt,
     const int mol_type, const int hinge_opt)
 {
-    TMalign_main(xa, ya, seqx, seqy, secx, secy, t0, u0,
-        TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
-        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-        xlen, ylen, sequence, Lnorm_ass,
-        d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
-    
     vector<double> tu_tmp(12,0);
-    t_u2tu(t0,u0,tu_tmp);
-    tu_vec.push_back(tu_tmp);
+    int round2=tu_vec.size();
+    if (round2==0)
+    {
+        TMalign_main(xa, ya, seqx, seqy, secx, secy, t0, u0,
+            TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
+            d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+            xlen, ylen, sequence, Lnorm_ass,
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+    
+        t_u2tu(t0,u0,tu_tmp);
+        tu_vec.push_back(tu_tmp);
+    }
     
     int i,j,r;
     int* invmap=new int[ylen+1];
@@ -92,6 +92,174 @@ int flexalign_main(double **xa, double **ya,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
         a_opt, u_opt, d_opt, mol_type, 0, invmap, 1);
+    if (round2)
+    {
+        /* aligned structure A vs unaligned structure B */
+        int xlen_h=n_ali8;
+        int ylen_h=ylen - n_ali8;
+        char *seqx_h = new char[xlen + 1];
+        char *seqy_h = new char[ylen + 1];
+        char *secx_h = new char[xlen + 1];
+        char *secy_h = new char[ylen + 1];
+        seqx_h[xlen]=seqy_h[ylen]=0;
+        secx_h[xlen]=secy_h[ylen]=0;
+        double **xa_h, **ya_h;
+        NewArray(&xa_h, xlen, 3);
+        NewArray(&ya_h, ylen, 3);
+
+        int r1,r2;
+        i=j=-1;
+        r1=r2=0;
+        for (r=0;r<seqxA.size();r++)
+        {
+            i+=(seqxA[r]!='-');
+            j+=(seqyA[r]!='-');
+            if (seqxA[r]!='-' && seqyA[r]!='-')
+            {
+                seqx_h[r1]=seqx[i];
+                secx_h[r1]=secx[i];
+                xa_h[r1][0]=xa[i][0];
+                xa_h[r1][1]=xa[i][1];
+                xa_h[r1][2]=xa[i][2];
+                r1++;
+            }
+            if (seqxA[r]=='-')
+            {
+                seqy_h[r2]=seqx[j];
+                secy_h[r2]=secx[j];
+                ya_h[r2][0]=ya[j][0];
+                ya_h[r2][1]=ya[j][1];
+                ya_h[r2][2]=ya[j][2];
+                r2++;
+            }
+        }
+        
+        double TM1_h, TM2_h;
+        double TM3_h, TM4_h, TM5_h;     // for a_opt, u_opt, d_opt
+        double d0_0_h, TM_0_h;
+        double d0A_h, d0B_h, d0u_h, d0a_h;
+        double d0_out_h=5.0;
+        string seqM_h, seqxA_h, seqyA_h;// for output alignment
+        double rmsd0_h = 0.0;
+        int L_ali_h=0;                // Aligned length in standard_TMscore
+        double Liden_h=0;
+        double TM_ali_h, rmsd_ali_h;  // TMscore and rmsd in standard_TMscore
+        int n_ali_h=0;
+        int n_ali8_h=0;
+
+        TMalign_main(xa_h, ya_h, seqx_h, seqy_h, secx_h, secy_h, t0, u0,
+            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0_h, TM_0_h,
+            d0A_h, d0B_h, d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h,
+            rmsd0_h, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
+            xlen_h, ylen_h, sequence, Lnorm_ass,
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+        
+        do_rotation(xa, xt, xlen, t0, u0);
+        t_u2tu(t0,u0,tu_vec[0]);
+        
+        int* invmap_h=new int[ylen+1];
+        for (j=0;j<ylen+1;j++) invmap_h[j]=-1;
+        TM1_h= TM2_h= TM3_h= TM4_h= TM5_h=rmsd0_h=0;
+        seqM_h="";
+        seqxA_h="";
+        seqyA_h="";
+        n_ali_h=n_ali8_h=0;
+        se_main(xt, ya, seqx, seqy, TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0,
+            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h,
+            rmsd0_h, L_ali, Liden, TM_ali, rmsd_ali, n_ali_h, n_ali8_h,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+            a_opt, u_opt, d_opt, mol_type, 0, invmap_h, 1);
+        
+        /* unaligned structure A vs aligned structure B */
+        xlen_h=xlen - n_ali8;
+        ylen_h=n_ali8;
+
+        i=j=-1;
+        r1=r2=0;
+        for (r=0;r<seqxA.size();r++)
+        {
+            i+=(seqxA[r]!='-');
+            j+=(seqyA[r]!='-');
+            if (seqyA[r]=='-')
+            {
+                seqx_h[r1]=seqx[i];
+                secx_h[r1]=secx[i];
+                xa_h[r1][0]=xa[i][0];
+                xa_h[r1][1]=xa[i][1];
+                xa_h[r1][2]=xa[i][2];
+                r1++;
+            }
+            if (seqxA[r]!='-' && seqyA[r]!='-')
+            {
+                seqy_h[r2]=seqx[j];
+                secy_h[r2]=secx[j];
+                ya_h[r2][0]=ya[j][0];
+                ya_h[r2][1]=ya[j][1];
+                ya_h[r2][2]=ya[j][2];
+                r2++;
+            }
+        }
+        
+        d0_out_h=5.0;
+        L_ali_h=Liden_h=0;
+        TM1= TM2= TM3= TM4= TM5=rmsd0=0;
+        seqM="";
+        seqxA="";
+        seqyA="";
+        n_ali=n_ali8=0;
+
+        TMalign_main(xa_h, ya_h, seqx_h, seqy_h, secx_h, secy_h, t0, u0,
+            TM1, TM2, TM3, TM4, TM5, d0_0_h, TM_0_h,
+            d0A_h, d0B_h, d0u_h, d0a_h, d0_out_h, seqM, seqxA, seqyA,
+            rmsd0, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali, n_ali8,
+            xlen_h, ylen_h, sequence, Lnorm_ass,
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+        
+        do_rotation(xa, xt, xlen, t0, u0);
+        
+        for (j=0;j<ylen+1;j++) invmap[j]=-1;
+        TM1= TM2= TM3= TM4= TM5=rmsd0=0;
+        seqM="";
+        seqxA="";
+        seqyA="";
+        n_ali=n_ali8=0;
+        se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5, d0_0,
+            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+            a_opt, u_opt, d_opt, mol_type, 0, invmap, 1);
+
+        double TM_h=(TM1_h>TM2_h)?TM1_h:TM2_h;
+        double TM  =(TM1  >TM2  )?TM1  :TM2  ;
+        if (TM_h>TM)
+        {
+            TM1=TM1_h;
+            TM2=TM2_h;
+            TM3=TM3_h;
+            TM4=TM4_h;
+            TM5=TM5_h;
+            seqM=seqM_h;
+            seqxA=seqxA_h;
+            seqyA=seqyA_h;
+            rmsd0=rmsd0_h;
+            n_ali=n_ali_h;
+            n_ali8=n_ali8_h;
+            for (j=0;j<ylen+1;j++) invmap[j]=invmap_h[j];
+        }
+        else t_u2tu(t0,u0,tu_vec[0]);
+        
+        /* clean up */
+        delete [] invmap_h;
+        DeleteArray(&xa_h, xlen);
+        DeleteArray(&ya_h, ylen);
+        seqM_h.clear();
+        seqxA_h.clear();
+        seqyA_h.clear();
+        delete [] seqx_h;
+        delete [] secx_h;
+        delete [] seqy_h;
+        delete [] secy_h;
+    }
     for (r=0;r<seqM.size();r++) if (seqM[r]=='1') seqM[r]='0';
 
     int minlen = min(xlen, ylen);
@@ -421,7 +589,6 @@ int flexalign_main(double **xa, double **ya,
         if (afp_len) break;
         tu_vec.pop_back(); // remove unnecessary afp
     }
-
 
     /* clean up */
     seqM_char.clear();
