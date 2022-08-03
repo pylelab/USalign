@@ -190,8 +190,8 @@ void print_help(bool h_opt=false)
 "          $ rasmol -script sup_all_atm       # full-atom whole chain\n"
 "          $ rasmol -script sup_all_atm_lig   # full-atom with all molecules\n"
 "\n"
-"      -h  Print the full help message, including additional options\n"
-"\n"
+//"      -h  Print the full help message, including additional options\n"
+//"\n"
 "Example usages ('gunzip' program is needed to read .gz compressed files):\n"
 "    USalign 101m.cif.gz 1mba.pdb             # pairwise monomeric protein alignment\n"
 "    USalign 1qf6.cif 5yyn.pdb.gz -mol RNA    # pairwise monomeric RNA alignment\n"
@@ -201,7 +201,8 @@ void print_help(bool h_opt=false)
 "    USalign 1ajk.pdb.gz 2ayh.pdb.gz -mm 3    # circular permutation alignment\n"
     <<endl;
 
-    if (h_opt) print_extra_help();
+    //if (h_opt) 
+        print_extra_help();
 
     exit(EXIT_SUCCESS);
 }
