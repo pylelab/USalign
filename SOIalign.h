@@ -910,6 +910,7 @@ int SOIalign_main(double **xa, double **ya,
     do_rotation(xa, xt, xlen, t0, u0);
 
     Liden=0;
+    //double SO=0;
     for (j=0;j<ylen;j++)
     {
         seqyA[j]=seqy[j];
@@ -920,9 +921,11 @@ int SOIalign_main(double **xa, double **ya,
         if (d<d0_out) seqM[j]=':';
         else seqM[j]='.';
         dist_list[j]=d;
+        //SO+=(d<3.5);
         seqxA[j]=seqx[i];
         Liden+=(seqx[i]==seqy[j]);
     }
+    //SO/=getmin(xlen,ylen);
     k=0;
     for (i=0;i<xlen;i++)
     {
@@ -931,6 +934,9 @@ int SOIalign_main(double **xa, double **ya,
         seqxA[ylen+k]=seqx[i];
         k++;
     }
+    //cout<<n_ali8<<'\t'
+        //<<rmsd0<<'\t'
+        //<<100.*SO<<endl;
 
 
     /* clean up */
