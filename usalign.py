@@ -22,7 +22,7 @@ INSTALLATION
 from __future__ import print_function
 
 __author__ = 'Chengxin Zhang'
-__version__ = '20220623'
+__version__ = '20220830'
 __license__ = 'BSD-2-Clause'
 
 from pymol import cmd, CmdException
@@ -86,7 +86,7 @@ CITATION
     matrix = []
     for line in iter(lines):
         print(line.rstrip())
-        if line.strip().startswith('----'):
+        if line.strip().startswith('------ The rotation matrix to rotate '):
             rowcount = 1
         elif 4 >= rowcount and rowcount> 0:
             if rowcount >= 2:
