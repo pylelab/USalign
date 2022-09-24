@@ -3,8 +3,9 @@
    and nucleic acids
 
    References to cite:
-   Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang.
-   Nat Methods (2022)
+   (1) Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang
+       (2022) Nat Methods
+   (2) Chengxin Zhang, Anna Marie Pyle (2022) iScience
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
