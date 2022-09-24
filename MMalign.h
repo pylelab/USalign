@@ -1058,8 +1058,7 @@ void parse_chain_list(const vector<string>&chain_list,
     vector<char>tmp_seq_array;
     vector<char>tmp_sec_array;
     //vector<string> resi_vec;
-    int read_resi=0;
-    if (o_opt) read_resi=2;
+    int read_resi=2;
 
     for (i=0;i<chain_list.size();i++)
     {

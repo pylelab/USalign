@@ -151,9 +151,9 @@ void print_help(bool h_opt=false)
 "          1: superpose two structures by assuming that a pair of residues\n"
 "             with the same residue index are equivalent between the two\n"
 "             structures\n"
-"          2: superpose two structures, assuming that a pair of residues\n"
-"             with the same residue index and the same chain ID are\n"
-"             equivalent between the two structures\n"
+"          2: superpose two complex structures, assuming that a pair of\n"
+"             residues with the same residue index and the same chain ID\n"
+"             are equivalent between the two structures\n"
 //"          3: (similar to TMscore '-c' option; used with -ter 0 or 1)\n"
 //"             align by residue index and order of chain\n"
 //"          4: sequence dependent alignment: perform Needleman-Wunsch\n"
@@ -161,6 +161,9 @@ void print_help(bool h_opt=false)
 "          5: sequence dependent alignment: perform glocal sequence\n"
 "             alignment followed by TM-score superposition.\n"
 "             -byresi 5 is the same as -seq\n"
+"          6: superpose two complex structures by first deriving optimal\n"
+"             chain mapping, followed by TM-score superposition for residues\n"
+"             with the same residue ID\n"
 "\n"
 "      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
@@ -467,7 +470,8 @@ int MMalign(const string &xname, const string &yname,
     bool fast_opt, const int mirror_opt, const int het_opt,
     const string &atom_opt, const string &mol_opt,
     const string &dir1_opt, const string &dir2_opt,
-    const vector<string> &chain1_list, const vector<string> &chain2_list)
+    const vector<string> &chain1_list, const vector<string> &chain2_list,
+    const int byresi_opt)
 {
     /* declare previously global variables */
     vector<vector<vector<double> > > xa_vec; // structure of complex1
@@ -508,6 +512,8 @@ int MMalign(const string &xname, const string &yname,
         len_aa=(xlen_aa+ylen_aa)/2;
         len_na=(xlen_na+ylen_na)/2;
     }
+    int i_opt=0;
+    if (byresi_opt) i_opt=3;
 
     /* perform monomer alignment if there is only one chain */
     if (xa_vec.size()==1 && ya_vec.size()==1)
@@ -537,6 +543,9 @@ int MMalign(const string &xname, const string &yname,
         double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
         int n_ali=0;
         int n_ali8=0;
+        
+        if (byresi_opt) extract_aln_from_resi(sequence,
+            seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
 
         /* entry function for structure alignment */
         TMalign_main(xa, ya, seqx, seqy, secx, secy,
@@ -545,7 +554,7 @@ int MMalign(const string &xname, const string &yname,
             seqM, seqxA, seqyA,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, 0, d0_scale,
-            0, a_opt, false, d_opt, fast_opt,
+            i_opt, a_opt, false, d_opt, fast_opt,
             mol_vec1[0]+mol_vec2[0],TMcut);
 
         /* print result */
@@ -662,6 +671,29 @@ int MMalign(const string &xname, const string &yname,
 
             int Lnorm_tmp=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
+            
+            if (byresi_opt)
+            {
+                int total_aln=extract_aln_from_resi(sequence,
+                    seqx,seqy,resi_vec1,resi_vec2,xlen_vec,ylen_vec, i, j);
+                seqxA_mat[i][j]=sequence[0];
+                seqyA_mat[i][j]=sequence[1];
+                if (total_aln>xlen+ylen-3)
+                {
+                    for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) 
+                        ut_mat[ut_idx][ui*3+uj]=(ui==uj)?1:0;
+                    for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=0;
+                    TMave_mat[i][j]=0;
+                    seqM.clear();
+                    seqxA.clear();
+                    seqyA.clear();
+
+                    delete[]seqy;
+                    delete[]secy;
+                    DeleteArray(&ya,ylen);
+                    continue;
+                }
+            }
 
             /* entry function for structure alignment */
             TMalign_main(xa, ya, seqx, seqy, secx, secy,
@@ -670,7 +702,7 @@ int MMalign(const string &xname, const string &yname,
                 seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_tmp, d0_scale,
-                0, false, true, false, fast_opt,
+                i_opt, false, true, false, fast_opt,
                 mol_vec1[i]+mol_vec2[j],TMcut);
 
             /* store result */
@@ -780,14 +812,14 @@ int MMalign(const string &xname, const string &yname,
                               // score was from monomeric chain superpositions
     int max_iter=5-(int)((len_aa+len_na)/200);
     if (max_iter<2) max_iter=2;
-    MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
-        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
-        xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
-        TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-        d0_scale, fast_opt);
+    if (byresi_opt==0) MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec,
+        seqx_vec, seqy_vec, secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec,
+        ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
+        chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
+        sequence, d0_scale, fast_opt);
 
     /* sometime MMalign_iter is even worse than monomer alignment */
-    if (max_total_score<maxTMmono)
+    if (byresi_opt==0 && max_total_score<maxTMmono)
     {
         copy_chain_assign_data(chain1_num, chain2_num, sequence,
             seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init,
@@ -820,7 +852,7 @@ int MMalign(const string &xname, const string &yname,
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_init, seqyA_init, assign1_init,  assign2_init,  TMave_init);
     double max_total_score_cross=max_total_score;
-    if (len_aa+len_na<10000)
+    if (byresi_opt==0 && len_aa+len_na<10000)
     {
         MMalign_dimer(max_total_score_cross, xa_vec, ya_vec, seqx_vec, seqy_vec,
             secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
@@ -877,6 +909,8 @@ int MMalign(const string &xname, const string &yname,
     vector<string>().swap(chainID_list2);  // list of chainID2
     xlen_vec.clear();       // length of complex1
     ylen_vec.clear();       // length of complex2
+    vector<string> ().swap(resi_vec1);  // residue index for chain1
+    vector<string> ().swap(resi_vec2);  // residue index for chain2
     return 1;
 }
 
@@ -2934,10 +2968,10 @@ int main(int argc, char *argv[])
     {
         if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
-        if (byresi_opt<0 || byresi_opt>5)
-            PrintErrorAndQuit("-byresi can only be 0, 1, 2, 4, or 5");
-        if (byresi_opt>=2 && byresi_opt<=3 && ter_opt>=2)
-            PrintErrorAndQuit("-byresi 2 must be used with -ter <=1");
+        if (byresi_opt<0 || byresi_opt>6)
+            PrintErrorAndQuit("-byresi can only be 0 to 6");
+        if ((byresi_opt==2 || byresi_opt==3 || byresi_opt==6) && ter_opt>=2)
+            PrintErrorAndQuit("-byresi 2 and 6 must be used with -ter <=1");
     }
     //if (split_opt==1 && ter_opt!=0)
         //PrintErrorAndQuit("-split 1 should be used with -ter 0");
@@ -2993,7 +3027,8 @@ int main(int argc, char *argv[])
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
 
-    if (byresi_opt) i_opt=3;
+    if (byresi_opt==6) mm_opt=1;
+    else if (byresi_opt) i_opt=3;
 
     if (m_opt && fname_matrix == "") // Output rotation matrix: matrix.txt
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
@@ -3028,7 +3063,8 @@ int main(int argc, char *argv[])
         fname_matrix, sequence, d0_scale, m_opt, o_opt,
         a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
         ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list);
+        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list,
+        byresi_opt);
     else if (mm_opt==2) MMdock(xname, yname, fname_super, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,

@@ -652,4 +652,63 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     return sequence[0].size();
 }
 
+/* extract pairwise sequence alignment from residue index vectors,
+ * return length of alignment, including gap. */
+int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
+    const vector<string> resi_vec1, const vector<string> resi_vec2,
+    const vector<int> xlen_vec, const vector<int> ylen_vec,
+    const int chain_i, const int chain_j)
+{
+    sequence.clear();
+    sequence.push_back("");
+    sequence.push_back("");
+
+    int i1=0; // positions in resi_vec1
+    int i2=0; // positions in resi_vec2
+    int xlen=xlen_vec[chain_i];
+    int ylen=ylen_vec[chain_j];
+    int i,j;
+    for (i=0;i<chain_i;i++) i1+=xlen_vec[i];
+    for (j=0;j<chain_j;j++) i2+=ylen_vec[j];
+
+    i=j=0;
+    while(i<xlen && j<ylen)
+    {
+        if (atoi(resi_vec1[i+i1].substr(0,4).c_str())<
+            atoi(resi_vec2[j+i2].substr(0,4).c_str()))
+        {
+            sequence[0]+=seqx[i++];
+            sequence[1]+='-';
+        }
+        else if (atoi(resi_vec1[i+i1].substr(0,4).c_str())>
+                 atoi(resi_vec2[j+i2].substr(0,4).c_str()))
+        {
+            sequence[0]+='-';
+            sequence[1]+=seqy[j++];
+        }
+        else
+        {
+            sequence[0]+=seqx[i++];
+            sequence[1]+=seqy[j++];
+        }
+    }
+    if (i<xlen && j==ylen)
+    {
+        for (i;i<xlen;i++)
+        {
+            sequence[0]+=seqx[i];
+            sequence[1]+='-';
+        }
+    }
+    else if (i==xlen && j<ylen)
+    {
+        for (j;j<ylen;j++)
+        {
+            sequence[0]+='-';
+            sequence[1]+=seqy[j];
+        }
+    }
+    return sequence[0].size();
+}
+
 #endif

@@ -746,6 +746,8 @@ int main(int argc, char *argv[])
     vector<string>().swap(chain1_list);
     vector<string>().swap(chain2_list);
     vector<string>().swap(sequence);
+    vector<string>().swap(resi_vec1);  // residue index for chain1
+    vector<string>().swap(resi_vec2);  // residue index for chain2
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
