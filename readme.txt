@@ -71,6 +71,7 @@
    2022/06/22: Fix infinite loop for mal-formatted PDB
    2022/06/23: Fix -m for Windows. Add pymol plugin.
    2022/06/26: Add -full option for -mm 2 and 4
+   2022/09/24: Support -TMscore for complex when the chain order is different
 ===============================================================================
 
 =========================
