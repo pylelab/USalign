@@ -26,15 +26,15 @@ void print_help()
 "             RNA : only align RNA and DNA in a structure.\n"
 "\n"
 "    -ter     Strings to mark the end of a chain\n"
-"             3: (default) TER, ENDMDL, END or different chain ID\n"
+"             3: TER, ENDMDL, END or different chain ID\n"
 "             2: ENDMDL, END, or different chain ID\n"
-"             1: ENDMDL or END\n"
+"             1: (default) ENDMDL or END\n"
 "             0: end of file\n"
 "\n"
 "    -split   Whether to split PDB file into multiple chains\n"
-"             0: (default) treat the whole structure as one single chain\n"
+"             0: treat the whole structure as one single chain\n"
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
-"             2: treat each chain as a seperate chain (-ter should be <=1)\n"
+"             2: (default) treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
 "    -het     Whether to read residues marked as 'HETATM' in addition to 'ATOM  '\n"
 "             0: (default) only align 'ATOM  ' residues\n"
@@ -58,9 +58,9 @@ int main(int argc, char *argv[])
     /*    get argument    */
     /**********************/
     string xname     = "";
-    int    ter_opt   =3;     // TER, END, or different chainID
+    int    ter_opt   =1;     // TER, END, or different chainID
     int    infmt_opt =-1;    // PDB or PDBx/mmCIF format
-    int    split_opt =0;     // do not split chain
+    int    split_opt =2;     // do not split chain
     int    het_opt=0;        // do not read HETATM residues
     string atom_opt  ="auto";// use C alpha atom for protein and C3' for RNA
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
