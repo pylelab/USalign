@@ -3598,29 +3598,25 @@ int CPalign_main(double **xa, double **ya,
 }
 
 bool output_cp(const string&xname, const string&yname,
-    const string &seqxA, const string &seqyA, const int outfmt_opt)
+    const string &seqxA, const string &seqyA, const int outfmt_opt,
+    int &left_num, int &right_num, int &left_aln_num, int &right_aln_num)
 {
     int r;
     bool after_cp=false;
-    int left_num=0;
-    int right_num=0;
-    int left_aln_num=0;
-    int right_aln_num=0;
     for (r=0;r<seqxA.size();r++)
     {
-        if      (seqxA[r]=='-') continue;
-        else if (seqxA[r]=='*') after_cp=true;
+        if (seqxA[r]=='*') after_cp=true;
         else 
         {
             if (after_cp)
             {
-                right_num++;
-                right_aln_num+=(seqyA[r]!='-');
+                right_aln_num++;
+                right_num+=(seqxA[r]!='-');
             }
             else
             {
-                left_num++;
-                left_aln_num+=(seqyA[r]!='-');
+                left_aln_num++;
+                left_num+=(seqxA[r]!='-');
             }
         }
     }
@@ -3632,13 +3628,13 @@ bool output_cp(const string&xname, const string&yname,
     }
     else
     {
-        if (outfmt_opt<=0) cout<<"CP point in structure_1: "<<left_num<<'/'<<right_num<<'\n'
-            <<"CP point in structure_1 alignment: "<<left_aln_num<<'/'<<right_aln_num<<endl;
-        else if (outfmt_opt==1) cout<<"#CP_in_seq="<<left_num<<'/'<<right_num
-                                    <<"\tCP_in_aln="<<left_aln_num<<'/'<<right_aln_num<<endl;
-        else if (outfmt_opt==2) cout<<"@"<<xname<<'\t'<<yname<<'\t'<<left_num
-            <<'/'<<right_num<<'\t'<<left_aln_num<<'/'<<right_aln_num<<endl;
-
+        if (outfmt_opt<=0) cout<<"CP point in structure_1 alignment: "<<left_aln_num<<'/'<<right_aln_num<<'\n'
+            <<"CP point in structure_1: "<<left_num<<'/'<<right_num<<endl;
+        else if (outfmt_opt==1) 
+            cout<<"#CP_in_aln="<<left_aln_num<<'/'<<right_aln_num
+               <<"\tCP_in_seq="<<left_num<<'/'<<right_num<<endl;
+        else if (outfmt_opt==2) cout<<"@"<<xname<<'\t'<<yname<<'\t'<<left_aln_num
+            <<'/'<<right_aln_num<<'\t'<<left_num<<'/'<<right_num<<endl;
     }
     return after_cp;
 }

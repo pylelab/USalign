@@ -398,10 +398,16 @@ int TMalign(string &xname, string &yname, const string &fname_super,
 
                     /* print result */
                     if (outfmt_opt==0) print_version();
-                    if (cp_opt) output_cp(
+                    int left_num=0;
+                    int right_num=0;
+                    int left_aln_num=0;
+                    int right_aln_num=0;
+                    bool after_cp=false;
+                    if (cp_opt) after_cp=output_cp(
                         xname.substr(dir1_opt.size()+dir_opt.size()),
                         yname.substr(dir2_opt.size()+dir_opt.size()),
-                        seqxA,seqyA,outfmt_opt);
+                        seqxA,seqyA,outfmt_opt,left_num,right_num,
+                        left_aln_num,right_aln_num);
                     output_results(
                         xname.substr(dir1_opt.size()+dir_opt.size()),
                         yname.substr(dir2_opt.size()+dir_opt.size()),
@@ -415,6 +421,30 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         outfmt_opt, ter_opt, false, split_opt, o_opt,
                         fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
                         resi_vec1, resi_vec2);
+                    if (cp_opt && outfmt_opt<=0)
+                    {
+                        cout<<"###############\t###############\n"
+                            <<"#Aligned atom 1\tAligned atom 2#\n";
+                        size_t r1=right_num;
+                        size_t r2=0;
+                        size_t r;
+                        for (r=0;r<seqxA.size();r++)
+                        {
+                            r1+=seqxA[r]!='-';
+                            r2+=seqyA[r]!='-';
+                            if (seqxA[r]=='*')
+                            {
+                                cout<<"###### Circular\tPermutation ###\n";
+                                r1=0;
+                            }
+                            else if (seqxA[r]!='-' && seqyA[r]!='-')
+                            {
+                                cout<<PDB_lines1[chain_i][r1-1].substr(12,15)<<'\t'
+                                    <<PDB_lines2[chain_j][r2-1].substr(12,15)<<'\n';
+                            }
+                        }
+                        cout<<"###############\t###############"<<endl;
+                    }
 
                     /* Done! Free memory */
                     seqM.clear();
