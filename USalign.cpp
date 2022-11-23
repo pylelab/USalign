@@ -2977,8 +2977,13 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-suffix is only valid if -dir, -dir1 or -dir2 is set");
     if ((dir_opt.size() || dir1_opt.size() || dir2_opt.size()))
     {
-        if (mm_opt!=2 && mm_opt!=4 && (m_opt || o_opt))
-            PrintErrorAndQuit("-m or -o cannot be set with -dir, -dir1 or -dir2");
+        if (mm_opt!=2 && mm_opt!=4)
+        {
+            if (o_opt)
+                PrintErrorAndQuit("-o cannot be set with -dir, -dir1 or -dir2");
+            if (m_opt && fname_matrix!="-")
+                PrintErrorAndQuit("-m can only be - or unset when using -dir, -dir1 or -dir2");
+        }
         else if (dir_opt.size() && (dir1_opt.size() || dir2_opt.size()))
             PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
     }
