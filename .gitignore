@@ -21,3 +21,6 @@ MMalign
 TMscore
 *.exe
 *.zip
+
+.idea
+cmake-build-debug
