@@ -19,5 +19,6 @@ NWalign
 HwRMSD
 MMalign
 TMscore
+pdbAtomName
 *.exe
 *.zip
