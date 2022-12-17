@@ -22,3 +22,6 @@ TMscore
 pdbAtomName
 *.exe
 *.zip
+
+.idea
+cmake-build-debug
