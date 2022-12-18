@@ -2929,7 +2929,7 @@ int main(int argc, char *argv[])
         }
         else if ( !strcmp(argv[i],"-cp") )
         {
-            mm_opt==3;
+            mm_opt=3;
         }
         else if ( !strcmp(argv[i],"-mirror") )
         {
