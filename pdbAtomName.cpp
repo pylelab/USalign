@@ -114,10 +114,23 @@ size_t pdbAtomName(const string &infile,const string &outfile)
                 continue;
             }
             resn=lines[l].substr(17,3);
+            if (resn[2]==' ')
+            {
+                if (resn[1]==' ') resn="  "+resn.substr(0,1);
+                else resn=" "+resn.substr(0,2);
+                msg=lines[l].substr(17,3)+"=>"+resn;
+                if (msg_dict.count(msg)==0)
+                {
+                    cerr<<msg<<'.'<<endl;
+                    msg_dict[msg]=0;
+                }
+                msg_dict[msg]++;
+                changeNum++;
+            }
             if (lines[l].size()<78 && aa3to1.count(resn)==0)
             {
                 cerr<<"heteroatom:"<<lines[l]<<endl;
-                buf<<lines[l]<<endl;
+                buf<<lines[l].substr(0,17)<<resn<<lines[l].substr(20)<<endl;
                 continue;
             }
 
@@ -135,7 +148,7 @@ size_t pdbAtomName(const string &infile,const string &outfile)
                 atom=atom.substr(0,atom.size()-1)+"'";
             if (atom.size()==4) 
             {
-                buf<<lines[l]<<endl;
+                buf<<lines[l].substr(0,17)<<resn<<lines[l].substr(20)<<endl;
                 continue;
             }
             if ((lines[l].size()>=78 && lines[l][76]!=' ')||
@@ -163,7 +176,8 @@ size_t pdbAtomName(const string &infile,const string &outfile)
                 msg_dict[msg]++;
                 changeNum++;
             }
-            buf<<lines[l].substr(0,12)<<atom<<lines[l].substr(16)<<endl;
+            buf<<lines[l].substr(0,12)<<atom<<lines[l].substr(16,1)
+               <<resn<<lines[l].substr(20)<<endl;
         }
         else if (lines[l].size())
         {
