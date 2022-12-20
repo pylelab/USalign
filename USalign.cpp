@@ -14,7 +14,7 @@ void print_version()
 " * US-align (Version 20220924)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
-" * Please email comments and suggestions to yangzhanglab@umich.edu  *\n"
+" * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
 " ********************************************************************"
     << endl;
 }
