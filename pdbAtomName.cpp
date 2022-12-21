@@ -151,7 +151,7 @@ size_t pdbAtomName(const string &infile,const string &outfile)
                 buf<<lines[l].substr(0,17)<<resn<<lines[l].substr(20)<<endl;
                 continue;
             }
-            if ((lines[l].size()>=78 && lines[l][76]!=' ')||
+            if ((lines[l].size()>=78 && lines[l][76]!=' ' && lines[l][77]!=' ')||
                 ('0'<=atom[0] && atom[0]<='9'))
             {
                 if      (atom.size()==1) atom+="   ";
