@@ -852,8 +852,8 @@ void make_sec(char *seq, double **x, int len, char *sec,const string atom_opt)
         }
     }
     
-    // From 5' to 3': A0 C0 D0 B0: A0 paired to B0, C0 paired to D0
-    vector<int> A0,B0,C0,D0;
+    // From 5' to 3': A0_var C0_var D0_var B0_var: A0_var paired to B0_var, C0_var paired to D0_var
+    vector<int> A0_var,B0_var,C0_var,D0_var;
     for (i=0; i<len-2; i++)
     {
         for (j=i+3; j<len; j++)
@@ -867,32 +867,32 @@ void make_sec(char *seq, double **x, int len, char *sec,const string atom_opt)
                 ii=i;
                 jj=j;
             }
-            A0.push_back(i);
-            B0.push_back(j);
-            C0.push_back(ii);
-            D0.push_back(jj);
+            A0_var.push_back(i);
+            B0_var.push_back(j);
+            C0_var.push_back(ii);
+            D0_var.push_back(jj);
         }
     }
     
     //int sign;
-    for (i=0;i<A0.size();i++)
+    for (i=0;i<A0_var.size();i++)
     {
         /*
         sign=0;
-        if(C0[i]-A0[i]<=1)
+        if(C0_var[i]-A0_var[i]<=1)
         {
-            for(j=0;j<A0.size();j++)
+            for(j=0;j<A0_var.size();j++)
             {
                 if(i==j) continue;
 
-                if((A0[j]>=A0[i]&&A0[j]<=C0[i])||
-                   (C0[j]>=A0[i]&&C0[j]<=C0[i])||
-                   (D0[j]>=A0[i]&&D0[j]<=C0[i])||
-                   (B0[j]>=A0[i]&&B0[j]<=C0[i])||
-                   (A0[j]>=D0[i]&&A0[j]<=B0[i])||
-                   (C0[j]>=D0[i]&&C0[j]<=B0[i])||
-                   (D0[j]>=D0[i]&&D0[j]<=B0[i])||
-                   (B0[j]>=D0[i]&&B0[j]<=B0[i]))
+                if((A0_var[j]>=A0_var[i]&&A0_var[j]<=C0_var[i])||
+                   (C0_var[j]>=A0_var[i]&&C0_var[j]<=C0_var[i])||
+                   (D0_var[j]>=A0_var[i]&&D0_var[j]<=C0_var[i])||
+                   (B0_var[j]>=A0_var[i]&&B0_var[j]<=C0_var[i])||
+                   (A0_var[j]>=D0_var[i]&&A0_var[j]<=B0_var[i])||
+                   (C0_var[j]>=D0_var[i]&&C0_var[j]<=B0_var[i])||
+                   (D0_var[j]>=D0_var[i]&&D0_var[j]<=B0_var[i])||
+                   (B0_var[j]>=D0_var[i]&&B0_var[j]<=B0_var[i]))
                 {
                     sign=-1;
                     break;
@@ -904,18 +904,18 @@ void make_sec(char *seq, double **x, int len, char *sec,const string atom_opt)
 
         for (j=0;;j++)
         {
-            if(A0[i]+j>C0[i]) break;
-            sec[A0[i]+j]='<';
-            sec[D0[i]+j]='>';
+            if(A0_var[i]+j>C0_var[i]) break;
+            sec[A0_var[i]+j]='<';
+            sec[D0_var[i]+j]='>';
         }
     }
     sec[len]=0;
 
     /* clean up */
-    A0.clear();
-    B0.clear();
-    C0.clear();
-    D0.clear();
+    A0_var.clear();
+    B0_var.clear();
+    C0_var.clear();
+    D0_var.clear();
     bp.clear();
 }
 
