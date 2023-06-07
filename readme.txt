@@ -4,8 +4,8 @@
 
    References to cite:
    (1) Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang
-       (2022) Nat Methods
-   (2) Chengxin Zhang, Anna Marie Pyle (2022) iScience
+       (2022) Nat Methods. 19(9), 1109-1115.
+   (2) Chengxin Zhang, Anna Marie Pyle (2022) iScience. 25(10), 105218.
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
