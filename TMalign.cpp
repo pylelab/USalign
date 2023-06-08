@@ -450,8 +450,8 @@ int main(int argc, char *argv[])
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
+            ter_opt, infmt1_opt, atom_opt, false, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -491,8 +491,8 @@ int main(int argc, char *argv[])
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt,
-                        het_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, false, 
+                        split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname

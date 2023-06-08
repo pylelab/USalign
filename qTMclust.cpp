@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         newchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            mol_vec, ter_opt, infmt_opt, atom_opt, split_opt, het_opt);
+            mol_vec, ter_opt, infmt_opt, atom_opt, false, split_opt, het_opt);
         if (!newchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

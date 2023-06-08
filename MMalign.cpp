@@ -346,11 +346,11 @@ int main(int argc, char *argv[])
     /* parse complex */
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
-        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
+        atom_opt, false, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
-        atom_opt, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
+        atom_opt, false, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
     if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);

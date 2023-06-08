@@ -197,6 +197,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-suffix is only valid if -dir, -dir1 or -dir2 is set");
     if (dir_opt.size() && (dir1_opt.size() || dir2_opt.size()))
         PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
+
+    bool autojustify=(atom_opt=="auto" || atom_opt=="PC4'"); // auto re-pad atom name
     if (atom_opt.size()!=4)
         PrintErrorAndQuit("ERROR! Atom name must have 4 characters, including space.");
     if (mol_opt!="auto" && mol_opt!="protein" && mol_opt!="RNA")
@@ -247,8 +249,8 @@ int main(int argc, char *argv[])
         xname=chain1_list[i];
         if (infmt1_opt>=4) xchainnum=get_FASTA_lines(xname, PDB_lines1, 
                 chainID_list1, mol_vec1, ter_opt, split_opt);
-        else xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-                mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
+        else xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
+            ter_opt, infmt1_opt, atom_opt, autojustify, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -284,7 +286,7 @@ int main(int argc, char *argv[])
                             chainID_list2, mol_vec2, ter_opt, split_opt);
                     else ychainnum=get_PDB_lines(yname, PDB_lines2,
                             chainID_list2, mol_vec2, ter_opt, infmt2_opt,
-                            atom_opt, split_opt, het_opt);
+                            atom_opt, autojustify, split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname

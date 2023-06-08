@@ -126,6 +126,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! Molecule type must be one of the"
             "following:\nauto, prot (the same as 'protein'), and "
             "RNA (the same as 'DNA').");
+    
+    bool autojustify=(atom_opt=="auto" || atom_opt=="PC4'"); // auto re-pad atom name
     if (mol_opt=="protein" && atom_opt=="auto")
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")
@@ -170,8 +172,8 @@ int main(int argc, char *argv[])
     for (i=0;i<chain_list.size();i++)
     {
         xname=chain_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            mol_vec, ter_opt, infmt_opt, atom_opt, split_opt, het_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list, mol_vec,
+            ter_opt, infmt_opt, atom_opt, autojustify, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

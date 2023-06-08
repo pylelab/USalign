@@ -219,10 +219,10 @@ int TMalign(string &xname, string &yname, const string &fname_super,
     const int infmt1_opt, const int infmt2_opt, const int ter_opt,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
     const int cp_opt, const int mirror_opt, const int het_opt,
-    const string &atom_opt, const string &mol_opt, const string &dir_opt,
-    const string &dir1_opt, const string &dir2_opt, const int byresi_opt,
-    const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const bool se_opt)
+    const string &atom_opt, const bool autojustify, const string &mol_opt,
+    const string &dir_opt, const string &dir1_opt, const string &dir2_opt,
+    const int byresi_opt, const vector<string> &chain1_list,
+    const vector<string> &chain2_list, const bool se_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -252,8 +252,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
+            ter_opt, infmt1_opt, atom_opt, autojustify, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -292,8 +292,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt,
-                        het_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, autojustify,
+                        split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -498,7 +498,7 @@ int MMalign(const string &xname, const string &yname,
     const double TMcut, const int infmt1_opt, const int infmt2_opt,
     const int ter_opt, const int split_opt, const int outfmt_opt,
     bool fast_opt, const int mirror_opt, const int het_opt,
-    const string &atom_opt, const string &mol_opt,
+    const string &atom_opt, const bool autojustify, const string &mol_opt,
     const string &dir1_opt, const string &dir2_opt,
     const vector<string> &chain1_list, const vector<string> &chain2_list,
     const int byresi_opt)
@@ -529,11 +529,12 @@ int MMalign(const string &xname, const string &yname,
     /* parse complex */
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
-        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
+        atom_opt, autojustify, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, 
+        resi_vec1);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
-        atom_opt, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
+        atom_opt, autojustify, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
     if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);
@@ -953,7 +954,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     const double TMcut, const int infmt1_opt, const int infmt2_opt,
     const int ter_opt, const int split_opt, const int outfmt_opt,
     bool fast_opt, const int mirror_opt, const int het_opt,
-    const string &atom_opt, const string &mol_opt,
+    const string &atom_opt, const bool autojustify, const string &mol_opt,
     const string &dir1_opt, const string &dir2_opt,
     const vector<string> &chain1_list, const vector<string> &chain2_list)
 {
@@ -983,11 +984,12 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     /* parse complex */
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
-        atom_opt, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, resi_vec1);
+        atom_opt, autojustify, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt, 
+        resi_vec1);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 individual chain");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
-        atom_opt, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
+        atom_opt, autojustify, 0, het_opt, ylen_aa, ylen_na, o_opt, resi_vec2);
     if (xa_vec.size()>ya_vec.size()) PrintErrorAndQuit(
         "ERROR! more individual chains to align than number of chains in complex template");
     int len_aa=getmin(xlen_aa,ylen_aa);
@@ -1417,9 +1419,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     bool u_opt, const bool d_opt, const bool full_opt, const double TMcut,
     const int infmt_opt, const int ter_opt,
     const int split_opt, const int outfmt_opt, bool fast_opt,
-    const int het_opt,
-    const string &atom_opt, const string &mol_opt, const string &dir_opt,
-    const int byresi_opt,
+    const int het_opt, const string &atom_opt, const bool autojustify,
+    const string &mol_opt, const string &dir_opt, const int byresi_opt,
     const vector<string> &chain_list)
 {
     /* declare previously global variables */
@@ -1441,7 +1442,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     /* parse chain list */
     parse_chain_list(chain_list, a_vec, seq_vec, sec_vec, mol_vec,
         len_vec, chainID_list, ter_opt, split_opt, mol_opt, infmt_opt,
-        atom_opt, false, het_opt, len_aa, len_na, o_opt, resi_vec);
+        atom_opt, autojustify, false, het_opt, len_aa, len_na, o_opt, resi_vec);
     int chain_num=a_vec.size();
     if (chain_num<=1) PrintErrorAndQuit("ERROR! <2 chains for multiple alignment");
     if (m_opt||o_opt) for (i=0;i<chain_num;i++) ua_vec.push_back(a_vec[i]);
@@ -2128,8 +2129,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     const int infmt1_opt, const int infmt2_opt, const int ter_opt,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
     const int cp_opt, const int mirror_opt, const int het_opt,
-    const string &atom_opt, const string &mol_opt, const string &dir_opt,
-    const string &dir1_opt, const string &dir2_opt, 
+    const string &atom_opt, const bool autojustify, const string &mol_opt,
+    const string &dir_opt, const string &dir1_opt, const string &dir2_opt, 
     const vector<string> &chain1_list, const vector<string> &chain2_list,
     const bool se_opt, const int closeK_opt, const int mm_opt)
 {
@@ -2164,8 +2165,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     {
         /* parse chain 1 */
         xname=chain1_list[i];
-        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
+        xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
+            ter_opt, infmt1_opt, atom_opt, autojustify, split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -2211,8 +2212,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt,
-                        het_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, autojustify, 
+                        split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -2400,8 +2401,8 @@ int flexalign(string &xname, string &yname, const string &fname_super,
     const bool u_opt, const bool d_opt, const double TMcut,
     const int infmt1_opt, const int infmt2_opt, const int ter_opt,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
-    const int mirror_opt, const int het_opt,
-    const string &atom_opt, const string &mol_opt, const string &dir_opt,
+    const int mirror_opt, const int het_opt, const string &atom_opt,
+    const bool autojustify, const string &mol_opt, const string &dir_opt,
     const string &dir1_opt, const string &dir2_opt, const int byresi_opt,
     const vector<string> &chain1_list, const vector<string> &chain2_list,
     const int hinge_opt)
@@ -2435,7 +2436,8 @@ int flexalign(string &xname, string &yname, const string &fname_super,
         /* parse chain 1 */
         xname=chain1_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1,
-            mol_vec1, ter_opt, infmt1_opt, atom_opt, split_opt, het_opt);
+            mol_vec1, ter_opt, infmt1_opt, atom_opt, autojustify,
+            split_opt, het_opt);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -2474,8 +2476,8 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                 {
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
-                        mol_vec2, ter_opt, infmt2_opt, atom_opt, split_opt,
-                        het_opt);
+                        mol_vec2, ter_opt, infmt2_opt, atom_opt, autojustify,
+                        split_opt, het_opt);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -2986,6 +2988,7 @@ int main(int argc, char *argv[])
     if (o_opt && (infmt1_opt!=-1 && infmt1_opt!=0 && infmt1_opt!=3))
         PrintErrorAndQuit("-o can only be used with -infmt1 -1, 0 or 3");
 
+    bool autojustify=(atom_opt=="auto" || atom_opt=="PC4'"); // auto re-pad atom name
     if (mol_opt=="protein" && atom_opt=="auto")
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")
@@ -3099,37 +3102,38 @@ int main(int argc, char *argv[])
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
+        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
         chain1_list, chain2_list, se_opt);
     else if (mm_opt==1) MMalign(xname, yname, fname_super, fname_lign,
         fname_matrix, sequence, d0_scale, m_opt, o_opt,
         a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
         ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list,
-        byresi_opt);
+        atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt, chain1_list,
+        chain2_list, byresi_opt);
     else if (mm_opt==2) MMdock(xname, yname, fname_super, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir1_opt, dir2_opt, chain1_list, chain2_list);
+        atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt,
+        chain1_list, chain2_list);
     else if (mm_opt==3) ; // should be changed to mm_opt=0, cp_opt=true
     else if (mm_opt==4) mTMalign(xname, yname, fname_super, fname_matrix,
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,
         u_opt, d_opt, full_opt, TMcut, infmt1_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, het_opt,
-        atom_opt, mol_opt, dir_opt, byresi_opt, chain1_list);
+        atom_opt, autojustify, mol_opt, dir_opt, byresi_opt, chain1_list);
     else if (mm_opt==5 || mm_opt==6) SOIalign(xname, yname, fname_super, fname_lign,
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, 
+        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt, 
         chain1_list, chain2_list, se_opt, closeK_opt, mm_opt);
     else if (mm_opt==7) flexalign(xname, yname, fname_super, fname_lign, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
-        chain1_list, chain2_list, hinge_opt);
+        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt,
+        byresi_opt, chain1_list, chain2_list, hinge_opt);
     else cerr<<"WARNING! -mm "<<mm_opt<<" not implemented"<<endl;
 
     /* clean up */
