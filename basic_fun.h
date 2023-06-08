@@ -752,6 +752,17 @@ void read_user_alignment(vector<string>&sequence, const string &fname_lign,
     return;
 }
 
+
+inline bool isfile(const string& filename)
+{
+    if (FILE *fp = fopen(filename.c_str(), "r"))
+    {
+        fclose(fp);
+        return true;
+    }
+    else return false;
+}
+
 /* read list of entries from 'name' to 'chain_list'.
  * dir_opt is the folder name (prefix).
  * suffix_opt is the file name extension (suffix_opt).
@@ -764,14 +775,47 @@ void file2chainlist(vector<string>&chain_list, const string &name,
     if (! fp.is_open())
         PrintErrorAndQuit(("Can not open file: "+name+'\n').c_str());
     string line;
+    string filename;
+    int a,b;
+    string sep;
     while (fp.good())
     {
         getline(fp, line);
         if (! line.size()) continue;
-        chain_list.push_back(dir_opt+Trim(line)+suffix_opt);
+        line=Trim(line);
+        for (a=0;a<=2;a++)
+        {
+            if      (a==0) sep="";
+            else if (a==1) sep="/";
+            else if (a==2) sep="\\";
+                
+            filename=dir_opt+sep+line+suffix_opt;
+            if (isfile(filename)) break;
+            if (suffix_opt.size())
+            {
+                filename=dir_opt+sep+line;
+                if (isfile(filename)) break;
+            }
+            else
+            {
+                filename=dir_opt+sep+line+".pdb";
+                if (isfile(filename)) break;
+                filename=dir_opt+sep+line+".cif";
+                if (isfile(filename)) break;
+            }
+            filename.clear();
+        }
+
+        if (filename.size()==0)
+        {
+            filename=dir_opt+line+suffix_opt;
+            cerr<<"WARNING! "<<filename<<" does not exist"<<endl;
+        }
+        else chain_list.push_back(filename);
+        line.clear();
+        filename.clear();
     }
     fp.close();
-    line.clear();
 }
 
 #endif
