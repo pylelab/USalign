@@ -2862,10 +2862,6 @@ int main(int argc, char *argv[])
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -atom");
             atom_opt=argv[i + 1]; i++;
-            if (atom_opt.size()!=4) PrintErrorAndQuit(
-                "ERROR! Atom name must have 4 characters, including space.\n"
-                "For example, C alpha, C3' and P atoms should be specified by\n"
-                "-atom \" CA \", -atom \" P  \" and -atom \" C3'\", respectively.");
         }
         else if ( !strcmp(argv[i],"-mol") )
         {
@@ -2994,6 +2990,17 @@ int main(int argc, char *argv[])
         atom_opt=" CA ";
     else if (mol_opt=="RNA" && atom_opt=="auto")
         atom_opt=" C3'";
+    if (atom_opt.size()!=4)
+    {
+        cerr<<"ERROR! Atom name must have 4 characters, including space.\n"
+              "For example, C alpha, C3' and P atoms should be specified by\n"
+              "-atom \" CA \", -atom \" P  \" and -atom \" C3'\", respectively."<<endl;
+        if (atom_opt.size()>=5 || atom_opt.size()==0) return 1;
+        else if (atom_opt.size()==1) atom_opt=" "+atom_opt+"  ";
+        else if (atom_opt.size()==2) atom_opt=" "+atom_opt+" ";
+        else if (atom_opt.size()==3) atom_opt=" "+atom_opt;
+        cerr<<"Change -atom to \""<<atom_opt<<"\""<<endl;
+    }
 
     if (d_opt && d0_scale<=0)
         PrintErrorAndQuit("Wrong value for option -d! It should be >0");
