@@ -164,6 +164,10 @@ void print_help(bool h_opt=false)
 "          6: superpose two complex structures by first deriving optimal\n"
 "             chain mapping, followed by TM-score superposition for residues\n"
 "             with the same residue ID\n"
+"          7: sequence dependent alignment of two complex structures:\n"
+"             perform global sequence alignment of each chain pair, derive\n"
+"             optimal chain mapping, and then superpose two complex\n"
+"             structures by TM-score\n"
 "\n"
 "      -I  Use the final alignment specified by FASTA file 'align.txt'\n"
 "\n"
@@ -705,8 +709,8 @@ int MMalign(const string &xname, const string &yname,
             
             if (byresi_opt)
             {
-                int total_aln=extract_aln_from_resi(sequence,
-                    seqx,seqy,resi_vec1,resi_vec2,xlen_vec,ylen_vec, i, j);
+                int total_aln=extract_aln_from_resi(sequence, seqx,seqy,
+                    resi_vec1,resi_vec2,xlen_vec,ylen_vec, i, j, byresi_opt);
                 seqxA_mat[i][j]=sequence[0];
                 seqyA_mat[i][j]=sequence[1];
                 if (total_aln>xlen+ylen-3)
@@ -3013,8 +3017,8 @@ int main(int argc, char *argv[])
     {
         if (i_opt)
             PrintErrorAndQuit("-byresi >=1 cannot be used with -i or -I");
-        if (byresi_opt<0 || byresi_opt>6)
-            PrintErrorAndQuit("-byresi can only be 0 to 6");
+        if (byresi_opt<0 || byresi_opt>7)
+            PrintErrorAndQuit("-byresi can only be 0 to 7");
         if ((byresi_opt==2 || byresi_opt==3 || byresi_opt==6) && ter_opt>=2)
             PrintErrorAndQuit("-byresi 2 and 6 must be used with -ter <=1");
     }
@@ -3072,7 +3076,7 @@ int main(int argc, char *argv[])
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
 
-    if (byresi_opt==6) mm_opt=1;
+    if (byresi_opt==6 || byresi_opt==7) mm_opt=1;
     else if (byresi_opt) i_opt=3;
 
     if (m_opt && fname_matrix == "") // Output rotation matrix: matrix.txt

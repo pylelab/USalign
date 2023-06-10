@@ -530,17 +530,17 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     int i2=0; // positions in resi_vec2
     int xlen=resi_vec1.size();
     int ylen=resi_vec2.size();
-    if (byresi_opt==4 || byresi_opt==5) // global or glocal sequence alignment
+    if (byresi_opt==4 || byresi_opt==5 || byresi_opt==7) // global or glocal sequence alignment
     {
         int *invmap;
         int glocal=0;
-        if (byresi_opt==5) glocal=2;
+        if (byresi_opt==5 || byresi_opt==7) glocal=2;
         int mol_type=0;
         for (i1=0;i1<xlen;i1++)
             if ('a'<seqx[i1] && seqx[i1]<'z') mol_type++;
             else mol_type--;
         for (i2=0;i2<ylen;i2++)
-            if ('a'<seqx[i2] && seqx[i2]<'z') mol_type++;
+            if ('a'<seqy[i2] && seqy[i2]<'z') mol_type++;
             else mol_type--;
         NWalign_main(seqx, seqy, xlen, ylen, sequence[0],sequence[1],
             mol_type, invmap, 0, glocal);
@@ -657,7 +657,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
 int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     const vector<string> resi_vec1, const vector<string> resi_vec2,
     const vector<int> xlen_vec, const vector<int> ylen_vec,
-    const int chain_i, const int chain_j)
+    const int chain_i, const int chain_j, const int byresi_opt)
 {
     sequence.clear();
     sequence.push_back("");
@@ -670,6 +670,24 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     int i,j;
     for (i=0;i<chain_i;i++) i1+=xlen_vec[i];
     for (j=0;j<chain_j;j++) i2+=ylen_vec[j];
+
+    if (byresi_opt==7)
+    {
+        int *invmap;
+        int glocal=2;
+        int mol_type=0;
+
+        for (i=0;i<xlen;i++)
+            if ('a'<seqx[i] && seqx[i]<'z') mol_type++;
+            else mol_type--;
+        for (i=0;i<ylen;i++)
+            if ('a'<seqy[i] && seqy[i]<'z') mol_type++;
+            else mol_type--;
+        NWalign_main(seqx, seqy, xlen, ylen, sequence[0],sequence[1],
+            mol_type, invmap, 0, glocal);
+        delete [] invmap;
+        return sequence[0].size();
+    }
 
     i=j=0;
     while(i<xlen && j<ylen)
