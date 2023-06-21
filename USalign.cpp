@@ -31,12 +31,16 @@ void print_extra_help()
 "   -fast  Fast but slightly inaccurate alignment\n"
 "\n"
 "    -dir  Perform all-against-all alignment among the list of PDB\n"
-"          chains listed by 'chain_list' under 'chain_folder'. Note\n"
-"          that the slash is necessary.\n"
+"          chains listed by 'chain_list' under 'chain_folder'.\n"
 "          $ USalign -dir chain_folder/ chain_list\n"
 "\n"
+//"-dirpair  Perform batch alignment for each pair of chains listed by\n"
+//"          'chain_pair_list' under 'chain_folder'. Each line consist of\n"
+//"          two chains, separated by tab or space.\n"
+//"          $ USalign -dirpair chain_folder/ chain_pair_list\n"
+//"\n"
 "   -dir1  Use chain2 to search a list of PDB chains listed by 'chain1_list'\n"
-"          under 'chain1_folder'. Note that the slash is necessary.\n"
+"          under 'chain1_folder'.\n"
 "          $ USalign -dir1 chain1_folder/ chain1_list chain2\n"
 "\n"
 "   -dir2  Use chain1 to search a list of PDB chains listed by 'chain2_list'\n"
@@ -92,7 +96,7 @@ void print_extra_help()
 "   -se    Do not perform superposition. Useful for extracting alignment from\n"
 "          superposed structure pairs\n"
 "\n"
-" -infmt1  Input format for structure_11\n"
+" -infmt1  Input format for structure_1\n"
 " -infmt2  Input format for structure_2\n"
 "          -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
 "           0: PDB format\n"
@@ -224,8 +228,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
     const int cp_opt, const int mirror_opt, const int het_opt,
     const string &atom_opt, const bool autojustify, const string &mol_opt,
-    const string &dir_opt, const string &dir1_opt, const string &dir2_opt,
-    const int byresi_opt, const vector<string> &chain1_list,
+    const string &dir_opt, const string &dirpair_opt, const string &dir1_opt,
+    const string &dir2_opt, const int byresi_opt, const vector<string> &chain1_list,
     const vector<string> &chain2_list, const bool se_opt)
 {
     /* declare previously global variables */
@@ -291,6 +295,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
+                if (dirpair_opt.size() && j!=i) continue;
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
                 {
@@ -413,8 +418,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         seqxA,seqyA,outfmt_opt,left_num,right_num,
                         left_aln_num,right_aln_num);
                     output_results(
-                        xname.substr(dir1_opt.size()+dir_opt.size()),
-                        yname.substr(dir2_opt.size()+dir_opt.size()),
+                        xname.substr(dir1_opt.size()+dir_opt.size()+dirpair_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()+dirpair_opt.size()),
                         chainID_list1[chain_i], chainID_list2[chain_j],
                         xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
                         rmsd0, d0_out, seqM.c_str(),
@@ -2134,9 +2139,10 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
     const int cp_opt, const int mirror_opt, const int het_opt,
     const string &atom_opt, const bool autojustify, const string &mol_opt,
-    const string &dir_opt, const string &dir1_opt, const string &dir2_opt, 
-    const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const bool se_opt, const int closeK_opt, const int mm_opt)
+    const string &dir_opt, const string &dirpair_opt, const string &dir1_opt,
+    const string &dir2_opt, const vector<string> &chain1_list,
+    const vector<string> &chain2_list, const bool se_opt,
+    const int closeK_opt, const int mm_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -2211,6 +2217,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
+                if (dirpair_opt.size() && i!=j) continue;
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
                 {
@@ -2320,8 +2327,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                     /* print result */
                     if (outfmt_opt==0) print_version();
                     output_results(
-                        xname.substr(dir1_opt.size()+dir_opt.size()),
-                        yname.substr(dir2_opt.size()+dir_opt.size()),
+                        xname.substr(dir1_opt.size()+dir_opt.size()+dirpair_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()+dirpair_opt.size()),
                         chainID_list1[chain_i], chainID_list2[chain_j],
                         xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
                         rmsd0, d0_out, seqM.c_str(),
@@ -2407,9 +2414,9 @@ int flexalign(string &xname, string &yname, const string &fname_super,
     const int split_opt, const int outfmt_opt, const bool fast_opt,
     const int mirror_opt, const int het_opt, const string &atom_opt,
     const bool autojustify, const string &mol_opt, const string &dir_opt,
-    const string &dir1_opt, const string &dir2_opt, const int byresi_opt,
-    const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const int hinge_opt)
+    const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt,
+    const int byresi_opt, const vector<string> &chain1_list,
+    const vector<string> &chain2_list, const int hinge_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -2475,6 +2482,7 @@ int flexalign(string &xname, string &yname, const string &fname_super,
 
             for (j=(dir_opt.size()>0)*(i+1);j<chain2_list.size();j++)
             {
+                if (dirpair_opt.size() && i!=j) continue;
                 /* parse chain 2 */
                 if (PDB_lines2.size()==0)
                 {
@@ -2608,8 +2616,8 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                     /* print result */
                     if (outfmt_opt==0) print_version();
                     output_flexalign_results(
-                        xname.substr(dir1_opt.size()+dir_opt.size()),
-                        yname.substr(dir2_opt.size()+dir_opt.size()),
+                        xname.substr(dir1_opt.size()+dir_opt.size()+dirpair_opt.size()),
+                        yname.substr(dir2_opt.size()+dir_opt.size()+dirpair_opt.size()),
                         chainID_list1[chain_i], chainID_list2[chain_j],
                         xlen, ylen, t0, u0, tu_vec, TM1, TM2, TM3, TM4, TM5,
                         rmsd0, d0_out, seqM.c_str(),
@@ -2714,11 +2722,13 @@ int main(int argc, char *argv[])
     string mol_opt   ="auto";// auto-detect the molecule type as protein/RNA
     string suffix_opt="";    // set -suffix to empty
     string dir_opt   ="";    // set -dir to empty
+    string dirpair_opt="";   // set -dirpair to empty
     string dir1_opt  ="";    // set -dir1 to empty
     string dir2_opt  ="";    // set -dir2 to empty
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
+    vector<pair<string,string> > chain_pair_list; // only when -dirpair is set
 
     for(int i = 1; i < argc; i++)
     {
@@ -2887,6 +2897,12 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -dir");
             dir_opt=argv[i + 1]; i++;
         }
+        else if ( !strcmp(argv[i],"-dirpair") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -dirpair");
+            dirpair_opt=argv[i + 1]; i++;
+        }
         else if ( !strcmp(argv[i],"-dir1") )
         {
             if (i>=(argc-1)) 
@@ -2958,8 +2974,9 @@ int main(int argc, char *argv[])
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
     }
 
-    if(xname.size()==0 || (yname.size()==0 && dir_opt.size()==0) || 
-                          (yname.size()    && dir_opt.size()))
+    if  (xname.size()==0 || (yname.size() && dir_opt.size()) ||
+        (yname.size() && dirpair_opt.size()) ||
+        (yname.size()==0 && dir_opt.size()==0 && dirpair_opt.size()==0))
     {
         if (h_opt) print_help(h_opt);
         if (v_opt)
@@ -2969,15 +2986,15 @@ int main(int argc, char *argv[])
         }
         if (xname.size()==0)
             PrintErrorAndQuit("Please provide input structures");
-        else if (yname.size()==0 && dir_opt.size()==0 && mm_opt!=4)
+        else if (yname.size()==0 && dir_opt.size()==0 && dirpair_opt.size()==0 && mm_opt!=4)
             PrintErrorAndQuit("Please provide structure B");
-        else if (yname.size() && dir_opt.size())
+        else if (yname.size() && dir_opt.size()+dirpair_opt.size())
             PrintErrorAndQuit("Please provide only one file name if -dir is set");
     }
 
-    if (suffix_opt.size() && dir_opt.size()+dir1_opt.size()+dir2_opt.size()==0)
+    if (suffix_opt.size() && dir_opt.size()+dirpair_opt.size()+dir1_opt.size()+dir2_opt.size()==0)
         PrintErrorAndQuit("-suffix is only valid if -dir, -dir1 or -dir2 is set");
-    if ((dir_opt.size() || dir1_opt.size() || dir2_opt.size()))
+    if ((dir_opt.size() || dirpair_opt.size() || dir1_opt.size() || dir2_opt.size()))
     {
         if (mm_opt!=2 && mm_opt!=4)
         {
@@ -2986,8 +3003,10 @@ int main(int argc, char *argv[])
             if (m_opt && fname_matrix!="-")
                 PrintErrorAndQuit("-m can only be - or unset when using -dir, -dir1 or -dir2");
         }
-        else if (dir_opt.size() && (dir1_opt.size() || dir2_opt.size()))
+        else if ((dir_opt.size() || dirpair_opt.size() )&& (dir1_opt.size() || dir2_opt.size()))
             PrintErrorAndQuit("-dir cannot be set with -dir1 or -dir2");
+        else if (dir_opt.size() && dirpair_opt.size())
+            PrintErrorAndQuit("-dir cannot be set with -dirpair");
     }
     if (o_opt && (infmt1_opt!=-1 && infmt1_opt!=0 && infmt1_opt!=3))
         PrintErrorAndQuit("-o can only be used with -infmt1 -1, 0 or 3");
@@ -3051,6 +3070,8 @@ int main(int argc, char *argv[])
         if (ter_opt>=2 && (mm_opt==1 || mm_opt==2)) PrintErrorAndQuit("-mm 1 or 2 must be used with -ter 0 or -ter 1");
         if (mm_opt==4 && (yname.size() || dir2_opt.size()))
             cerr<<"WARNING! structure_2 is ignored for -mm 4"<<endl;
+        if (dirpair_opt.size() && (mm_opt==2 || mm_opt==4))
+            PrintErrorAndQuit("-mm 2 or 4 cannot be used with -dirpair");
     }
     else if (full_opt) PrintErrorAndQuit("-full can only be used with -mm");
 
@@ -3083,15 +3104,20 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! Please provide a file name for option -m!");
 
     /* parse file list */
-    if (dir1_opt.size()+dir_opt.size()==0) chain1_list.push_back(xname);
-    else file2chainlist(chain1_list, xname, dir_opt+dir1_opt, suffix_opt);
-
     int i; 
-    if (dir_opt.size())
-        for (i=0;i<chain1_list.size();i++)
-            chain2_list.push_back(chain1_list[i]);
-    else if (dir2_opt.size()==0) chain2_list.push_back(yname);
-    else file2chainlist(chain2_list, yname, dir2_opt, suffix_opt);
+    if (dirpair_opt.size())
+        file2chainpairlist(chain1_list,chain2_list, xname, dirpair_opt, suffix_opt);
+    else
+    {
+        if (dir1_opt.size()+dir_opt.size()==0) chain1_list.push_back(xname);
+        else file2chainlist(chain1_list, xname, dir_opt+dir1_opt, suffix_opt);
+
+        if (dir_opt.size())
+            for (i=0;i<chain1_list.size();i++)
+                chain2_list.push_back(chain1_list[i]);
+        else if (dir2_opt.size()==0) chain2_list.push_back(yname);
+        else file2chainlist(chain2_list, yname, dir2_opt, suffix_opt);
+    }
 
     if (outfmt_opt==2)
     {
@@ -3106,14 +3132,37 @@ int main(int argc, char *argv[])
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
-        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt, byresi_opt,
-        chain1_list, chain2_list, se_opt);
-    else if (mm_opt==1) MMalign(xname, yname, fname_super, fname_lign,
-        fname_matrix, sequence, d0_scale, m_opt, o_opt,
-        a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
-        ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt, chain1_list,
-        chain2_list, byresi_opt);
+        atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
+        dir2_opt, byresi_opt, chain1_list, chain2_list, se_opt);
+    else if (mm_opt==1)
+    { 
+        if (dirpair_opt.size()==0) MMalign(xname, yname, fname_super,
+            fname_lign, fname_matrix, sequence, d0_scale, m_opt, o_opt,
+            a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
+            ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
+            atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt, chain1_list,
+            chain2_list, byresi_opt);
+        else
+        {
+            vector<string> tmp_vec1;
+            vector<string> tmp_vec2;
+            for (i=0;i<chain1_list.size();i++)
+            {
+                xname=chain1_list[i];
+                yname=chain2_list[i];
+                tmp_vec1.push_back(xname);
+                tmp_vec2.push_back(yname);
+                MMalign(xname, yname, fname_super, fname_lign, fname_matrix,
+                    sequence, d0_scale, m_opt, o_opt, a_opt, d_opt, full_opt,
+                    TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt,
+                    outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt,
+                    autojustify, mol_opt, dirpair_opt, dirpair_opt, tmp_vec1,
+                    tmp_vec2, byresi_opt);
+                tmp_vec1[0].clear(); tmp_vec1.clear();
+                tmp_vec2[0].clear(); tmp_vec2.clear();
+            }
+        }
+    }
     else if (mm_opt==2) MMdock(xname, yname, fname_super, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, o_opt, a_opt,
         u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
@@ -3130,20 +3179,21 @@ int main(int argc, char *argv[])
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
-        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt, 
-        chain1_list, chain2_list, se_opt, closeK_opt, mm_opt);
+        atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
+        dir2_opt, chain1_list, chain2_list, se_opt, closeK_opt, mm_opt);
     else if (mm_opt==7) flexalign(xname, yname, fname_super, fname_lign, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-        atom_opt, autojustify, mol_opt, dir_opt, dir1_opt, dir2_opt,
-        byresi_opt, chain1_list, chain2_list, hinge_opt);
+        atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
+        dir2_opt, byresi_opt, chain1_list, chain2_list, hinge_opt);
     else cerr<<"WARNING! -mm "<<mm_opt<<" not implemented"<<endl;
 
     /* clean up */
     vector<string>().swap(chain1_list);
     vector<string>().swap(chain2_list);
     vector<string>().swap(sequence);
+    vector<pair<string,string> >().swap(chain_pair_list);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;

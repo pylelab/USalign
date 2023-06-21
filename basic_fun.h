@@ -872,4 +872,125 @@ void file2chainlist(vector<string>&chain_list, const string &name,
     fp.close();
 }
 
+void file2chainpairlist(vector<string>&chain1_list, vector<string>&chain2_list,
+    const string &name, const string &dirpair_opt, const string &suffix_opt)
+{
+    ifstream fp(name.c_str());
+    if (! fp.is_open())
+        PrintErrorAndQuit(("Can not open file: "+name+'\n').c_str());
+    string line;
+    string filename;
+    int a,b;
+    size_t i;
+    string sep,filename1,filename2;
+    vector<string> line_vec;
+    while (fp.good())
+    {
+        getline(fp, line);
+        if (! line.size()) continue;
+        line=Trim(line);
+        split(line, line_vec, '\t');
+        if (line_vec.size()==2)
+        {
+            filename1=line_vec[0];
+            filename2=line_vec[1];
+            for (i=0;i<2;i++) line_vec[i].clear(); line_vec.clear();
+        }
+        else
+        {
+            for (i=0;i<line_vec.size();i++) line_vec[i].clear(); line_vec.clear();
+            split(line, line_vec, ' ');
+            if (line_vec.size()==2)
+            {
+                filename1=line_vec[0];
+                filename2=line_vec[1];
+                for (i=0;i<2;i++) line_vec[i].clear(); line_vec.clear();
+            }
+            else
+            {
+                cerr<<"WARNING! not a chain pair: "<<line<<endl;
+                for (i=0;i<line_vec.size();i++) line_vec[i].clear(); line_vec.clear();
+                continue;
+            }
+        }
+
+        filename.clear();
+        for (a=0;a<=2;a++)
+        {
+            if      (a==0) sep="";
+            else if (a==1) sep="/";
+            else if (a==2) sep="\\";
+                
+            filename=dirpair_opt+sep+filename1+suffix_opt;
+            if (isfile(filename)) break;
+            if (suffix_opt.size())
+            {
+                filename=dirpair_opt+sep+line;
+                if (isfile(filename)) break;
+            }
+            else
+            {
+                filename=dirpair_opt+sep+line+".pdb";
+                if (isfile(filename)) break;
+                filename=dirpair_opt+sep+line+".cif";
+                if (isfile(filename)) break;
+            }
+            filename.clear();
+        }
+
+        if (filename.size()==0)
+        {
+            filename=dirpair_opt+filename1+suffix_opt;
+            cerr<<"WARNING! "<<filename<<" does not exist"<<endl;
+            continue;
+        }
+        else
+        {
+            filename1=filename; 
+            filename.clear();
+        }
+
+        for (a=0;a<=2;a++)
+        {
+            if      (a==0) sep="";
+            else if (a==1) sep="/";
+            else if (a==2) sep="\\";
+                
+            filename=dirpair_opt+sep+filename2+suffix_opt;
+            if (isfile(filename)) break;
+            if (suffix_opt.size())
+            {
+                filename=dirpair_opt+sep+line;
+                if (isfile(filename)) break;
+            }
+            else
+            {
+                filename=dirpair_opt+sep+line+".pdb";
+                if (isfile(filename)) break;
+                filename=dirpair_opt+sep+line+".cif";
+                if (isfile(filename)) break;
+            }
+            filename.clear();
+        }
+
+        if (filename.size()==0)
+        {
+            filename=dirpair_opt+filename2+suffix_opt;
+            cerr<<"WARNING! "<<filename<<" does not exist"<<endl;
+            continue;
+        }
+        else
+        {
+            filename2=filename; 
+            filename.clear();
+        }
+
+        chain1_list.push_back(filename1);
+        chain2_list.push_back(filename2);
+        line.clear();
+        filename.clear();
+    }
+    fp.close();
+}
+
 #endif
