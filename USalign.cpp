@@ -104,6 +104,10 @@ void print_extra_help()
 //"           2: xyz format\n"
 "           3: PDBx/mmCIF format\n"
 "\n"
+//"-chainmap (only useful for -mm 1) use the final chain mapping 'chainmap.txt'\n"
+//"          specified by user. 'chainmap.txt' is a tab-seperated text with two\n"
+//"          columns, one for each complex\n"
+//"\n"
 "Advanced usage 1 (generate an image for a pair of superposed structures):\n"
 "    USalign 1cpc.pdb 1mba.pdb -o sup\n"
 "    pymol -c -d @sup_all_atm.pml -g sup_all_atm.png\n"
@@ -510,7 +514,7 @@ int MMalign(const string &xname, const string &yname,
     const string &atom_opt, const bool autojustify, const string &mol_opt,
     const string &dir1_opt, const string &dir2_opt,
     const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const int byresi_opt)
+    const int byresi_opt,const string&chainmapfile)
 {
     /* declare previously global variables */
     vector<vector<vector<double> > > xa_vec; // structure of complex1
@@ -554,6 +558,63 @@ int MMalign(const string &xname, const string &yname,
     }
     int i_opt=0;
     if (byresi_opt) i_opt=3;
+
+    map<int,int> chainmap;
+    if (chainmapfile.size())
+    {
+        string line;
+        int chainidx1,chainidx2;
+        vector<string> line_vec;
+        ifstream fin;
+        bool fromStdin=(chainmapfile=="-");
+        if (!fromStdin) fin.open(chainmapfile.c_str());
+        while (fromStdin?cin.good():fin.good())
+        {
+            if (fromStdin) getline(cin,line);
+            else           getline(fin,line);
+            if (line.size()==0 || line[0]=='#') continue;
+            split(line,line_vec,'\t');
+            if (line_vec.size()==2)
+            {
+                chainidx1=-1;
+                chainidx2=-1;
+                
+                for (i=0;i<chainID_list1.size();i++)
+                {
+                    if (line_vec[0]==chainID_list1[i] ||
+                    ":"+line_vec[0]==chainID_list1[i] ||
+                  ":1,"+line_vec[0]==chainID_list1[i]) 
+                    {
+                        chainidx1=i;
+                        break;
+                    }
+                }
+                for (i=0;i<chainID_list2.size();i++)
+                {
+                    if (line_vec[1]==chainID_list2[i] ||
+                    ":"+line_vec[1]==chainID_list2[i] ||
+                  ":1,"+line_vec[1]==chainID_list2[i])
+                    {
+                        chainidx2=i;
+                        break;
+                    }
+                }
+                if (chainidx1>=0 && chainidx2>=0)
+                {
+                    if (chainmap.count(chainidx1))
+                        cerr<<"ERROR! "<<line_vec[0]<<" already mapped"<<endl;
+                    chainmap[chainidx1]=chainidx2;
+                }
+                else cerr<<"ERROR! Cannot map "<<line<<endl;
+            }
+            else     cerr<<"ERROR! Cannot map "<<line<<endl;
+            for (i=0;i<line_vec.size();i++) line_vec[i].clear(); line_vec.clear();
+        }
+        if (!fromStdin) fin.close();
+        if (chainmap.size()==0)
+            cerr<<"ERROR! cannot map any chain pair from "<<chainmapfile<<endl;
+    }
+
 
     /* perform monomer alignment if there is only one chain */
     if (xa_vec.size()==1 && ya_vec.size()==1)
@@ -681,6 +742,11 @@ int MMalign(const string &xname, const string &yname,
                 TMave_mat[i][j]=-1;
                 continue;
             }
+            if (chainmap.size() && chainmap[i]!=j)
+            {
+                TMave_mat[i][j]=-1;
+                continue;
+            }
 
             ylen=ylen_vec[j];
             if (ylen<3)
@@ -786,7 +852,7 @@ int MMalign(const string &xname, const string &yname,
     /* refine alignment for large oligomers */
     int aln_chain_num=count_assign_pair(assign1_list,chain1_num);
     bool is_oligomer=(aln_chain_num>=3);
-    if (aln_chain_num==2) // dimer alignment
+    if (aln_chain_num==2 && chainmap.size()==0) // dimer alignment
     {
         int na_chain_num1,na_chain_num2,aa_chain_num1,aa_chain_num2;
         count_na_aa_chain_num(na_chain_num1,aa_chain_num1,mol_vec1);
@@ -808,7 +874,7 @@ int MMalign(const string &xname, const string &yname,
         else is_oligomer=true; /* align oligomers to dimer */
     }
 
-    if (aln_chain_num>=3 || is_oligomer) // oligomer alignment
+    if ((aln_chain_num>=3 || is_oligomer) && chainmap.size()==0) // oligomer alignment
     {
         /* extract centroid coordinates */
         double **xcentroids;
@@ -951,6 +1017,7 @@ int MMalign(const string &xname, const string &yname,
     ylen_vec.clear();       // length of complex2
     vector<string> ().swap(resi_vec1);  // residue index for chain1
     vector<string> ().swap(resi_vec2);  // residue index for chain2
+    map<int,int> ().swap(chainmap);
     return 1;
 }
 
@@ -2725,6 +2792,7 @@ int main(int argc, char *argv[])
     string dirpair_opt="";   // set -dirpair to empty
     string dir1_opt  ="";    // set -dir1 to empty
     string dir2_opt  ="";    // set -dir2 to empty
+    string chainmapfile="";  // chain mapping between two complexes
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
@@ -2830,6 +2898,12 @@ int main(int argc, char *argv[])
             if (i_opt==1)
                 PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
             fname_lign = argv[i + 1];      i_opt = 3; i++;
+        }
+        else if (!strcmp(argv[i], "-chainmap") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chainmap");
+            chainmapfile = argv[i + 1]; i++;
         }
         else if (!strcmp(argv[i], "-m") )
         {
@@ -3093,6 +3167,9 @@ int main(int argc, char *argv[])
     if (mm_opt==7 && hinge_opt>=10)
         PrintErrorAndQuit("ERROR! -hinge must be <10");
 
+    if (chainmapfile.size() && mm_opt!=1)
+        PrintErrorAndQuit("ERROR! -chainmap must be used with -mm 1");
+
 
     /* read initial alignment file from 'align.txt' */
     if (i_opt) read_user_alignment(sequence, fname_lign, i_opt);
@@ -3141,7 +3218,7 @@ int main(int argc, char *argv[])
             a_opt, d_opt, full_opt, TMcut, infmt1_opt, infmt2_opt,
             ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
             atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt, chain1_list,
-            chain2_list, byresi_opt);
+            chain2_list, byresi_opt,chainmapfile);
         else
         {
             vector<string> tmp_vec1;
@@ -3157,11 +3234,12 @@ int main(int argc, char *argv[])
                     TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt,
                     outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt,
                     autojustify, mol_opt, dirpair_opt, dirpair_opt, tmp_vec1,
-                    tmp_vec2, byresi_opt);
+                    tmp_vec2, byresi_opt,chainmapfile);
                 tmp_vec1[0].clear(); tmp_vec1.clear();
                 tmp_vec2[0].clear(); tmp_vec2.clear();
             }
         }
+        chainmapfile.clear();
     }
     else if (mm_opt==2) MMdock(xname, yname, fname_super, 
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, o_opt, a_opt,
