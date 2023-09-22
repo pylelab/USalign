@@ -80,6 +80,8 @@ void print_help(bool h_opt=false)
 "             1: treat each MODEL as a separate chain (-ter should be 0)\n"
 "             2: treat each chain as a seperate chain (-ter should be <=1)\n"
 "\n"
+"    -init    tentative clustering\n"
+"\n"
 "    -h       Print the full help message, including additional options.\n"
 "\n"
     <<endl;
@@ -110,6 +112,32 @@ void filter_lower_bound(double &lb_HwRMSD, double &lb_TMfast,
     return;
 }
 
+void read_init_cluster(const string&filename, 
+    map<string, map<string,bool> > &init_cluster)
+{
+    ifstream fin;
+    string line;
+    vector<string> line_vec;
+    map<string, bool> tmp_map;
+    size_t i,j;
+    fin.open(filename.c_str());
+    while (fin.good())
+    {
+        getline(fin,line);
+        split(line,line_vec,'\t');
+        for (i=0;i<line_vec.size();i++)
+        {
+            for (j=0;j<line_vec.size();j++)
+                if (i!=j) tmp_map[line_vec[j]]=1;
+            init_cluster[line_vec[i]]=tmp_map;
+            map<string, bool> ().swap(tmp_map);
+        }
+        for (i=0;i<line_vec.size();i++) line_vec[i].clear(); line_vec.clear();
+    }
+    fin.close();
+    vector<string>().swap(line_vec);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) print_help();
@@ -124,6 +152,7 @@ int main(int argc, char *argv[])
     string xname       = "";
     double TMcut       = 0.5;
     string fname_clust = ""; // file name for output cluster result
+    string fname_init  = "";
     string fname_lign  = ""; // file name for user alignment
     vector<string> sequence; // get value from alignment file
     double Lnorm_ass, d0_scale;
@@ -146,6 +175,7 @@ int main(int argc, char *argv[])
     string dir_opt   ="";    // set -dir to empty
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain_list;
+    map<string, map<string,bool> > init_cluster;
 
     for(int i = 1; i < argc; i++)
     {
@@ -227,6 +257,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
         {
             het_opt=atoi(argv[i + 1]); i++;
+        }
+        else if ( !strcmp(argv[i],"-init") && i < (argc-1) )
+        {
+            read_init_cluster(argv[i+1],init_cluster); i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -439,6 +473,7 @@ int main(int argc, char *argv[])
         }
         sizePROT=index_vec.size();
 
+        string key=chainID_list[chain_i];
         cout<<'>'<<chainID_list[chain_i]<<'\t'<<xlen<<'\t'
             <<setiosflags(ios::fixed)<<setprecision(2)
             <<100.*i/Nstruct<<"%(#"<<i<<")\t"
@@ -447,9 +482,14 @@ int main(int argc, char *argv[])
 #ifdef TMalign_HwRMSD_h
         vector<pair<double,size_t> > HwRMSDscore_list;
         double TM;
+        size_t init_count=0;
         for (j=0;j<sizePROT;j++)
         {
             chain_j=index_vec[j];
+            string value=chainID_list[chain_j];
+            if (init_cluster.count(key) && init_count>=2 && 
+                HwRMSDscore_list.size()>=init_cluster[key].size() && !init_cluster[key].count(value))
+                continue;
             ylen=xyz_vec[chain_j].size();
             if (mol_vec[chain_i]*mol_vec[chain_j]<0)    continue;
             else if (s_opt==2 && xlen<TMcut*ylen)       continue;
@@ -460,6 +500,8 @@ int main(int argc, char *argv[])
 
             if (s_opt<=1) filter_lower_bound(lb_HwRMSD, lb_TMfast, 
                 TMcut, s_opt, mol_vec[chain_i]+mol_vec[chain_j]);
+            
+            //cout<<chainID_list[chain_i]<<" => "<<chainID_list[chain_j]<<endl;
             
             NewArray(&ya, ylen, 3);
             for (r=0;r<ylen;r++)
@@ -509,7 +551,16 @@ int main(int argc, char *argv[])
 
             Lave=sqrt(xlen*ylen); // geometry average because O(L1*L2)
             if (TM>=lb_HwRMSD || Lave<=fast_lb)
-                HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
+            {
+                if (init_cluster.count(key) && init_cluster[key].count(value))
+                {
+                    HwRMSDscore_list.push_back(make_pair(TM+1,index_vec[j]));
+                    init_count++;
+                    if (init_count==init_cluster[key].size()) break;
+                }
+                else
+                    HwRMSDscore_list.push_back(make_pair(TM,index_vec[j]));
+            }
 
             /* clean up after each HwRMSD */
             seqM.clear();
@@ -529,6 +580,7 @@ int main(int argc, char *argv[])
         if (xlen<=fast_lb) cur_repr_num_cutoff=max_repr_num;
         else if (xlen>fast_lb && xlen<fast_ub) cur_repr_num_cutoff+=
             (fast_ub-xlen)/(fast_ub-fast_lb)*(max_repr_num-min_repr_num);
+        //if (init_count>=2) cur_repr_num_cutoff=init_count;
 
         index_vec.clear();
         for (j=0;j<HwRMSDscore_list.size();j++)
@@ -715,6 +767,7 @@ int main(int argc, char *argv[])
     clust_mem_vec.clear();
     chainID_list.clear();
     clust_repr_map.clear();
+    map<string, map<string,bool> >().swap(init_cluster);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
