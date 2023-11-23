@@ -742,7 +742,7 @@ int MMalign(const string &xname, const string &yname,
                 TMave_mat[i][j]=-1;
                 continue;
             }
-            if (chainmap.size() && chainmap[i]!=j)
+            if (chainmap.size()>i && chainmap[i]!=j)
             {
                 TMave_mat[i][j]=-1;
                 continue;
