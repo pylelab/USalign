@@ -924,7 +924,7 @@ int MMalign(const string &xname, const string &yname,
         chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
         sequence, d0_scale, fast_opt);
     
-    if (byresi_opt && aln_chain_num>=3 && is_oligomer && chainmap.size()==0) // oligomer alignment
+    if (byresi_opt && aln_chain_num>=4 && is_oligomer && chainmap.size()==0) // oligomer alignment
     {
         MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
             chainID_list1, chainID_list2,

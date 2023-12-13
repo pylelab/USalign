@@ -74,6 +74,7 @@
    2022/09/24: Support -TMscore for complex when the chain order is different
    2023/06/09: Correct atom name justification in PDB file for standard amino
                acids and nucleotides
+   2023/12/13: Refine chain assignment for -TMscore >=6 for large complex
 ===============================================================================
 
 =========================
