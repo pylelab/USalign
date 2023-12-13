@@ -893,7 +893,7 @@ int MMalign(const string &xname, const string &yname,
         hetero_refined_greedy_search(TMave_mat, assign1_list,
             assign2_list, chain1_num, chain2_num, xcentroids,
             ycentroids, d0MM, len_aa+len_na);
-        
+
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
         DeleteArray(&ycentroids, chain2_num);
@@ -923,6 +923,44 @@ int MMalign(const string &xname, const string &yname,
         ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
         chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
         sequence, d0_scale, fast_opt);
+    
+    if (byresi_opt && aln_chain_num>=3 && is_oligomer && chainmap.size()==0) // oligomer alignment
+    {
+        MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
+            chainID_list1, chainID_list2,
+            fname_super, fname_lign, fname_matrix,
+            xa_vec, ya_vec, seqx_vec, seqy_vec,
+            secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+            xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
+            chain1_num, chain2_num, TMave_mat,
+            seqxA_mat, seqM_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+            d0_scale, 1, 0, 5, ter_opt, split_opt,
+            0, 0, true, true, mirror_opt, resi_vec1, resi_vec2);
+
+
+        /* extract centroid coordinates */
+        double **xcentroids;
+        double **ycentroids;
+        NewArray(&xcentroids, chain1_num, 3);
+        NewArray(&ycentroids, chain2_num, 3);
+        double d0MM=getmin(
+            calculate_centroids(xa_vec, chain1_num, xcentroids),
+            calculate_centroids(ya_vec, chain2_num, ycentroids));
+
+        /* refine enhanced greedy search with centroid superposition */
+        //double het_deg=check_heterooligomer(TMave_mat, chain1_num, chain2_num);
+        homo_refined_greedy_search(TMave_mat, assign1_list,
+            assign2_list, chain1_num, chain2_num, xcentroids,
+            ycentroids, d0MM, len_aa+len_na, ut_mat);
+
+        hetero_refined_greedy_search(TMave_mat, assign1_list,
+            assign2_list, chain1_num, chain2_num, xcentroids,
+            ycentroids, d0MM, len_aa+len_na);
+
+        /* clean up */
+        DeleteArray(&xcentroids, chain1_num);
+        DeleteArray(&ycentroids, chain2_num);
+    }
 
     /* sometime MMalign_iter is even worse than monomer alignment */
     if (byresi_opt==0 && max_total_score<maxTMmono)
