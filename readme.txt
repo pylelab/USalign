@@ -75,6 +75,7 @@
    2023/06/09: Correct atom name justification in PDB file for standard amino
                acids and nucleotides
    2023/12/13: Refine chain assignment for -TMscore >=6 for large complex
+   2023/12/22: Forbid chain assignment refinment for -chainmap
 ===============================================================================
 
 =========================

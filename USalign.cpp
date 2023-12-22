@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20230609)                                      *\n"
+" * US-align (Version 20231222)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
@@ -742,7 +742,7 @@ int MMalign(const string &xname, const string &yname,
                 TMave_mat[i][j]=-1;
                 continue;
             }
-            if (chainmap.size()>i && chainmap[i]!=j)
+            if (chainmap.size() && (!chainmap.count(i) || chainmap[i]!=j))
             {
                 TMave_mat[i][j]=-1;
                 continue;
@@ -922,7 +922,7 @@ int MMalign(const string &xname, const string &yname,
         seqx_vec, seqy_vec, secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec,
         ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
         chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
-        sequence, d0_scale, fast_opt);
+        sequence, d0_scale, fast_opt, chainmap);
     
     if (byresi_opt && aln_chain_num>=4 && is_oligomer && chainmap.size()==0) // oligomer alignment
     {
@@ -985,7 +985,7 @@ int MMalign(const string &xname, const string &yname,
             secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
             xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
             TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-            d0_scale, fast_opt);
+            d0_scale, fast_opt, chainmap);
     }
 
     /* perform cross chain alignment

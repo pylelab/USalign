@@ -1624,7 +1624,7 @@ void MMalign_iter(double & max_total_score, const int max_iter,
     int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool fast_opt)
+    double d0_scale, bool fast_opt, map<int,int> &chainmap)
 {
     /* tmp assignment */
     double total_score;
@@ -1640,7 +1640,7 @@ void MMalign_iter(double & max_total_score, const int max_iter,
     copy_chain_assign_data(chain1_num, chain2_num, sequence_tmp,
         seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
         seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp);
-    
+
     for (int iter=0;iter<max_iter;iter++)
     {
         total_score=MMalign_search(xa_vec, ya_vec, seqx_vec, seqy_vec,
@@ -1649,14 +1649,25 @@ void MMalign_iter(double & max_total_score, const int max_iter,
             chain1_num, chain2_num, 
             TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp,
             sequence, d0_scale, fast_opt);
+        if (chainmap.size())
+        {
+            int i,j;
+            for (i=0;i<chain1_num;i++) for (j=0;j<chain2_num;j++)
+                if (!chainmap.count(i) || chainmap[i]!=j) TMave_tmp[i][j]=-1;
+        }
         total_score=enhanced_greedy_search(TMave_tmp, assign1_tmp,
             assign2_tmp, chain1_num, chain2_num);
         //if (total_score<=0) PrintErrorAndQuit("ERROR! No assignable chain");
         if (total_score<=max_total_score) break;
         max_total_score=total_score;
-        copy_chain_assign_data(chain1_num, chain2_num, sequence,
-            seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
-            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
+        if (chainmap.size())
+            copy_chain_assign_data(chain1_num, chain2_num, sequence,
+                seqxA_tmp, seqyA_tmp, assign1_list, assign2_list, TMave_tmp,
+                seqxA_mat, seqyA_mat, assign1_tmp,  assign2_tmp,  TMave_mat);
+        else
+            copy_chain_assign_data(chain1_num, chain2_num, sequence,
+                seqxA_tmp, seqyA_tmp, assign1_tmp,  assign2_tmp,  TMave_tmp,
+                seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat);
     }
 
     /* clean up everything */
@@ -2834,7 +2845,7 @@ void MMalign_cross(double & max_total_score, const int max_iter,
     int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool fast_opt)
+    double d0_scale, bool fast_opt, map<int,int> &chainmap)
 {
     /* tmp assignment */
     int *assign1_tmp, *assign2_tmp;
@@ -2868,7 +2879,7 @@ void MMalign_cross(double & max_total_score, const int max_iter,
         secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
         xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
         TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-        d0_scale, fast_opt);
+        d0_scale, fast_opt, chainmap);
 
     /* clean up everything */
     delete [] assign1_tmp;
