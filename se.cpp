@@ -142,6 +142,8 @@ int main(int argc, char *argv[])
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
+    vector<string> chain2parse1;
+    vector<string> chain2parse2;
 
     for(int i = 1; i < argc; i++)
     {
@@ -221,6 +223,20 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
         {
             het_opt=atoi(argv[i + 1]); i++;
+        }
+        else if (!strcmp(argv[i], "-chain1") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain1");
+            split(argv[i+1],chain2parse1,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-chain2") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain2");
+            split(argv[i+1],chain2parse2,',');
+            i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else if (yname.size() == 0) yname=argv[i];
@@ -319,7 +335,8 @@ int main(int argc, char *argv[])
         /* parse chain 1 */
         xname=chain1_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
-            ter_opt, infmt1_opt, atom_opt, false, split_opt, het_opt);
+            ter_opt, infmt1_opt, atom_opt, false, split_opt, het_opt,
+            chain2parse1);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -350,7 +367,7 @@ int main(int argc, char *argv[])
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
                         mol_vec2, ter_opt, infmt2_opt, atom_opt, false, 
-                        split_opt, het_opt);
+                        split_opt, het_opt, chain2parse2);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -462,5 +479,7 @@ int main(int argc, char *argv[])
     }
     chain1_list.clear();
     chain2_list.clear();
+    vector<string>().swap(chain2parse1);
+    vector<string>().swap(chain2parse2);
     return 0;
 }

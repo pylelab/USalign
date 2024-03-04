@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
     string suffix_opt="";    // set -suffix to empty
     string dir_opt   ="";    // set -dir to empty
     vector<string> chain_list; // only when -dir1 is set
+    vector<string> chain2parse;
 
     int nameIdx = 0;
     for(int i = 1; i < argc; i++)
@@ -104,6 +105,13 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-het") && i < (argc-1) )
         {
             het_opt=atoi(argv[i + 1]); i++;
+        }
+        else if (!strcmp(argv[i], "-chain") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain");
+            split(argv[i+1],chain2parse,',');
+            i++;
         }
         else xname=argv[i];
     }
@@ -173,7 +181,8 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list, mol_vec,
-            ter_opt, infmt_opt, atom_opt, autojustify, split_opt, het_opt);
+            ter_opt, infmt_opt, atom_opt, autojustify, split_opt, het_opt,
+            chain2parse);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

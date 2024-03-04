@@ -152,7 +152,7 @@ size_t get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
     vector<int> &mol_vec, const int ter_opt, const int infmt_opt,
     const string atom_opt, const bool autojustify, const int split_opt, 
-    const int het_opt)
+    const int het_opt, const vector<string>&chain2parse)
 {
     size_t i=0; // resi i.e. atom index
     string line;
@@ -229,9 +229,11 @@ size_t get_PDB_lines(const string filename,
             if  (compress_type==-1) getline(cin, line);
             else if (compress_type) getline(fin_gz, line);
             else                    getline(fin, line);
-            if (infmt_opt==-1 && line.compare(0,5,"loop_")==0) // PDBx/mmCIF
+            if (infmt_opt==-1 && (line.compare(0,5,"loop_")==0 || 
+                                  line.compare(0,1,"#")==0)) // PDBx/mmCIF
                 return get_PDB_lines(filename,PDB_lines,chainID_list, mol_vec,
-                    ter_opt, 3, atom_opt, autojustify, split_opt,het_opt);
+                    ter_opt, 3, atom_opt, autojustify, split_opt,het_opt,
+                    chain2parse);
             if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
@@ -276,6 +278,11 @@ size_t get_PDB_lines(const string filename,
                 else     select_atom=(atom==atom_opt);
                 if (select_atom)
                 {
+                    if (chain2parse.size() && ( (line[21]==' ' && 
+                        find(chain2parse.begin(),chain2parse.end(), "_"
+                            )==chain2parse.end())|| (line[21]!=' ' && 
+                        find(chain2parse.begin(), chain2parse.end(),
+                            string(1,line[21]))==chain2parse.end()))) continue;
                     if (!chainID)
                     {
                         chainID=line[21];
@@ -552,6 +559,12 @@ size_t get_PDB_lines(const string filename,
                  asym_id=line_vec[_atom_site["auth_asym_id"]];
             else asym_id=line_vec[_atom_site["label_asym_id"]];
             if (asym_id==".") asym_id=" ";
+
+            if (chain2parse.size() && ( (asym_id==" " && 
+                find(chain2parse.begin(),chain2parse.end(), "_"
+                )==chain2parse.end())|| (asym_id!=" " && 
+                find(chain2parse.begin(), chain2parse.end(),asym_id
+                )==chain2parse.end()))) continue;
             
             if (_atom_site.count("pdbx_PDB_model_num") && 
                 model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])

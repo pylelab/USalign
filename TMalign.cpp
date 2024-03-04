@@ -9,7 +9,7 @@ void print_version()
     cout << 
 "\n"
 " **********************************************************************\n"
-" * TM-align (Version 20220623): protein and RNA structure alignment   *\n"
+" * TM-align (Version 20240303): protein and RNA structure alignment   *\n"
 " * References: Y Zhang, J Skolnick. Nucl Acids Res 33, 2302-9 (2005)  *\n"
 " *             S Gong, C Zhang, Y Zhang. Bioinformatics, bz282 (2019) *\n"
 " * Please email comments and suggestions to yangzhanglab@umich.edu    *\n"
@@ -205,6 +205,8 @@ int main(int argc, char *argv[])
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain1_list; // only when -dir1 is set
     vector<string> chain2_list; // only when -dir2 is set
+    vector<string> chain2parse1;
+    vector<string> chain2parse2;
 
     for(int i = 1; i < argc; i++)
     {
@@ -252,6 +254,20 @@ int main(int argc, char *argv[])
             if (i_opt==1)
                 PrintErrorAndQuit("ERROR! -I and -i cannot be used together");
             fname_lign = argv[i + 1];      i_opt = 3; i++;
+        }
+        else if (!strcmp(argv[i], "-chain1") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain1");
+            split(argv[i+1],chain2parse1,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-chain2") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain2");
+            split(argv[i+1],chain2parse2,',');
+            i++;
         }
         else if (!strcmp(argv[i], "-m") && i < (argc-1) )
         {
@@ -451,7 +467,8 @@ int main(int argc, char *argv[])
         /* parse chain 1 */
         xname=chain1_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
-            ter_opt, infmt1_opt, atom_opt, false, split_opt, het_opt);
+            ter_opt, infmt1_opt, atom_opt, false, split_opt, het_opt,
+            chain2parse1);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -492,7 +509,7 @@ int main(int argc, char *argv[])
                     yname=chain2_list[j];
                     ychainnum=get_PDB_lines(yname, PDB_lines2, chainID_list2,
                         mol_vec2, ter_opt, infmt2_opt, atom_opt, false, 
-                        split_opt, het_opt);
+                        split_opt, het_opt, chain2parse2);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -625,6 +642,8 @@ int main(int argc, char *argv[])
     chain1_list.clear();
     chain2_list.clear();
     sequence.clear();
+    vector<string>().swap(chain2parse1);
+    vector<string>().swap(chain2parse2);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;

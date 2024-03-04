@@ -31,6 +31,10 @@ void print_extra_help()
 "             1: SPICKER format\n"
 "             2: xyz format\n"
 "             3: PDBx/mmCIF format\n"
+"    -chain   Chains to parse in structure_2. Use _ for a chain without chain ID.\n"
+"             Multiple chains can be separated by commas, e.g.,\n"
+"             USalign -chain1 C,D,E,F 5jdo.pdb -chain2 A,B,C,D 3wtg.pdb -ter 0\n"
+"\n"
     <<endl;
 }
 
@@ -175,6 +179,7 @@ int main(int argc, char *argv[])
     string dir_opt   ="";    // set -dir to empty
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain_list;
+    vector<string> chain2parse;
     map<string, map<string,bool> > init_cluster;
 
     for(int i = 1; i < argc; i++)
@@ -261,6 +266,13 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-init") && i < (argc-1) )
         {
             read_init_cluster(argv[i+1],init_cluster); i++;
+        }
+        else if (!strcmp(argv[i], "-chain") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chain2");
+            split(argv[i+1],chain2parse,',');
+            i++;
         }
         else if (xname.size() == 0) xname=argv[i];
         else PrintErrorAndQuit(string("ERROR! Undefined option ")+argv[i]);
@@ -351,7 +363,8 @@ int main(int argc, char *argv[])
     {
         xname=chain_list[i];
         newchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
-            mol_vec, ter_opt, infmt_opt, atom_opt, false, split_opt, het_opt);
+            mol_vec, ter_opt, infmt_opt, atom_opt, false, split_opt, het_opt,
+            chain2parse);
         if (!newchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -767,6 +780,7 @@ int main(int argc, char *argv[])
     clust_mem_vec.clear();
     chainID_list.clear();
     clust_repr_map.clear();
+    vector<string>().swap(chain2parse);
     map<string, map<string,bool> >().swap(init_cluster);
 
     t2 = clock();
