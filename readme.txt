@@ -2,10 +2,10 @@
    US-align: universal structure alignment of monomeric and complex proteins
    and nucleic acids
 
-   References to cite:
-   (1) Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang
-       (2022) Nat Methods. 19(9), 1109-1115.
-   (2) Chengxin Zhang, Anna Marie Pyle (2022) iScience. 25(10), 105218.
+   References:
+   * Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang
+     (2022) Nat Methods. 19(9), 1109-1115.
+   * Chengxin Zhang, Anna Marie Pyle (2022) iScience. 25(10), 105218.
 
    DISCLAIMER:
      Permission to use, copy, modify, and distribute this program for 
@@ -76,6 +76,7 @@
                acids and nucleotides
    2023/12/13: Refine chain assignment for -TMscore >=6 for large complex
    2023/12/22: Forbid chain assignment refinment for -chainmap
+   2024/03/04: -chain1 and -chain2 option
 ===============================================================================
 
 =========================
