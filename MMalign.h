@@ -1,6 +1,19 @@
 #include <cfloat>
 #include "se.h"
 
+void print_assign_list(int *assign1_list, const int chain1_num,
+    const vector<string> &chainID_list1,
+    const vector<string> &chainID_list2)
+{
+    int i,j;
+    for (i=0;i<chain1_num;i++)
+    {
+        j=assign1_list[i];
+        if (j>=0)
+            cout<<chainID_list1[i]<<'\t'<<chainID_list2[j]<<endl;
+    }
+}
+
 /* count the number of nucleic acid chains (na_chain_num) and
  * protein chains (aa_chain_num) in a complex */
 int count_na_aa_chain_num(int &na_chain_num,int &aa_chain_num,
@@ -1216,7 +1229,7 @@ double MMalign_search(
     int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool fast_opt, const int i_opt=3)
+    double d0_scale, bool fast_opt, const int i_opt=3, const int byresi_opt=0)
 {
     double total_score=0;
     int i,j;
@@ -1325,13 +1338,19 @@ double MMalign_search(
 
             double Lnorm_ass=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_ass=len_na;
+            vector<string> sequence_tmp;
+            if (byresi_opt)
+            {
+                sequence_tmp.push_back(seqxA_mat[i][j]);
+                sequence_tmp.push_back(seqyA_mat[i][j]);
+            }
 
             /* entry function for structure alignment */
             se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                xlen, ylen, sequence, Lnorm_ass, d0_scale,
-                0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
+                xlen, ylen, sequence_tmp, Lnorm_ass, d0_scale,
+                byresi_opt, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
 
             /* print result */
             seqxA_mat[i][j]=seqxA;
@@ -1344,6 +1363,7 @@ double MMalign_search(
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
+            vector<string>().swap(sequence_tmp);
 
             delete[]seqy;
             delete[]secy;
@@ -1354,6 +1374,20 @@ double MMalign_search(
         delete[]secx;
         DeleteArray(&xa,xlen);
         DeleteArray(&xt,xlen);
+    }
+    if (byresi_opt)
+    {
+        sequence[0]="";
+        sequence[1]="";
+        for (i=0;i<chain1_num;i++)
+        {
+            j=assign1_list[i];
+            if (j>=0)
+            {
+                sequence[0]+=seqxA_mat[i][j];
+                sequence[1]+=seqyA_mat[i][j];
+            }
+        }
     }
     return total_score;
 }
@@ -1626,7 +1660,8 @@ void MMalign_iter(double & max_total_score, const int max_iter,
     int len_aa, int len_na, int chain1_num, int chain2_num, double **TMave_mat,
     vector<vector<string> >&seqxA_mat, vector<vector<string> >&seqyA_mat,
     int *assign1_list, int *assign2_list, vector<string>&sequence,
-    double d0_scale, bool fast_opt, map<int,int> &chainmap)
+    double d0_scale, bool fast_opt, map<int,int> &chainmap,
+    const int byresi_opt=0)
 {
     /* tmp assignment */
     double total_score;
@@ -1650,7 +1685,7 @@ void MMalign_iter(double & max_total_score, const int max_iter,
             xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
             chain1_num, chain2_num, 
             TMave_tmp, seqxA_tmp, seqyA_tmp, assign1_tmp, assign2_tmp,
-            sequence, d0_scale, fast_opt);
+            sequence, d0_scale, fast_opt, 3, byresi_opt);
         if (chainmap.size())
         {
             int i,j;

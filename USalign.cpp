@@ -930,11 +930,12 @@ int MMalign(const string &xname, const string &yname,
                               // score was from monomeric chain superpositions
     int max_iter=5-(int)((len_aa+len_na)/200);
     if (max_iter<2) max_iter=2;
-    if (byresi_opt==0) MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec,
+    //if (byresi_opt==0) 
+        MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec,
         seqx_vec, seqy_vec, secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec,
         ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
         chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
-        sequence, d0_scale, fast_opt, chainmap);
+        sequence, d0_scale, fast_opt, chainmap, byresi_opt);
     
     if (byresi_opt && aln_chain_num>=4 && is_oligomer && chainmap.size()==0) // oligomer alignment
     {
