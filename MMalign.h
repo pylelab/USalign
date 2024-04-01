@@ -1377,8 +1377,10 @@ double MMalign_search(
     }
     if (byresi_opt)
     {
-        sequence[0]="";
-        sequence[1]="";
+        if (sequence.size()<2) sequence.push_back("");
+        else sequence[0]="";
+        if (sequence.size()<2) sequence.push_back("");
+        else sequence[1]="";
         for (i=0;i<chain1_num;i++)
         {
             j=assign1_list[i];

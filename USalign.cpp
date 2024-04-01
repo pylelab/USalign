@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20240303)                                      *\n"
+" * US-align (Version 20240319)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
@@ -3230,7 +3230,7 @@ int main(int argc, char *argv[])
             <<" RasMol output due to limitations in PDB file format. "
             <<"When -mm is used, -o is recommended over -rasmol"<<endl;
         else if (mm_opt==0) cerr<<"WARNING! Only the superposition of the"
-            <<"last aligned chain pair will be generated"<<endl;
+            <<" last aligned structure pair will be generated"<<endl;
     }
 
     if (closeK_opt<0)

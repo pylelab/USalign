@@ -77,6 +77,7 @@
    2023/12/13: Refine chain assignment for -TMscore >=6 for large complex
    2023/12/22: Forbid chain assignment refinment for -chainmap
    2024/03/04: -chain1 and -chain2 option
+   2024/03/19: chain mapping for trimer -TMscore
 ===============================================================================
 
 =========================

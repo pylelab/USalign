@@ -2572,7 +2572,7 @@ void output_results(const string xname, const string yname,
             TM2, TM1, rmsd, Liden/xlen, Liden/ylen, (n_ali8>0)?Liden/n_ali8:0,
             xlen, ylen, n_ali8);
     }
-    cout << endl;
+    if (outfmt_opt<5) cout << endl;
 
     if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
 
