@@ -118,6 +118,8 @@ int main(int argc, char *argv[])
     vector<string> chain2_list; // only when -dir2 is set
     vector<string> chain2parse1;
     vector<string> chain2parse2;
+    vector<string> model2parse1;
+    vector<string> model2parse2;
     int    glocal    =0;
 
     for(int i = 1; i < argc; i++)
@@ -190,6 +192,20 @@ int main(int argc, char *argv[])
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -chain2");
             split(argv[i+1],chain2parse2,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model1") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model1");
+            split(argv[i+1],model2parse1,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model2") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model2");
+            split(argv[i+1],model2parse2,',');
             i++;
         }
         else if (xname.size() == 0) xname=argv[i];
@@ -267,7 +283,7 @@ int main(int argc, char *argv[])
                 chainID_list1, mol_vec1, ter_opt, split_opt);
         else xchainnum=get_PDB_lines(xname, PDB_lines1, chainID_list1, mol_vec1,
             ter_opt, infmt1_opt, atom_opt, autojustify, split_opt, het_opt,
-            chain2parse1);
+            chain2parse1, model2parse1);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -304,7 +320,7 @@ int main(int argc, char *argv[])
                     else ychainnum=get_PDB_lines(yname, PDB_lines2,
                             chainID_list2, mol_vec2, ter_opt, infmt2_opt,
                             atom_opt, autojustify, split_opt, het_opt,
-                            chain2parse2);
+                            chain2parse2, model2parse2);
                     if (!ychainnum)
                     {
                         cerr<<"Warning! Cannot parse file: "<<yname
@@ -390,5 +406,7 @@ int main(int argc, char *argv[])
     chain2_list.clear();
     vector<string>().swap(chain2parse1);
     vector<string>().swap(chain2parse2);
+    vector<string>().swap(model2parse1);
+    vector<string>().swap(model2parse2);
     return 0;
 }

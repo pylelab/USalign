@@ -152,7 +152,8 @@ size_t get_PDB_lines(const string filename,
     vector<vector<string> >&PDB_lines, vector<string> &chainID_list,
     vector<int> &mol_vec, const int ter_opt, const int infmt_opt,
     const string atom_opt, const bool autojustify, const int split_opt, 
-    const int het_opt, const vector<string>&chain2parse)
+    const int het_opt, const vector<string>&chain2parse,
+    const vector<string>&model2parse)
 {
     size_t i=0; // resi i.e. atom index
     string line;
@@ -161,7 +162,7 @@ size_t get_PDB_lines(const string filename,
     bool select_atom=false;
     size_t model_idx=0;
     vector<string> tmp_str_vec;
-    
+
     int compress_type=0; // uncompressed file
     ifstream fin;
 #ifndef REDI_PSTREAM_H_SEEN
@@ -224,6 +225,7 @@ size_t get_PDB_lines(const string filename,
 
         string atom;
         string resn;
+        string model_index="1";
         while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
         {
             if  (compress_type==-1) getline(cin, line);
@@ -233,7 +235,14 @@ size_t get_PDB_lines(const string filename,
                                   line.compare(0,1,"#")==0)) // PDBx/mmCIF
                 return get_PDB_lines(filename,PDB_lines,chainID_list, mol_vec,
                     ter_opt, 3, atom_opt, autojustify, split_opt,het_opt,
-                    chain2parse);
+                    chain2parse, model2parse);
+            if (model2parse.size())
+            {
+                if (line.size()>=6 && line.compare(0,5,"MODEL")==0)
+                    model_index=Trim(line.substr(5,9));
+                else if (find(model2parse.begin(),model2parse.end(),
+                    model_index)==model2parse.end()) continue;
+            }
             if (i > 0)
             {
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
@@ -283,6 +292,7 @@ size_t get_PDB_lines(const string filename,
                             )==chain2parse.end())|| (line[21]!=' ' && 
                         find(chain2parse.begin(), chain2parse.end(),
                             string(1,line[21]))==chain2parse.end()))) continue;
+                        
                     if (!chainID)
                     {
                         chainID=line[21];
@@ -565,11 +575,17 @@ size_t get_PDB_lines(const string filename,
                 )==chain2parse.end())|| (asym_id!=" " && 
                 find(chain2parse.begin(), chain2parse.end(),asym_id
                 )==chain2parse.end()))) continue;
+
+            if (model2parse.size() && _atom_site.count("pdbx_PDB_model_num") &&
+                find(model2parse.begin(), model2parse.end(),
+                    line_vec[_atom_site["pdbx_PDB_model_num"]]
+                    )==model2parse.end()) continue;
             
             if (_atom_site.count("pdbx_PDB_model_num") && 
                 model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])
             {
                 model_index=line_vec[_atom_site["pdbx_PDB_model_num"]];
+
                 if (PDB_lines.size() && ter_opt>=1) break;
                 if (PDB_lines.size()==0 || split_opt>=1)
                 {

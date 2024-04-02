@@ -1056,7 +1056,7 @@ void parse_chain_list(const vector<string>&chain_list,
     const string mol_opt, const int infmt_opt, const string atom_opt,
     const bool autojustify, const int mirror_opt, const int het_opt,
     int &len_aa, int &len_na,  const int o_opt, vector<string>&resi_vec,
-    const vector<string> &chain2parse)
+    const vector<string> &chain2parse, const vector<string> &model2parse)
 {
     size_t i;
     int chain_i,r;
@@ -1079,7 +1079,7 @@ void parse_chain_list(const vector<string>&chain_list,
         name=chain_list[i];
         chainnum=get_PDB_lines(name, PDB_lines, chainID_list, mol_vec,
             ter_opt, infmt_opt, atom_opt, autojustify, split_opt, het_opt,
-            chain2parse);
+            chain2parse, model2parse);
         if (!chainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<name

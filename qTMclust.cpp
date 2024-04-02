@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
     int    byresi_opt=0;     // set -byresi to 0
     vector<string> chain_list;
     vector<string> chain2parse;
+    vector<string> model2parse;
     map<string, map<string,bool> > init_cluster;
 
     for(int i = 1; i < argc; i++)
@@ -270,8 +271,15 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-chain") )
         {
             if (i>=(argc-1)) 
-                PrintErrorAndQuit("ERROR! Missing value for -chain2");
+                PrintErrorAndQuit("ERROR! Missing value for -chain");
             split(argv[i+1],chain2parse,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model");
+            split(argv[i+1],model2parse,',');
             i++;
         }
         else if (xname.size() == 0) xname=argv[i];
@@ -364,7 +372,7 @@ int main(int argc, char *argv[])
         xname=chain_list[i];
         newchainnum=get_PDB_lines(xname, PDB_lines, chainID_list,
             mol_vec, ter_opt, infmt_opt, atom_opt, false, split_opt, het_opt,
-            chain2parse);
+            chain2parse, model2parse);
         if (!newchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname
@@ -781,6 +789,7 @@ int main(int argc, char *argv[])
     chainID_list.clear();
     clust_repr_map.clear();
     vector<string>().swap(chain2parse);
+    vector<string>().swap(model2parse);
     map<string, map<string,bool> >().swap(init_cluster);
 
     t2 = clock();

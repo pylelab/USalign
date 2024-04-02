@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     string dir_opt   ="";    // set -dir to empty
     vector<string> chain_list; // only when -dir1 is set
     vector<string> chain2parse;
+    vector<string> model2parse;
 
     int nameIdx = 0;
     for(int i = 1; i < argc; i++)
@@ -111,6 +112,13 @@ int main(int argc, char *argv[])
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -chain");
             split(argv[i+1],chain2parse,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model");
+            split(argv[i+1],model2parse,',');
             i++;
         }
         else xname=argv[i];
@@ -182,7 +190,7 @@ int main(int argc, char *argv[])
         xname=chain_list[i];
         xchainnum=get_PDB_lines(xname, PDB_lines, chainID_list, mol_vec,
             ter_opt, infmt_opt, atom_opt, autojustify, split_opt, het_opt,
-            chain2parse);
+            chain2parse, model2parse);
         if (!xchainnum)
         {
             cerr<<"Warning! Cannot parse file: "<<xname

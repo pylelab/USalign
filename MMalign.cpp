@@ -172,6 +172,8 @@ int main(int argc, char *argv[])
     vector<string> chain2_list; // only when -dir2 is set
     vector<string> chain2parse1;
     vector<string> chain2parse2;
+    vector<string> model2parse1;
+    vector<string> model2parse2;
 
     for(int i = 1; i < argc; i++)
     {
@@ -222,6 +224,20 @@ int main(int argc, char *argv[])
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -chain2");
             split(argv[i+1],chain2parse2,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model1") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model1");
+            split(argv[i+1],model2parse1,',');
+            i++;
+        }
+        else if (!strcmp(argv[i], "-model2") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -model2");
+            split(argv[i+1],model2parse2,',');
             i++;
         }
         else if (!strcmp(argv[i], "-m") && i < (argc-1) )
@@ -363,12 +379,12 @@ int main(int argc, char *argv[])
     parse_chain_list(chain1_list, xa_vec, seqx_vec, secx_vec, mol_vec1,
         xlen_vec, chainID_list1, ter_opt, split_opt, mol_opt, infmt1_opt,
         atom_opt, false, mirror_opt, het_opt, xlen_aa, xlen_na, o_opt,
-        resi_vec1, chain2parse1);
+        resi_vec1, chain2parse1, model2parse1);
     if (xa_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 1");
     parse_chain_list(chain2_list, ya_vec, seqy_vec, secy_vec, mol_vec2,
         ylen_vec, chainID_list2, ter_opt, split_opt, mol_opt, infmt2_opt,
         atom_opt, false, 0, het_opt, ylen_aa, ylen_na, o_opt,
-        resi_vec2, chain2parse2);
+        resi_vec2, chain2parse2, model2parse2);
     if (ya_vec.size()==0) PrintErrorAndQuit("ERROR! 0 chain in complex 2");
     int len_aa=getmin(xlen_aa,ylen_aa);
     int len_na=getmin(xlen_na,ylen_na);
@@ -808,6 +824,8 @@ int main(int argc, char *argv[])
     vector<string>().swap(resi_vec2);  // residue index for chain2
     vector<string>().swap(chain2parse1);
     vector<string>().swap(chain2parse2);
+    vector<string>().swap(model2parse1);
+    vector<string>().swap(model2parse2);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1)/CLOCKS_PER_SEC;
