@@ -226,6 +226,8 @@ size_t get_PDB_lines(const string filename,
         string atom;
         string resn;
         string model_index="1";
+        map<string, char> alt_id_dict; // resi -> alt_id
+        string resi_chain;
         while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
         {
             if  (compress_type==-1) getline(cin, line);
@@ -248,9 +250,13 @@ size_t get_PDB_lines(const string filename,
                 if      (ter_opt>=1 && line.compare(0,3,"END")==0) break;
                 else if (ter_opt>=3 && line.compare(0,3,"TER")==0) break;
             }
-            if (split_opt && line.compare(0,3,"END")==0) chainID=0;
-            if (line.size()>=54 && (line[16]==' ' || line[16]=='A') && (
-                (line.compare(0, 6, "ATOM  ")==0) || 
+            if (line.compare(0,3,"END")==0)
+            {
+                if (split_opt) chainID=0;
+                map<string, char> ().swap(alt_id_dict);
+            }
+            if (line.size()>=54 && //(line[16]==' ' || line[16]=='A') && 
+               ((line.compare(0, 6, "ATOM  ")==0) || 
                 (line.compare(0, 6, "HETATM")==0 && het_opt==1) ||
                 (line.compare(0, 6, "HETATM")==0 && het_opt==2 && 
                  line.compare(17,3, "MSE")==0)))
@@ -287,6 +293,11 @@ size_t get_PDB_lines(const string filename,
                 else     select_atom=(atom==atom_opt);
                 if (select_atom)
                 {
+                    resi_chain=line.substr(21,6);
+                    if (alt_id_dict.count(resi_chain)==0)
+                        alt_id_dict[resi_chain]=line[16];
+                    else if (alt_id_dict[resi_chain]!=line[16]) continue;
+
                     if (chain2parse.size() && ( (line[21]==' ' && 
                         find(chain2parse.begin(),chain2parse.end(), "_"
                             )==chain2parse.end())|| (line[21]!=' ' && 
@@ -355,6 +366,8 @@ size_t get_PDB_lines(const string filename,
         }
 
         map<string,char>().swap(aa3to1);
+        map<string, char>().swap(alt_id_dict); // resi -> alt_id
+        string ().swap(resi_chain);
     }
     else if (infmt_opt==1) // SPICKER format
     {
@@ -455,6 +468,8 @@ size_t get_PDB_lines(const string filename,
         string prev_resi="";
         string model_index=""; // the same as model_idx but type is string
         stringstream i8_stream;
+        map<string, string> alt_id_dict; // resi -> alt_id
+        string resi_chain;
         while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
         {
             if (compress_type==-1)  getline(cin, line);
@@ -528,11 +543,6 @@ size_t get_PDB_lines(const string filename,
                  (het_opt==2 && line_vec[_atom_site["label_comp_id"]]!="MSE")))
                 ) continue;
             
-            alt_id=".";
-            if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
-                alt_id=line_vec[_atom_site["label_alt_id"]];
-            if (alt_id!="." && alt_id!="A") continue;
-
             atom=line_vec[_atom_site["label_atom_id"]];
             if (atom[0]=='"') atom=atom.substr(1);
             if (atom.size() && atom[atom.size()-1]=='"')
@@ -580,7 +590,7 @@ size_t get_PDB_lines(const string filename,
                 find(model2parse.begin(), model2parse.end(),
                     line_vec[_atom_site["pdbx_PDB_model_num"]]
                     )==model2parse.end()) continue;
-            
+
             if (_atom_site.count("pdbx_PDB_model_num") && 
                 model_index!=line_vec[_atom_site["pdbx_PDB_model_num"]])
             {
@@ -602,6 +612,26 @@ size_t get_PDB_lines(const string filename,
                     //else
                         //chainID_list.push_back("");
                 }
+                map<string, string>().swap(alt_id_dict);
+            }
+            
+            if (_atom_site.count("auth_seq_id"))
+                 resi=line_vec[_atom_site["auth_seq_id"]];
+            else resi=line_vec[_atom_site["label_seq_id"]];
+            if (_atom_site.count("pdbx_PDB_ins_code") && 
+                line_vec[_atom_site["pdbx_PDB_ins_code"]]!="?")
+                resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
+            else resi+=" ";
+            
+            if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
+            {
+                alt_id=line_vec[_atom_site["label_alt_id"]];
+                resi_chain=asym_id+resi;
+                if (alt_id_dict.count(resi_chain)==0)
+                    alt_id_dict[resi_chain]=alt_id;
+                else if (alt_id_dict.count(resi_chain) && alt_id!=alt_id_dict[resi_chain])
+                    continue;
+                //if (alt_id!="." && alt_id!="A") continue;
             }
 
             if (prev_asym_id!=asym_id)
@@ -627,14 +657,6 @@ size_t get_PDB_lines(const string filename,
             if (AA[0]==' ' && (AA[1]=='D'||AA[1]==' ')) mol_vec.back()++;
             else mol_vec.back()--;
 
-            if (_atom_site.count("auth_seq_id"))
-                 resi=line_vec[_atom_site["auth_seq_id"]];
-            else resi=line_vec[_atom_site["label_seq_id"]];
-            if (_atom_site.count("pdbx_PDB_ins_code") && 
-                line_vec[_atom_site["pdbx_PDB_ins_code"]]!="?")
-                resi+=line_vec[_atom_site["pdbx_PDB_ins_code"]][0];
-            else resi+=" ";
-
             if (prev_resi==resi && atom_opt!="PC4'")
                 cerr<<"Warning! Duplicated residue "<<resi<<endl;
             prev_resi=resi;
@@ -654,6 +676,8 @@ size_t get_PDB_lines(const string filename,
         alt_id.clear();
         asym_id.clear();
         AA.clear();
+        map<string, string>().swap(alt_id_dict);
+        resi_chain.clear();
     }
 
     if      (compress_type>=1) fin_gz.close();

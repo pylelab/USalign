@@ -78,6 +78,7 @@
    2023/12/22: Forbid chain assignment refinment for -chainmap
    2024/03/04: -chain1 and -chain2 option
    2024/03/19: chain mapping for trimer -TMscore
+   2024/05/10: better handling of alternative location indicator, e.g., 5e1n
 ===============================================================================
 
 =========================
