@@ -267,7 +267,7 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     int atom_site_pos;
     vector<string> line_vec;
     string group_PDB="ATOM  ";
-    string alt_id=".";  // alternative location indicator
+    string alt_id=" ";  // alternative location indicator
     string asym_id="."; // this is similar to chainID, except that
                         // chainID is char while asym_id is a string
                        // with possibly multiple char
@@ -277,6 +277,8 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     string atom="";
     string model_index=""; // the same as model_idx but type is string
     stringstream i8_stream;
+    map<string, string> alt_id_dict; // resi -> alt_id
+    string resi_chain;
     while ((compress_type==-1)?cin.good():(compress_type?fin_gz.good():fin.good()))
     {
         if  (compress_type==-1) getline(cin, line);
@@ -360,10 +362,10 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
         }
         else if (group_PDB!="ATOM  ") continue;
             
-        alt_id=".";
-        if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
-            alt_id=line_vec[_atom_site["label_alt_id"]];
-        if (alt_id!="." && alt_id!="A") continue;
+        //alt_id=".";
+        //if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
+            //alt_id=line_vec[_atom_site["label_alt_id"]];
+        //if (alt_id!="." && alt_id!="A") continue;
 
         if (resn.size()==1)
         {
@@ -412,6 +414,22 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
         {
             if (PDB_lines.size()) break;
             model_index=line_vec[_atom_site["pdbx_PDB_model_num"]];
+            map<string, string>().swap(alt_id_dict);
+        }
+
+        if (_atom_site.count("label_alt_id")) // in 39.4 % of entries
+        {
+            alt_id=line_vec[_atom_site["label_alt_id"]];
+            if (alt_id==".") alt_id=" ";
+            else
+            {
+                resi_chain=asym_id+resi;
+                if (alt_id_dict.count(resi_chain)==0)
+                    alt_id_dict[resi_chain]=alt_id;
+                else if (alt_id_dict.count(resi_chain) &&
+                       alt_id!=alt_id_dict[resi_chain]) continue;
+                //if (alt_id!="." && alt_id!="A") continue;
+            }
         }
 
         if (prev_asym_id!=asym_id)
@@ -424,7 +442,7 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
         a++;
         a%=100000;
         i8_stream<<group_PDB
-            <<setw(5)<<a<<" "<<atom<<" "<<resn<<" "<<asym_id[asym_id.size()-1]
+            <<setw(5)<<a<<" "<<atom<<alt_id<<resn<<" "<<asym_id[asym_id.size()-1]
             <<setw(5)<<resi<<"   "
             <<setw(8)<<line_vec[_atom_site["Cartn_x"]].substr(0,8)
             <<setw(8)<<line_vec[_atom_site["Cartn_y"]].substr(0,8)
@@ -445,6 +463,8 @@ size_t get_all_mmcif_lines(const string filename, const string chain_opt,
     alt_id.clear();
     asym_id.clear();
     resn.clear();
+    map<string, string>().swap(alt_id_dict);
+    resi_chain.clear();
 
     if (compress_type>=0)
     {

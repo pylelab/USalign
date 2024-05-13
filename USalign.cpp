@@ -193,7 +193,7 @@ void print_help(bool h_opt=false)
 "      -i  Use alignment specified by 'align.txt' as an initial alignment\n"
 "\n"
 "      -m  Output rotation matrix for superposition, e.g., '-m matrix.txt'\n"
-"          output the matrix to 'matrix.txt', '-m -' prints to stdout\n"
+"          prints the matrix to 'matrix.txt'; '-m -' prints to stdout.\n"
 "\n"
 "      -d  TM-score scaled by an assigned d0, e.g., '-d 3.5' reports MaxSub\n"
 "          score, where d0 is 3.5 Angstrom. -d does not change final alignment.\n"
