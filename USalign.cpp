@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20240510)                                      *\n"
+" * US-align (Version 20240602)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
@@ -1559,7 +1559,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     const int het_opt, const string &atom_opt, const bool autojustify,
     const string &mol_opt, const string &dir_opt, const int byresi_opt,
     const vector<string> &chain_list, const vector<string> &chain2parse,
-    const vector<string> &model2parse)
+    const vector<string> &model2parse, const bool se_opt)
 {
     /* declare previously global variables */
     vector<vector<vector<double> > >a_vec;  // atomic structure
@@ -1640,7 +1640,36 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             int n_ali8=0;
 
             /* entry function for structure alignment */
-            TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            if (se_opt)
+            {
+                int *invmap = new int[ylen+1];
+                u0[0][0]=u0[1][1]=u0[2][2]=1;
+                u0[0][1]=         u0[0][2]=
+                u0[1][0]=         u0[1][2]=
+                u0[2][0]=         u0[2][1]=
+                t0[0]   =t0[1]   =t0[2]   =0;
+                se_main(
+                    xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                    0, false, u_opt, false, mol_type, outfmt_opt, invmap);
+                if (outfmt_opt>=2) 
+                {
+                    Liden=L_ali=0;
+                    int r1,r2;
+                    for (r2=0;r2<ylen;r2++)
+                    {
+                        r1=invmap[r2];
+                        if (r1<0) continue;
+                        L_ali+=1;
+                        Liden+=(seqx[r1]==seqy[r2]);
+                    }
+                }
+                delete [] invmap;
+            }
+            else TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                 seqM, seqxA, seqyA,
@@ -1740,7 +1769,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         }
         //cout<<"repr="<<repr_idx<<"; "<<chain_list[repr_idx]<<"; TM="<<repr_TM<<endl;
 
-        /* superpose superpose */
+        /* superpose */
         yname=chain_list[repr_idx].substr(dir_opt.size())+chainID_list[repr_idx];
         double **xt;
         vector<pair<double,int> >TM_pair_vec; // TM vs chain
@@ -1813,7 +1842,36 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             int n_ali8=0;
 
             /* entry function for structure alignment */
-            TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            if (se_opt)
+            {
+                int *invmap = new int[ylen+1];
+                u0[0][0]=u0[1][1]=u0[2][2]=1;
+                u0[0][1]=         u0[0][2]=
+                u0[1][0]=         u0[1][2]=
+                u0[2][0]=         u0[2][1]=
+                t0[0]   =t0[1]   =t0[2]   =0;
+                se_main(
+                    xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                    2, a_opt, u_opt, d_opt, mol_type, outfmt_opt, invmap);
+                if (outfmt_opt>=2) 
+                {
+                    Liden=L_ali=0;
+                    int r1,r2;
+                    for (r2=0;r2<ylen;r2++)
+                    {
+                        r1=invmap[r2];
+                        if (r1<0) continue;
+                        L_ali+=1;
+                        Liden+=(seqx[r1]==seqy[r2]);
+                    }
+                }
+                delete [] invmap;
+            }
+            else TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                 seqM, seqxA, seqyA,
@@ -3357,7 +3415,7 @@ int main(int argc, char *argv[])
         u_opt, d_opt, full_opt, TMcut, infmt1_opt, ter_opt,
         split_opt, outfmt_opt, fast_opt, het_opt,
         atom_opt, autojustify, mol_opt, dir_opt, byresi_opt, chain1_list,
-        chain2parse1, model2parse1);
+        chain2parse1, model2parse1, se_opt);
     else if (mm_opt==5 || mm_opt==6) SOIalign(xname, yname, fname_super, fname_lign,
         fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
         a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
