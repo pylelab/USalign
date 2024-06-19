@@ -505,7 +505,7 @@ void get_SOI_initial_assign(double **xk, double **yk, const int closeK_opt,
     /* initial assignment */
     for (j=0;j<ylen;j++) invmap[j]=-1;
     if (mm_opt==6) NWDP_TM(score, path, val, xlen, ylen, -0.6, invmap);
-    for (j=0; j<ylen;j++) i=invmap[j];
+    for (j=0; j<ylen;j++) i=invmap[j]; /* !!! what is this line doing??? */
     soi_egs(score, xlen, ylen, invmap, secx_bond, secy_bond, mm_opt);
 
     /* clean up */

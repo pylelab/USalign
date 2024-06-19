@@ -2504,13 +2504,25 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                             }
                         }
                     }
-                    else SOIalign_main(xa, ya, xk, yk, closeK_opt,
-                        seqx, seqy, secx, secy,
-                        t0, u0, TM1, TM2, TM3, TM4, TM5,
-                        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA, invmap,
-                        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
-                        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+                    else SOIalign_main(xa, ya, 
+                        xk, yk, 
+                        closeK_opt,
+                        seqx, seqy, 
+                        secx, secy, // END INPUT DATA
+                        t0, u0, // START TO BE FILLED VARIABLES
+                        TM1, TM2, 
+                        TM3, TM4, TM5,
+                        d0_0, TM_0, 
+                        d0A, d0B, 
+                        d0u, d0a, d0_out,
+                        seqM, seqxA, seqyA, 
+                        invmap,
+                        rmsd0, 
+                        L_ali, Liden, 
+                        TM_ali, rmsd_ali, n_ali, 
+                        n_ali8,
+                        xlen, ylen, sequence, 
+                        Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
                         mol_vec1[chain_i]+mol_vec2[chain_j], dist_list,
                         secx_bond, secy_bond, mm_opt);
@@ -2521,15 +2533,23 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         xname.substr(dir1_opt.size()+dir_opt.size()+dirpair_opt.size()),
                         yname.substr(dir2_opt.size()+dir_opt.size()+dirpair_opt.size()),
                         chainID_list1[chain_i], chainID_list2[chain_j],
-                        xlen, ylen, t0, u0, TM1, TM2, TM3, TM4, TM5,
-                        rmsd0, d0_out, seqM.c_str(),
-                        seqxA.c_str(), seqyA.c_str(), Liden,
-                        n_ali8, L_ali, TM_ali, rmsd_ali, TM_0, d0_0,
-                        d0A, d0B, Lnorm_ass, d0_scale, d0a, d0u, 
-                        (m_opt?fname_matrix:"").c_str(),
-                        outfmt_opt, ter_opt, false, split_opt, o_opt,
-                        fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
-                        resi_vec1, resi_vec2);
+                        xlen, ylen, // IMPORTANT
+                        t0, u0, // IMPORTANT
+                        TM1, TM2, // IMPORTANT
+                        TM3, TM4, TM5, // only used if a_opt, d_opt, or u_opt
+                        rmsd0, d0_out, // IMPORTANT
+                        seqM.c_str(), seqxA.c_str(), seqyA.c_str(), // IMPORTANT
+                        Liden, n_ali8, // IMPORTANT
+                        L_ali, TM_ali, rmsd_ali, // `if i_opt` uses these
+                        TM_0, d0_0, // !!! not used???
+                        d0A, d0B, // IMPORTANT normalizing distance values for (y, 2, or A) target and (x, 1, or B) mobile structures
+                        Lnorm_ass, d0_scale, d0a, d0u, // !!! only used if a_opt, u_opt, or d_opt...
+                        (m_opt?fname_matrix:"").c_str(), // fname string for trans/rot matrix
+                        outfmt_opt, // option for output formatting style
+                        ter_opt, false, split_opt, o_opt, fname_super, // variables for outputting pymol/rasmol files
+                        i_opt, a_opt, u_opt, d_opt, // duh 
+                        mirror_opt, resi_vec1, resi_vec2 // variables only used for outputting visualization files
+                        );
                     if (outfmt_opt<=0)
                     {
                         cout<<"###############\t###############\t#########"<<endl;
