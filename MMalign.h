@@ -1271,12 +1271,13 @@ double MMalign_search(
     int n_ali8=0;
 
     double Lnorm_ass=len_aa+len_na;
+    vector<double> do_vec;
 
     /* entry function for structure alignment */
     TMalign_main(xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         i_opt, false, true, false, fast_opt, mol_type, -1);
 
@@ -1287,6 +1288,7 @@ double MMalign_search(
     delete [] secy;
     DeleteArray(&xa,xlen);
     DeleteArray(&ya,ylen);
+    do_vec.clear();
 
     /* re-compute chain level alignment */
     for (i=0;i<chain1_num;i++)
@@ -1347,7 +1349,7 @@ double MMalign_search(
 
             /* entry function for structure alignment */
             se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
-                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence_tmp, Lnorm_ass, d0_scale,
                 byresi_opt, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
@@ -1369,6 +1371,7 @@ double MMalign_search(
             delete[]secy;
             DeleteArray(&ya,ylen);
             delete[]invmap;
+            do_vec.clear();
         }
         delete[]seqx;
         delete[]secx;
@@ -1448,13 +1451,13 @@ void MMalign_final(
     double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
     int n_ali=0;
     int n_ali8=0;
-
+    vector<double>do_vec;
     double Lnorm_ass=len_aa+len_na;
 
     /* entry function for structure alignment */
     TMalign_main(xa, ya, seqx, seqy, secx, secy,
-        t0, u0, TM1, TM2, TM3, TM4, TM5,
-        d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+        t0, u0, TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
+        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         3, a_opt, false, d_opt, fast_opt, mol_type, -1);
@@ -1530,6 +1533,7 @@ void MMalign_final(
     sequence[0].clear();
     sequence[1].clear();
     sequence[2].clear();
+    do_vec.clear();
 
     if (!full_opt) return;
 
@@ -1580,7 +1584,7 @@ void MMalign_final(
             /* entry function for structure alignment */
             se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 1, a_opt, 2, d_opt, mol_vec1[i]+mol_vec2[j], 1, invmap);
         
@@ -1610,6 +1614,7 @@ void MMalign_final(
             delete[]secy;
             DeleteArray(&ya,ylen);
             delete[]invmap;
+            do_vec.clear();
         }
         delete[]seqx;
         delete[]secx;
@@ -2833,14 +2838,14 @@ void MMalign_dimer(double & total_score,
             rmsd0 = 0.0;
             Liden=0;
             int *invmap = new int[ylen+1];
-
+            vector<double> do_vec;
             double Lnorm_ass=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_ass=len_na;
 
             /* entry function for structure alignment */
             se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
 
@@ -2864,6 +2869,7 @@ void MMalign_dimer(double & total_score,
             delete[]secy;
             DeleteArray(&ya,ylen);
             delete[]invmap;
+            do_vec.clear();
         }
         delete[]seqx;
         delete[]secx;

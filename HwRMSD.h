@@ -98,6 +98,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     double rmsd_ali_tmp;
     double max_TM=0;
     double cur_TM=0;
+    vector<double>do_vec;
 
     /* initialize alignment */
     TM1=TM2=TM1_tmp=TM2_tmp=L_ali=-1;
@@ -133,7 +134,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
         /* derive new alignment */
         se_main(xt, ya, seqx, seqy, TM1_tmp, TM2_tmp, TM3_tmp, TM4_tmp,
             TM5_tmp, d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-            seqM_tmp, seqxA_tmp, seqyA_tmp, rmsd0_tmp, L_ali_tmp, Liden_tmp,
+            seqM_tmp, seqxA_tmp, seqyA_tmp, do_vec, 
+            rmsd0_tmp, L_ali_tmp, Liden_tmp,
             TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
             sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
             mol_type, 1, invmap_tmp);
@@ -165,7 +167,8 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
 
             se_main(xt, ya, seqx, seqy, TM1_tmp, TM2_tmp, TM3_tmp, TM4_tmp,
                 TM5_tmp, d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM_tmp, seqxA_tmp, seqyA_tmp, rmsd0_tmp, L_ali_tmp, Liden_tmp,
+                seqM_tmp, seqxA_tmp, seqyA_tmp, do_vec,
+                rmsd0_tmp, L_ali_tmp, Liden_tmp,
                 TM_ali_tmp, rmsd_ali_tmp, n_ali_tmp, n_ali8_tmp, xlen, ylen,
                 sequence, Lnorm_ass, d0_scale, i_opt==3, a_opt, u_opt, d_opt,
                 mol_type, 1, invmap_tmp);
@@ -239,6 +242,7 @@ int HwRMSD_main(double **xa, double **ya, const char *seqx, const char *seqy,
     DeleteArray(&xt, xlen);
     DeleteArray(&r1, minlen);
     DeleteArray(&r2, minlen);
+    do_vec.clear();
     return 0;
 }
 #endif

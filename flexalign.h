@@ -51,7 +51,7 @@ int flexalign_main(double **xa, double **ya,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA,
+    string &seqM, string &seqxA, string &seqyA, vector<double>&do_vec,
     double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
@@ -66,7 +66,7 @@ int flexalign_main(double **xa, double **ya,
     {
         TMalign_main(xa, ya, seqx, seqy, secx, secy, t0, u0,
             TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
-            d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+            d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass,
             d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
@@ -88,7 +88,7 @@ int flexalign_main(double **xa, double **ya,
     seqyA="";
     n_ali=n_ali8=0;
     se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5, d0_0, TM_0,
-        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+        d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
         a_opt, u_opt, d_opt, mol_type, 0, invmap, 1);
@@ -148,8 +148,8 @@ int flexalign_main(double **xa, double **ya,
         int n_ali8_h=0;
 
         TMalign_main(xa_h, ya_h, seqx_h, seqy_h, secx_h, secy_h, t0, u0,
-            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0_h, TM_0_h,
-            d0A_h, d0B_h, d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h,
+            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0_h, TM_0_h, d0A_h, d0B_h,
+            d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
             xlen_h, ylen_h, sequence, Lnorm_ass,
             d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
@@ -165,7 +165,7 @@ int flexalign_main(double **xa, double **ya,
         seqyA_h="";
         n_ali_h=n_ali8_h=0;
         se_main(xt, ya, seqx, seqy, TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0,
-            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h,
+            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali, Liden, TM_ali, rmsd_ali, n_ali_h, n_ali8_h,
             xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
             a_opt, u_opt, d_opt, mol_type, 0, invmap_h, 1);
@@ -209,8 +209,8 @@ int flexalign_main(double **xa, double **ya,
         n_ali=n_ali8=0;
 
         TMalign_main(xa_h, ya_h, seqx_h, seqy_h, secx_h, secy_h, t0, u0,
-            TM1, TM2, TM3, TM4, TM5, d0_0_h, TM_0_h,
-            d0A_h, d0B_h, d0u_h, d0a_h, d0_out_h, seqM, seqxA, seqyA,
+            TM1, TM2, TM3, TM4, TM5, d0_0_h, TM_0_h, d0A_h, d0B_h,
+            d0u_h, d0a_h, d0_out_h, seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali, n_ali8,
             xlen_h, ylen_h, sequence, Lnorm_ass,
             d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
@@ -224,7 +224,7 @@ int flexalign_main(double **xa, double **ya,
         seqyA="";
         n_ali=n_ali8=0;
         se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5, d0_0,
-            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
+            TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
             a_opt, u_opt, d_opt, mol_type, 0, invmap, 1);
@@ -324,8 +324,8 @@ int flexalign_main(double **xa, double **ya,
         int n_ali8_h=0;
 
         TMalign_main(xa_h, ya_h, seqx_h, seqy_h, secx_h, secy_h, t0, u0,
-            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0_h, TM_0_h,
-            d0A_h, d0B_h, d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h,
+            TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0_h, TM_0_h, d0A_h, d0B_h,
+            d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
             xlen_h, ylen_h, sequence, Lnorm_ass,
             d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
@@ -346,7 +346,7 @@ int flexalign_main(double **xa, double **ya,
         int* invmap_h=new int[ylen+1];
         for (j=0;j<ylen+1;j++) invmap_h[j]=invmap[j];
         se_main(xt, ya, seqx, seqy, TM1_h, TM2_h, TM3_h, TM4_h, TM5_h, d0_0, TM_0,
-            d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h,
+            d0A, d0B, d0u, d0a, d0_out, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali, Liden, TM_ali, rmsd_ali, n_ali_h, n_ali8_h,
             xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
             a_opt, u_opt, d_opt, mol_type, 0, invmap_h, hinge+1);

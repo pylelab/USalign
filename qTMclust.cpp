@@ -660,6 +660,7 @@ int main(int argc, char *argv[])
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
+            vector<double> do_vec;
             
             /* entry function for structure alignment */
             int status=TMalign_main(
@@ -667,7 +668,7 @@ int main(int argc, char *argv[])
                 &sec_vec[chain_i][0], &sec_vec[chain_j][0],
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
+                seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 i_opt, a_opt, u_opt, d_opt, overwrite_fast_opt,
@@ -680,6 +681,7 @@ int main(int argc, char *argv[])
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
+            do_vec.clear();
 
             double TM=TM3; // average length
             if      (s_opt==1) TM=TM2; // shorter length
@@ -712,7 +714,7 @@ int main(int argc, char *argv[])
                     &sec_vec[chain_i][0], &sec_vec[chain_j][0],
                     t0, u0, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
                     i_opt, a_opt, u_opt, d_opt, false,
@@ -720,6 +722,7 @@ int main(int argc, char *argv[])
                 seqM.clear();
                 seqxA.clear();
                 seqyA.clear();
+                do_vec.clear();
                 DeleteArray(&ya, ylen);
                 
                 TM=TM3;                // average length

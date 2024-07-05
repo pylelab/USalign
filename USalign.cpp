@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20240602)                                      *\n"
+" * US-align (Version 20240705)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
@@ -217,6 +217,8 @@ void print_help(bool h_opt=false)
 "          $ rasmol -script sup_all_atm       # full-atom whole chain\n"
 "          $ rasmol -script sup_all_atm_lig   # full-atom with all molecules\n"
 "\n"
+"     -do  Output distance of aligned residue pairs\n"
+"\n"
 //"      -h  Print the full help message, including additional options\n"
 //"\n"
 "Example usages ('gunzip' program is needed to read .gz compressed files):\n"
@@ -249,7 +251,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
     const vector<string> &chain2parse2, const vector<string> &model2parse1,
     const vector<string> &model2parse2, const int byresi_opt,
     const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const bool se_opt)
+    const bool se_opt, const bool do_opt)
 {
     /* declare previously global variables */
     vector<vector<string> >PDB_lines1; // text of chain1
@@ -373,13 +375,14 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                     int n_ali=0;
                     int n_ali8=0;
                     bool force_fast_opt=(getmin(xlen,ylen)>1500)?true:fast_opt;
+                    vector<double> do_vec;
 
                     /* entry function for structure alignment */
                     if (cp_opt) CPalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
@@ -392,10 +395,9 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         u0[1][0]=         u0[1][2]=
                         u0[2][0]=         u0[2][1]=
                         t0[0]   =t0[1]   =t0[2]   =0;
-                        se_main(
-                            xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                        se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                            seqM, seqxA, seqyA,
+                            seqM, seqxA, seqyA, do_vec,
                             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                             xlen, ylen, sequence, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt,
@@ -419,7 +421,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
@@ -450,29 +452,33 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                         outfmt_opt, ter_opt, false, split_opt, o_opt,
                         fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
                         resi_vec1, resi_vec2);
-                    if (cp_opt && outfmt_opt<=0)
+                    if (do_opt || (cp_opt && outfmt_opt<=0))
                     {
-                        cout<<"###############\t###############\n"
-                            <<"#Aligned atom 1\tAligned atom 2#\n";
+                        cout<<"###############\t###############\t#########"<<endl;
+                        cout<<"#Aligned atom 1\tAligned atom 2 \tDistance#"<<endl;
                         size_t r1=right_num;
                         size_t r2=0;
                         size_t r;
+                        int    postcp=0;
                         for (r=0;r<seqxA.size();r++)
                         {
                             r1+=seqxA[r]!='-';
                             r2+=seqyA[r]!='-';
                             if (seqxA[r]=='*')
                             {
-                                cout<<"###### Circular\tPermutation ###\n";
+                                cout<<"###### Circular\tPermutation ###\t#########\n";
                                 r1=0;
+                                postcp=1;
                             }
                             else if (seqxA[r]!='-' && seqyA[r]!='-')
                             {
                                 cout<<PDB_lines1[chain_i][r1-1].substr(12,15)<<'\t'
-                                    <<PDB_lines2[chain_j][r2-1].substr(12,15)<<'\n';
+                                    <<PDB_lines2[chain_j][r2-1].substr(12,15)<<'\t'
+                                    <<setw(9)<<setiosflags(ios::fixed)<<setprecision(3)
+                                    <<do_vec[r-postcp]<<'\n';
                             }
                         }
-                        cout<<"###############\t###############"<<endl;
+                        cout<<"###############\t###############\t#########"<<endl;
                     }
 
                     /* Done! Free memory */
@@ -483,6 +489,7 @@ int TMalign(string &xname, string &yname, const string &fname_super,
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
+                    do_vec.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -663,6 +670,7 @@ int MMalign(const string &xname, const string &yname,
         double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
         int n_ali=0;
         int n_ali8=0;
+        vector<double> do_vec;
         
         if (byresi_opt) extract_aln_from_resi(sequence,
             seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
@@ -671,7 +679,7 @@ int MMalign(const string &xname, const string &yname,
         TMalign_main(xa, ya, seqx, seqy, secx, secy,
             t0, u0, TM1, TM2, TM3, TM4, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-            seqM, seqxA, seqyA,
+            seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, 0, d0_scale,
             i_opt, a_opt, false, d_opt, fast_opt,
@@ -699,6 +707,7 @@ int MMalign(const string &xname, const string &yname,
         delete[]secy;
         DeleteArray(&xa,xlen);
         DeleteArray(&ya,ylen);
+        do_vec.clear();
 
         vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
         vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
@@ -793,6 +802,7 @@ int MMalign(const string &xname, const string &yname,
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
+            vector<double> do_vec;
 
             int Lnorm_tmp=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
@@ -824,7 +834,7 @@ int MMalign(const string &xname, const string &yname,
             TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
+                seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                 i_opt, false, true, false, fast_opt,
@@ -852,6 +862,7 @@ int MMalign(const string &xname, const string &yname,
             delete[]seqy;
             delete[]secy;
             DeleteArray(&ya,ylen);
+            do_vec.clear();
         }
 
         delete[]seqx;
@@ -1092,7 +1103,8 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     const string &dir1_opt, const string &dir2_opt,
     const vector<string> &chain2parse1, const vector<string> &chain2parse2, 
     const vector<string> &model2parse1, const vector<string> &model2parse2, 
-    const vector<string> &chain1_list, const vector<string> &chain2_list)
+    const vector<string> &chain1_list, const vector<string> &chain2_list,
+    const bool do_opt)
 {
     /* declare previously global variables */
     vector<vector<vector<double> > > xa_vec; // structure of complex1
@@ -1165,12 +1177,13 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
         int n_ali=0;
         int n_ali8=0;
+        vector<double> do_vec;
 
         /* entry function for structure alignment */
         TMalign_main(xa, ya, seqx, seqy, secx, secy,
             t0, u0, TM1, TM2, TM3, TM4, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-            seqM, seqxA, seqyA,
+            seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass, d0_scale,
             0, a_opt, u_opt, d_opt, fast_opt,
@@ -1202,6 +1215,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         delete[]secy;
         DeleteArray(&xa,xlen);
         DeleteArray(&ya,ylen);
+        do_vec.clear();
 
         vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
         vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
@@ -1300,6 +1314,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
+            vector<double> do_vec;
 
             int Lnorm_tmp=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
@@ -1316,7 +1331,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                 TMalign_main(xa, ya_trim, seqx, seqy_trim, secx, secy_trim,
                     t0, u0, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen_trim, sequence, Lnorm_tmp, d0_scale,
                     0, false, true, false, fast_opt,
@@ -1332,7 +1347,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                 int *invmap = new int[ylen+1];
                 se_main(xt, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                     0, false, 2, false, mol_vec1[i]+mol_vec2[j], 1, invmap);
                 delete[]invmap;
@@ -1344,7 +1359,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                 TMalign_main(xt, ya, seqx, seqy, secx, secy,
                     t0, u0, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                     2, false, true, false, fast_opt,
@@ -1356,7 +1371,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
                 TMalign_main(xa, ya, seqx, seqy, secx, secy,
                     t0, u0, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                     0, false, true, false, fast_opt,
@@ -1372,6 +1387,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
             seqM.clear();
             seqxA.clear();
             seqyA.clear();
+            do_vec.clear();
 
             delete[]seqy;
             delete[]secy;
@@ -1446,6 +1462,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
         int n_ali=0;
         int n_ali8=0;
+        vector<double> do_vec;
 
         int c;
         for (c=0; c<sequence.size(); c++) sequence[c].clear();
@@ -1457,7 +1474,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         TMalign_main(xa, ya, seqx, seqy, secx, secy,
             t0, u0, TM1, TM2, TM3, TM4, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-            seqM, seqxA, seqyA,
+            seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass, d0_scale,
             3, a_opt, u_opt, d_opt, fast_opt,
@@ -1494,6 +1511,7 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         delete[]seqx;
         delete[]secx;
         DeleteArray(&xa,xlen);
+        do_vec.clear();
     }
     if (outfmt_opt==2)
     {
@@ -1638,6 +1656,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
+            vector<double> do_vec;
 
             /* entry function for structure alignment */
             if (se_opt)
@@ -1648,10 +1667,9 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 u0[1][0]=         u0[1][2]=
                 u0[2][0]=         u0[2][1]=
                 t0[0]   =t0[1]   =t0[2]   =0;
-                se_main(
-                    xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
                     0, false, u_opt, false, mol_type, outfmt_opt, invmap);
@@ -1672,7 +1690,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             else TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
+                seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 0, false, u_opt, false, fast_opt,
@@ -1701,6 +1719,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             delete[]seqy;
             delete[]secy;
             DeleteArray(&ya,ylen);
+            do_vec.clear();
         }
 
         delete[]seqx;
@@ -1840,6 +1859,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
+            vector<double> do_vec;
 
             /* entry function for structure alignment */
             if (se_opt)
@@ -1850,10 +1870,9 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 u0[1][0]=         u0[1][2]=
                 u0[2][0]=         u0[2][1]=
                 t0[0]   =t0[1]   =t0[2]   =0;
-                se_main(
-                    xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                    seqM, seqxA, seqyA,
+                    seqM, seqxA, seqyA, do_vec,
                     rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
                     2, a_opt, u_opt, d_opt, mol_type, outfmt_opt, invmap);
@@ -1874,7 +1893,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             else TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
+                seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 2,  a_opt, u_opt, d_opt, fast_opt, mol_type);
@@ -1916,6 +1935,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             delete[]seqy;
             delete[]secy;
             DeleteArray(&ya,ylen);
+            do_vec.clear();
         }
         ylen = len_vec[repr_idx];
         seqy = new char[ylen+1];
@@ -1960,10 +1980,11 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             int n_ali=0;
             int n_ali8=0;
             int *invmap = new int[ylen+1];
+            vector<double> do_vec;
 
             se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_ass, d0_scale,
                 0, a_opt, u_opt, d_opt, mol_type, 1, invmap);
 
@@ -2040,6 +2061,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             delete[]seqy_ext;
             delete[]secy_ext;
             DeleteArray(&ya_ext,ylen_ext);
+            do_vec.clear();
         }
         vector<string>().swap(msa_ext);
         vector<pair<double,int> >().swap(TM_pair_vec);
@@ -2120,10 +2142,11 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 int n_ali=0;
                 int n_ali8=0;
                 int *invmap = new int[ylen+1];
+                vector<double> do_vec;
 
                 se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                     d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                     xlen, ylen, sequence, Lnorm_ass, d0_scale,
                     true, a_opt, u_opt, d_opt, mol_type, 1, invmap);
 
@@ -2176,6 +2199,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 delete[]seqy;
                 delete[]secy;
                 DeleteArray(&ya,ylen);
+                do_vec.clear();
             }
             delete[]seqx;
             delete[]secx;
@@ -2481,10 +2505,9 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
                         u0[1][0]=         u0[1][2]=
                         u0[2][0]=         u0[2][1]=
                         t0[0]   =t0[1]   =t0[2]   =0;
-                        soi_se_main(
-                            xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                        soi_se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                            seqM, seqxA, seqyA,
+                            seqM, seqxA, seqyA, 
                             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                             xlen, ylen, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt,
@@ -2734,13 +2757,14 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                     int n_ali8=0;
                     bool force_fast_opt=(getmin(xlen,ylen)>1500)?true:fast_opt;
                     vector<vector<double> >tu_vec;
+                    vector<double> do_vec;
 
                     /* entry function for structure alignment */
                     int hingeNum=flexalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, tu_vec, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, force_fast_opt,
@@ -2762,6 +2786,7 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                         int n_ali_h=0;
                         int n_ali8_h=0;
                         vector<vector<double> >tu_vec_h(1,tu_vec[0]);
+                        vector<double> do_vec_h;
                         tu2t_u(tu_vec[0],t0_h,u0_h);
 
                         int hingeNum_h=flexalign_main(
@@ -2769,7 +2794,7 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                             t0_h, u0_h, tu_vec_h,
                             TM1_h, TM2_h, TM3_h, TM4_h, TM5_h,
                             d0_0_h, TM_0_h, d0A, d0B, d0u, d0a, d0_out_h,
-                            seqM_h, seqxA_h, seqyA_h, rmsd0_h, L_ali_h,
+                            seqM_h, seqxA_h, seqyA_h, do_vec_h, rmsd0_h, L_ali_h,
                             Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
                             xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
                             a_opt, u_opt, d_opt, force_fast_opt,
@@ -2802,8 +2827,12 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                             tu_vec.clear();
                             for (int hinge=0;hinge<tu_vec_h.size();hinge++)
                                 tu_vec.push_back(tu_vec_h[hinge]);
+                            do_vec.clear();
+                            for (int r=0;r<do_vec_h.size();r++)
+                                do_vec_h.push_back(do_vec[r]);
                         }
                         else tu2t_u(tu_vec[0],t0,u0);
+                        do_vec_h.clear();
                     }
 
                     /* print result */
@@ -2831,6 +2860,7 @@ int flexalign(string &xname, string &yname, const string &fname_super,
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
+                    do_vec.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
                 {
@@ -2894,6 +2924,7 @@ int main(int argc, char *argv[])
     int  a_opt = 0;     // flag for -a, do not normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
+    bool do_opt= false; // flag for -do, output distance of i-th aligned pair
 
     bool   full_opt  = false;// do not show chain level alignment
     double TMcut     =-1;
@@ -3008,6 +3039,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-v") )
         {
             v_opt = true;
+        }
+        else if ( !strcmp(argv[i],"-do") )
+        {
+            do_opt = true;
         }
         else if ( !strcmp(argv[i],"-h") )
         {
@@ -3369,7 +3404,7 @@ int main(int argc, char *argv[])
         split_opt, outfmt_opt, fast_opt, cp_opt, mirror_opt, het_opt,
         atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
         dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2,
-        byresi_opt, chain1_list, chain2_list, se_opt);
+        byresi_opt, chain1_list, chain2_list, se_opt, do_opt);
     else if (mm_opt==1)
     { 
         if (dirpair_opt.size()==0) MMalign(xname, yname, fname_super,
@@ -3408,7 +3443,7 @@ int main(int argc, char *argv[])
         split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
         atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt,
         chain2parse1, chain2parse2, model2parse1, model2parse2, 
-        chain1_list, chain2_list);
+        chain1_list, chain2_list, do_opt);
     else if (mm_opt==3) ; // should be changed to mm_opt=0, cp_opt=true
     else if (mm_opt==4) mTMalign(xname, yname, fname_super, fname_matrix,
         sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt,

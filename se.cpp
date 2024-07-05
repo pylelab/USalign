@@ -64,6 +64,8 @@ void print_extra_help()
 "             0: (default) only align 'ATOM  ' residues\n"
 "             1: align both 'ATOM  ' and 'HETATM' residues\n"
 "\n"
+"    -do      Output distance of aligned residue pairs\n"
+"\n"
 "    -infmt1  Input format for chain1\n"
 "    -infmt2  Input format for chain2\n"
 "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
@@ -126,7 +128,7 @@ int main(int argc, char *argv[])
     bool a_opt = false; // flag for -a, normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
-
+    bool do_opt= false; // flag for -do, output distance of i-th aligned pair
     int    infmt1_opt=-1;    // PDB or PDBx/mmCIF format for chain_1
     int    infmt2_opt=-1;    // PDB or PDBx/mmCIF format for chain_2
     int    ter_opt   =3;     // TER, END, or different chainID
@@ -164,6 +166,10 @@ int main(int argc, char *argv[])
         else if ( !strcmp(argv[i],"-d") && i < (argc-1) )
         {
             d0_scale = atof(argv[i + 1]); d_opt = true; i++;
+        }
+        else if ( !strcmp(argv[i],"-do") )
+        {
+            do_opt = true;
         }
         else if ( !strcmp(argv[i],"-h") )
         {
@@ -424,12 +430,13 @@ int main(int argc, char *argv[])
                     int n_ali=0;
                     int n_ali8=0;
                     int *invmap = new int[ylen+1];
+                    vector<double> do_vec;
 
                     /* entry function for structure alignment */
                     se_main(
                         xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt,
@@ -454,6 +461,35 @@ int main(int argc, char *argv[])
                         "", outfmt_opt, ter_opt, 0, split_opt,
                         0, "", false, a_opt, u_opt, d_opt, 0,
                         resi_vec1, resi_vec2);
+                    
+                    if (do_opt)
+                    {
+                        cout<<"###############\t###############\t#########"<<endl;
+                        cout<<"#Aligned atom 1\tAligned atom 2 \tDistance#"<<endl;
+                        size_t r1=0;
+                        size_t r2=0;
+                        size_t r;
+                        int    postcp=0;
+                        for (r=0;r<seqxA.size();r++)
+                        {
+                            r1+=seqxA[r]!='-';
+                            r2+=seqyA[r]!='-';
+                            if (seqxA[r]=='*')
+                            {
+                                cout<<"###### Circular\tPermutation ###\t#########\n";
+                                r1=0;
+                                postcp=1;
+                            }
+                            else if (seqxA[r]!='-' && seqyA[r]!='-')
+                            {
+                                cout<<PDB_lines1[chain_i][r1-1].substr(12,15)<<'\t'
+                                    <<PDB_lines2[chain_j][r2-1].substr(12,15)<<'\t'
+                                    <<setw(9)<<setiosflags(ios::fixed)<<setprecision(3)
+                                    <<do_vec[r-postcp]<<'\n';
+                            }
+                        }
+                        cout<<"###############\t###############\t#########"<<endl;
+                    }
 
                     /* Done! Free memory */
                     delete [] invmap;
@@ -463,6 +499,7 @@ int main(int argc, char *argv[])
                     DeleteArray(&ya, ylen);
                     delete [] seqy;
                     resi_vec2.clear();
+                    do_vec.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
                 {

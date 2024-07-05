@@ -2805,7 +2805,7 @@ int TMalign_main(double **xa, double **ya,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA,
+    string &seqM, string &seqxA, string &seqyA, vector<double>&do_vec,
     double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
@@ -3335,6 +3335,8 @@ int TMalign_main(double **xa, double **ya,
     seqxA.assign(ali_len,'-');
     seqM.assign( ali_len,' ');
     seqyA.assign(ali_len,'-');
+    do_vec.clear();
+    do_vec.assign(ali_len,0);
     
     //do_rotation(xa, xt, xlen, t, u);
     do_rotation(xa, xt, xlen, t0, u0);
@@ -3369,6 +3371,7 @@ int TMalign_main(double **xa, double **ya,
         d=sqrt(dist(&xt[m1[k]][0], &ya[m2[k]][0]));
         if(d<d0_out) seqM[kk]=':';
         else         seqM[kk]='.';
+        do_vec[kk]=d;
         //SO+=(d<3.5);
         kk++;  
         i_old=m1[k]+1;
@@ -3417,7 +3420,7 @@ int CPalign_main(double **xa, double **ya,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA,
+    string &seqM, string &seqxA, string &seqyA, vector<double> &do_vec,
     double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
@@ -3456,7 +3459,7 @@ int CPalign_main(double **xa, double **ya,
     TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
         t0, u0, TM1_cp, TM2_cp, TM3, TM4_cp, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen*2, ylen, sequence, Lnorm_tmp, d0_scale,
         0, false, true, false, true, mol_type, -1);
 
@@ -3501,7 +3504,7 @@ int CPalign_main(double **xa, double **ya,
     TMalign_main(xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_tmp, d0_scale,
         0, false, true, false, true, mol_type, -1);
 
@@ -3537,7 +3540,7 @@ int CPalign_main(double **xa, double **ya,
         TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
             t0, u0, TM1_cp, TM2_cp, TM3, TM4_cp, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
-            rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, cp_aln_best,
+            do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, cp_aln_best,
             xlen, ylen, sequence, Lnorm_tmp, d0_scale,
             0, false, true, false, true, mol_type, -1);
         //cout<<"cp: aln="<<cp_aln_best<<"\tTM="<<TM4_cp<<endl;
@@ -3559,7 +3562,7 @@ int CPalign_main(double **xa, double **ya,
     TMalign_main(xa_cp, ya, seqx_cp, seqy, secx_cp, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA_cp, seqyA_cp,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, TMcut);
 

@@ -424,12 +424,13 @@ int main(int argc, char *argv[])
         double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
         int n_ali=0;
         int n_ali8=0;
+        vector<double> do_vec;
 
         /* entry function for structure alignment */
         TMalign_main(xa, ya, seqx, seqy, secx, secy,
             t0, u0, TM1, TM2, TM3, TM4, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-            seqM, seqxA, seqyA,
+            seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, 0, d0_scale,
             0, a_opt, false, d_opt, fast_opt,
@@ -460,6 +461,7 @@ int main(int argc, char *argv[])
         chain1_list.clear();
         chain2_list.clear();
         sequence.clear();
+        do_vec.clear();
 
         vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
         vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
@@ -553,7 +555,7 @@ int main(int argc, char *argv[])
             double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
             int n_ali=0;
             int n_ali8=0;
-
+            vector<double> do_vec;
             int Lnorm_tmp=len_aa;
             if (mol_vec1[i]+mol_vec2[j]>0) Lnorm_tmp=len_na;
 
@@ -561,7 +563,7 @@ int main(int argc, char *argv[])
             TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                seqM, seqxA, seqyA,
+                seqM, seqxA, seqyA, do_vec,
                 rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                 xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                 0, false, true, false, fast_opt,
@@ -589,6 +591,7 @@ int main(int argc, char *argv[])
             delete[]seqy;
             delete[]secy;
             DeleteArray(&ya,ylen);
+            do_vec.clear();
         }
 
         delete[]seqx;

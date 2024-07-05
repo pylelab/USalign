@@ -575,13 +575,14 @@ int main(int argc, char *argv[])
                     double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
                     int n_ali=0;
                     int n_ali8=0;
+                    vector<double> do_vec;
 
                     /* entry function for structure alignment */
                     if (cp_opt) CPalign_main(
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, fast_opt,
@@ -590,7 +591,7 @@ int main(int argc, char *argv[])
                         xa, ya, seqx, seqy, secx, secy,
                         t0, u0, TM1, TM2, TM3, TM4, TM5,
                         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
-                        seqM, seqxA, seqyA,
+                        seqM, seqxA, seqyA, do_vec,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_ass, d0_scale,
                         i_opt, a_opt, u_opt, d_opt, fast_opt,
@@ -623,6 +624,7 @@ int main(int argc, char *argv[])
                     delete [] seqy;
                     delete [] secy;
                     resi_vec2.clear();
+                    do_vec.clear();
                 } // chain_j
                 if (chain2_list.size()>1)
                 {

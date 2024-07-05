@@ -10,7 +10,7 @@ int se_main(
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA,
+    string &seqM, string &seqxA, string &seqyA, vector<double> &do_vec,
     double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen, const vector<string> &sequence,
@@ -161,6 +161,8 @@ int se_main(
     seqxA.assign(ali_len,'-');
     seqM.assign( ali_len,' ');
     seqyA.assign(ali_len,'-');
+    do_vec.clear();
+    do_vec.assign(ali_len,0);
     
     int kk=0, i_old=0, j_old=0;
     d=0;
@@ -191,6 +193,7 @@ int se_main(
         d=sqrt(dist(&xa[m1[k]][0], &ya[m2[k]][0]));
         if(d<d0_out) seqM[kk]=':';
         else         seqM[kk]='.';
+        do_vec[kk]=d;
         kk++;  
         i_old=m1[k]+1;
         j_old=m2[k]+1;

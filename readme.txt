@@ -80,6 +80,7 @@
    2024/03/19: chain mapping for trimer -TMscore
    2024/05/10: better handling of alternative location indicator, e.g., 5e1n
    2024/06/02: implement -mm 4 -se
+   2024/07/05: implement -do
 ===============================================================================
 
 =========================

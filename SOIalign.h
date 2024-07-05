@@ -333,13 +333,13 @@ int soi_se_main(
 
     int *fwdmap = new int [xlen+1];
     for (i=0;i<xlen;i++) fwdmap[i]=-1;
-    
     for (j=0;j<ylen;j++)
     {
         seqyA[j]=seqy[j];
         i=invmap[j];
         if (i<0) continue;
-        if (sqrt(dist(xa[i], ya[j]))<d0_out) seqM[j]=':';
+        d=sqrt(dist(xa[i], ya[j]));
+        if (d<d0_out) seqM[j]=':';
         else seqM[j]='.';
         fwdmap[i]=j;
         seqxA[j]=seqx[i];
@@ -553,8 +553,8 @@ int SOIalign_main(double **xa, double **ya,
     double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
     double &d0_0, double &TM_0,
     double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
-    string &seqM, string &seqxA, string &seqyA, int *invmap,
-    double &rmsd0, int &L_ali, double &Liden,
+    string &seqM, string &seqxA, string &seqyA,
+    int *invmap, double &rmsd0, int &L_ali, double &Liden,
     double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
     const int xlen, const int ylen,
     const vector<string> sequence, const double Lnorm_ass,
@@ -614,14 +614,15 @@ int SOIalign_main(double **xa, double **ya,
     /*************************************************************/
     /* initial alignment with sequence order dependent alignment */
     /*************************************************************/
-    CPalign_main(
-        xa, ya, seqx, seqy, secx, secy,
+    vector<double> do_vec;
+    CPalign_main(xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
-        rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+        do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
         i_opt, a_opt, u_opt, d_opt, fast_opt,
         mol_type,-1);
+    do_vec.clear();
     if (mm_opt==6)
     {
         i=0;
