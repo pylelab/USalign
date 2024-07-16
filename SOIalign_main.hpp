@@ -5,6 +5,7 @@ for monomeric protein pair alignment
 
 */
 #include <math.h>
+#include "TMalign.h"
 
 using namespace std;
 
@@ -30,12 +31,6 @@ template <class A> void DeleteArray(A *** array, int Narray)
     (*array)=NULL;
 }
 
-void PrintErrorAndQuit(const string sErrorString)
-{
-    cout << sErrorString << endl;
-    exit(1);
-}
-
 double dist(double x[3], double y[3])
 {
     double d1=x[0]-y[0];
@@ -44,8 +39,6 @@ double dist(double x[3], double y[3])
  
     return (d1*d1 + d2*d2 + d3*d3);
 }
-
-/*!!! missing pow() function? */
 
 /////////////////////////////////////////////////////////////////////////////
 /* param_set.h code */
