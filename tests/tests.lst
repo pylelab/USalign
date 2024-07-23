@@ -1,0 +1,7 @@
+#### circular permutation examples
+## all atoms of a single chain from structures
+data/2pel_chainA.pdb data/3cna_chainA.pdb 5
+data/2pel_chainA.pdb data/3cna_chainA.pdb 6
+## only CA atoms of a single chain from structures
+data/2pel_chainA_onlyCAs.pdb data/3cna_chainA_onlyCAs.pdb 5
+data/2pel_chainA_onlyCAs.pdb data/3cna_chainA_onlyCAs.pdb 6

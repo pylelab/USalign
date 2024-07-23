@@ -3,6 +3,7 @@
 
 # vim temporary backup
 .*.sw*
+*~
 
 # binary executables
 cif2pdb
