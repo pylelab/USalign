@@ -81,6 +81,7 @@
    2024/05/10: better handling of alternative location indicator, e.g., 5e1n
    2024/06/02: implement -mm 4 -se
    2024/07/05: implement -do
+   2024/07/30: implement -se -byresi 6 7
 ===============================================================================
 
 =========================
