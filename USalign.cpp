@@ -539,7 +539,7 @@ int MMalign(const string &xname, const string &yname,
     const vector<string> &chain2parse1, const vector<string> &chain2parse2,
     const vector<string> &model2parse1, const vector<string> &model2parse2,
     const vector<string> &chain1_list, const vector<string> &chain2_list,
-    const int byresi_opt,const string&chainmapfile)
+    const int byresi_opt,const string&chainmapfile, const bool se_opt)
 {
     /* declare previously global variables */
     vector<vector<vector<double> > > xa_vec; // structure of complex1
@@ -676,7 +676,36 @@ int MMalign(const string &xname, const string &yname,
             seqx,seqy,resi_vec1,resi_vec2,byresi_opt);
 
         /* entry function for structure alignment */
-        TMalign_main(xa, ya, seqx, seqy, secx, secy,
+        if (se_opt)
+        {
+            int *invmap = new int[ylen+1];
+            u0[0][0]=u0[1][1]=u0[2][2]=1;
+            u0[0][1]=         u0[0][2]=
+            u0[1][0]=         u0[1][2]=
+            u0[2][0]=         u0[2][1]=
+            t0[0]   =t0[1]   =t0[2]   =0;
+            se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                seqM, seqxA, seqyA, do_vec,
+                rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                xlen, ylen, sequence, 0, d0_scale,
+                i_opt, a_opt, false, d_opt,
+                mol_vec1[0]+mol_vec2[0], outfmt_opt, invmap);
+            if (outfmt_opt>=2) 
+            {
+                Liden=L_ali=0;
+                int r1,r2;
+                for (r2=0;r2<ylen;r2++)
+                {
+                    r1=invmap[r2];
+                    if (r1<0) continue;
+                    L_ali+=1;
+                    Liden+=(seqx[r1]==seqy[r2]);
+                }
+            }
+            delete [] invmap;
+        }
+        else TMalign_main(xa, ya, seqx, seqy, secx, secy,
             t0, u0, TM1, TM2, TM3, TM4, TM5,
             d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
             seqM, seqxA, seqyA, do_vec,
@@ -831,7 +860,36 @@ int MMalign(const string &xname, const string &yname,
             }
 
             /* entry function for structure alignment */
-            TMalign_main(xa, ya, seqx, seqy, secx, secy,
+            if (se_opt)
+            {
+                int *invmap = new int[ylen+1];
+                u0[0][0]=u0[1][1]=u0[2][2]=1;
+                u0[0][1]=         u0[0][2]=
+                u0[1][0]=         u0[1][2]=
+                u0[2][0]=         u0[2][1]=
+                t0[0]   =t0[1]   =t0[2]   =0;
+                se_main(xa, ya, seqx, seqy, TM1, TM2, TM3, TM4, TM5,
+                    d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
+                    seqM, seqxA, seqyA, do_vec,
+                    rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
+                    xlen, ylen, sequence, Lnorm_tmp, d0_scale,
+                    i_opt, false, true, false,
+                    mol_vec1[i]+mol_vec2[j], outfmt_opt, invmap);
+                if (outfmt_opt>=2) 
+                {
+                    Liden=L_ali=0;
+                    int r1,r2;
+                    for (r2=0;r2<ylen;r2++)
+                    {
+                        r1=invmap[r2];
+                        if (r1<0) continue;
+                        L_ali+=1;
+                        Liden+=(seqx[r1]==seqy[r2]);
+                    }
+                }
+                delete [] invmap;
+            }
+            else TMalign_main(xa, ya, seqx, seqy, secx, secy,
                 t0, u0, TM1, TM2, TM3, TM4, TM5,
                 d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out,
                 seqM, seqxA, seqyA, do_vec,
@@ -882,7 +940,7 @@ int MMalign(const string &xname, const string &yname,
     /* refine alignment for large oligomers */
     int aln_chain_num=count_assign_pair(assign1_list,chain1_num);
     bool is_oligomer=(aln_chain_num>=3);
-    if (aln_chain_num==2 && chainmap.size()==0) // dimer alignment
+    if (aln_chain_num==2 && chainmap.size()==0 && !se_opt) // dimer alignment
     {
         int na_chain_num1,na_chain_num2,aa_chain_num1,aa_chain_num2;
         count_na_aa_chain_num(na_chain_num1,aa_chain_num1,mol_vec1);
@@ -904,7 +962,7 @@ int MMalign(const string &xname, const string &yname,
         else is_oligomer=true; /* align oligomers to dimer */
     }
 
-    if ((aln_chain_num>=3 || is_oligomer) && chainmap.size()==0) // oligomer alignment
+    if ((aln_chain_num>=3 || is_oligomer) && chainmap.size()==0 && !se_opt) // oligomer alignment
     {
         /* extract centroid coordinates */
         double **xcentroids;
@@ -949,13 +1007,14 @@ int MMalign(const string &xname, const string &yname,
     int max_iter=5-(int)((len_aa+len_na)/200);
     if (max_iter<2) max_iter=2;
     //if (byresi_opt==0) 
+    if (!se_opt)
         MMalign_iter(max_total_score, max_iter, xa_vec, ya_vec,
         seqx_vec, seqy_vec, secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec,
         ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
         chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
         sequence, d0_scale, fast_opt, chainmap, byresi_opt);
     
-    if (byresi_opt && aln_chain_num>=4 && is_oligomer && chainmap.size()==0) // oligomer alignment
+    if (byresi_opt && aln_chain_num>=4 && is_oligomer && chainmap.size()==0 && !se_opt) // oligomer alignment
     {
         MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
             chainID_list1, chainID_list2,
@@ -1045,7 +1104,17 @@ int MMalign(const string &xname, const string &yname,
 
     /* final alignment */
     if (outfmt_opt==0) print_version();
-    MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
+    if (se_opt) MMalign_se_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
+        chainID_list1, chainID_list2,
+        fname_super, fname_lign, fname_matrix,
+        xa_vec, ya_vec, seqx_vec, seqy_vec,
+        secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
+        xa, ya, seqx, seqy, secx, secy, len_aa, len_na,
+        chain1_num, chain2_num, TMave_mat,
+        seqxA_mat, seqM_mat, seqyA_mat, assign1_list, assign2_list, sequence,
+        d0_scale, m_opt, o_opt, outfmt_opt, ter_opt, split_opt,
+        a_opt, d_opt, fast_opt, full_opt, mirror_opt, resi_vec1, resi_vec2);
+    else MMalign_final(xname.substr(dir1_opt.size()), yname.substr(dir2_opt.size()),
         chainID_list1, chainID_list2,
         fname_super, fname_lign, fname_matrix,
         xa_vec, ya_vec, seqx_vec, seqy_vec,
@@ -3413,7 +3482,7 @@ int main(int argc, char *argv[])
             ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
             atom_opt, autojustify, mol_opt, dir1_opt, dir2_opt,
             chain2parse1, chain2parse2, model2parse1, model2parse2,
-            chain1_list, chain2_list, byresi_opt,chainmapfile);
+            chain1_list, chain2_list, byresi_opt,chainmapfile, se_opt);
         else
         {
             vector<string> tmp_vec1;
@@ -3430,7 +3499,7 @@ int main(int argc, char *argv[])
                     outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt,
                     autojustify, mol_opt, dirpair_opt, dirpair_opt, 
                     chain2parse1, chain2parse2, model2parse1, model2parse2,
-                    tmp_vec1, tmp_vec2, byresi_opt,chainmapfile);
+                    tmp_vec1, tmp_vec2, byresi_opt,chainmapfile, se_opt);
                 tmp_vec1[0].clear(); tmp_vec1.clear();
                 tmp_vec2[0].clear(); tmp_vec2.clear();
             }
