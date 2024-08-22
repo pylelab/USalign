@@ -2,11 +2,10 @@
  * python wrapper implementation for monomeric protein pair alignment using SOI
  * alignment methods (sNS and fNS) */
 
-#include "SOIalign.h"	// uncertain if including is necessary
+#include "SOIalign.h"	// 
 #include "TMalign.h"	//
 
 #include "param_set.h"	// 
-#include <math.h>	//
 #include "basic_fun.h"	//
 
 #include "NW.h"		//
@@ -15,6 +14,8 @@
 
 #include "NWalign.h"	//
 #include "BLOSUM.h"	//
+
+#include <math.h>	//
 
 /////////////////////////////////////////////////////////////////////////////
 /* TMalign.h code */
