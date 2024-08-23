@@ -1043,9 +1043,9 @@ int SOIalign_main(double **xa, double **ya, // prepare cartesian coordinates
     int iteration_max=(fast_opt)?2:30; // fast_opt != 0, iteration_max = 2; fast_opt == 0, iteration_max = 30
     //if (mm_opt==6) iteration_max=1;
 
-    /*************************************************************/
-    /* 'initial' alignment with sequence order dependent alignment */
-    /*************************************************************/
+    /*************************************************************
+    /* 'initial' alignment with sequence order dependent alignment 
+     *************************************************************/
     CPalign_main(
         xa, ya, seqx, seqy, secx, secy,
         t0, u0, TM1, TM2, TM3, TM4, TM5,
