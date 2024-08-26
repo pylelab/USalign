@@ -21,6 +21,8 @@
                         line is the alignment method to be used for the calc,
                         mirroring the options for USalign -mm parameter. 5 and
                         6 for fNS and sNS, respectively.
+        --usalign-path /path/to/USalign, -path /path/to/USalign 
+                        path to the USalign executable
         --scheduler-file SCHEDULER_FILE, -s SCHEDULER_FILE
                         dask scheduler file; optional, default = None
         --nIterations, 1, -niters 1 
@@ -32,6 +34,7 @@ import sys
 import time
 import io
 import re
+import json
 import argparse
 import platform
 import logging
@@ -106,7 +109,7 @@ def parse_usalign_file(file_object):
     :param file_object: file object that can be read. many methods of creating 
                         such an object; ex: io.StringIO or "with open()" 
     RETURNS:
-    :return: results, start_time, stop_time, return_value
+    :return: results, start_time, stop_time
     :return results: dictionary of quantitative results associated with the
                      alignment. 
             Keys:
@@ -128,8 +131,27 @@ def parse_usalign_file(file_object):
                 'Len1': float, the query structure's length
                 'Len2': float, the target structure's length
                 'LenAligned': float, the number of residues used in the 
+                'd0_1': float, the normalized distance for query structure; used 
+                        in TMscore metric calculation
+                'd0_2': float, the normalized distance for target structure; used 
+                        in TMscore metric calculation
+                'map_1_to_2': optional, dictionary, keys are query structure's 
+                              ('1') residue indices (string) that map to a 
+                              tuple with query residue name, target structure's
+                              ('2') residue index (string), target residue name,
+                              and alignment distance (float, only available for 
+                              SNS and FNS alignments); if alignment_type is not 
+                              in ['CP', 'SNS', 'FNS'], this mapping will not be 
+                              created
                 'dt': float, reported time for alignment; units: seconds
+                'trans_vector': list, shape = (3), cart coords to translate 
+                                mobile onto target.
+                'rot_vector': list, shape = (3,3), rot matrix to align 
+                              mobile to target; always apply after translation
+    :return start_time: float, epoch time when the task began
+    :return stop_time: float, epoch time when the task stopped
     """
+    start_time = time.time()
     results = {}
     # file_object is a TextIOBase text stream created by open() or io.StringIO 
     # or some other way; here we just collect all lines
@@ -166,24 +188,56 @@ def parse_usalign_file(file_object):
     # and sequence ID for the aligned residues
     results['LenAligned'], results['RMSD'], results['SeqIDAli'] = [float(elem) for elem in re.findall(r'(?<=[=\s](?=\d))\d*[\.]?\d*',aln_lines[0])]
 
+    # dictionary of tuples; keys are mobile residue index with values being a tuple of (target residue index, mobile resname, target resname, distance)
+    results['map_1_to_2'] = {}
+    
+    # gather the alignment mapping, strip white space on both sides
+    map_lines    = [line.strip() for line in lines if ' CA ' == line[:4]]
+    for line in map_lines:
+        # line format: 'CA  LEU A 111 \t CA  GLN A  97 \t    1.568'
+        # awkward white spaces:      ^^               ^^
+        temp = [elem.strip() for elem in line.split('\t')]
+        
+        if len(temp) == 2:
+            # CP-align does not print distance btw atoms
+            dist = 0
+        elif len(temp) == 3:
+            # SOIalign methods print distance btw atoms
+            dist = float(temp[2])
+        else:
+            # something funky going on, skip the map_lines
+            break
+        
+        # from the above example: {'111': ('97','LEU','GLN',1.568)}, where 
+        # dict key is mobile resid (type int) that maps to a value (type: 
+        # tup). The tup is filled with target resid, mobile resname, target
+        # resname, and distance btw the two atoms.
+        results['map_1_to_2'].update(
+            {int(temp[0][-4:].strip()): (int(temp[1][-4:].strip()),
+                                         temp[0][4:7],
+                                         temp[1][4:7],
+                                         float(temp[2]))})
+
     # collect USalign reported timing
     time_lines = [line.strip() for line in lines if 'Total CPU time' in line]
     results['dt'] = float(re.findall(r'\d*[\.]?\d+',time_lines[0])[0])
 
-    # collect translation and rotation lines if present
+    # collect translation and rotation lines if present; these lines are not
+    # written in standard USalign output. Gotta `cat` the -m file...
     trans_rot_array = np.array([line.split()[1:] for line in lines if line[0] in ['0','1','2']],dtype=float)
     if trans_rot_array.size > 0:
-        results['trans_vector'] = trans_rot_array[:,0]
-        results['rot_matrix'] = trans_rot_array[:,1:]
+        results['trans_vector'] = trans_rot_array[:,0].tolist()
+        results['rot_matrix'] = trans_rot_array[:,1:].tolist()
 
-    return results
+    stop_time = time.time()
+    return results, start_time, stop_time
 
 
 #######################################
 ### DASK RELATED FUNCTIONS
 #######################################
 
-def submit_subprocess_pipeline(alignments, nIterations):
+def submit_subprocess_pipeline(alignments, nIterations, USalign_executable_path):
     """
     alignment task function for the dask workflow
     INPUT:
@@ -195,6 +249,7 @@ def submit_subprocess_pipeline(alignments, nIterations):
                   elem[2] is the USalign -mm parameter value to be used. 5 for 
                           fNS and 6 for sNS. 
         :param nIterations: int, number of iterations to perform.
+        :param USalign_executable_path: str, path to USalign executable.
     RETURNS:
         :return: platform information i.e. "hostname."
         :return: worker identification string.
@@ -217,7 +272,7 @@ def submit_subprocess_pipeline(alignments, nIterations):
             # 3) delete the trans/rot matrix file so we don't get a ton of files 
             temp_string = str(uuid4())
             completed_process = subprocess.run(
-                    f'~/Apps/USalign/USalign {alignments[0]} {alignments[1]} -mm {alignments[2]} -outfmt 0 -m {temp_string}.dat; cat {temp_string}.dat; rm {temp_string}.dat',
+                    f'{USalign_executable_path} {alignments[0]} {alignments[1]} -mm {alignments[2]} -outfmt 0 -m {temp_string}.dat; cat {temp_string}.dat; rm {temp_string}.dat',
                     shell=True,
                     capture_output=True,
                     check=True)
@@ -234,22 +289,16 @@ def submit_subprocess_pipeline(alignments, nIterations):
             # put this text stream through the parser
             # hard coding the aln_algo as '' because we are not interested in
             # the residue mapping at the present
-            parsed_results = parse_usalign_file(stdout_file)
+            parsed_results, start, stop = parse_usalign_file(stdout_file)
             # save alignment results as a key-value in the results_dict
             # key: string with format of "iter_0"
-            # value: list, [TMscore1, TMscore2, RMSD, SeqIDAli, Len1, Len2,
-            #               LenAligned, dt, trans_vector, rot_matrix]
+            # value: subdict, with keys 'struct1', 'struct2', 'struct1_chainID', 
+            #        'struct2_chainID', 'TMscore1', 'TMscore2', 'RMSD', 
+            #        'SeqIDAli', 'Len1', 'Len2', 'LenAligned', 'd0_1', 'd0_2', 
+            #        'map_1_to_2', 'dt', trans_vector, rot_matrix]
             key = f'iter_{_iter}'
-            results_dict[key] = [float(parsed_results['TMscore1']),
-                                 float(parsed_results['TMscore2']),
-                                 float(parsed_results['RMSD']),
-                                 float(parsed_results['SeqIDAli']),
-                                 float(parsed_results['Len1']),
-                                 float(parsed_results['Len2']),
-                                 float(parsed_results['LenAligned']),
-                                 float(parsed_results['dt']),
-                                 parsed_results['trans_vector'],
-                                 parsed_results['rot_matrix']]
+            results_dict[key] = parsed_results
+        
         except Exception as e:
             print(f'submit_pipeline, parsing, {_iter}, {alignments[0]}, {alignments[1]}', e, file=sys.stderr, flush=True)
             continue
@@ -269,15 +318,23 @@ if __name__ == '__main__':
     parser.add_argument('--timings-file', 
                         '-ts', 
                         required=True, 
-                        help='CSV file for protein processing timings')
+                        help='string for CSV file name to store processing timings',
+                        type=str)
     parser.add_argument('--tskmgr-log-file', 
                         '-log', 
                         required=True, 
-                        help='string that will be used to store logging info for this run')
+                        help='string that will be used to store logging info for this run',
+                        type=str)
     parser.add_argument('--alignments-pdb-list-file', 
                         '-inp', 
                         required=True, 
-                        help='list file where each line consists of the paths for the two protein models that are to be aligned')
+                        help='list file where each line consists of the paths for the two protein models that are to be aligned',
+                        type=str)
+    parser.add_argument('--usalign-path', 
+                        '-path', 
+                        required=True,
+                        help='path to the USalign executable',
+                        type=str)
     # optional parameters
     parser.add_argument('--scheduler-file', 
                         '-s', 
@@ -295,6 +352,7 @@ if __name__ == '__main__':
     # set up the main logger file and list all relevant parameters.
     main_logger = setup_logger('tskmgr_logger',args.tskmgr_log_file)
     main_logger.info(f'Starting dask pipeline and setting up logging. Time: {time.time()}')
+    main_logger.info(f'Path to the USalign executable: {args.usalign_path}')
     main_logger.info(f'Scheduler file: {args.scheduler_file}')
     main_logger.info(f'Timing file: {args.timings_file}')
     main_logger.info(f'Alignments are listed in {args.alignments_pdb_list_file}.')
@@ -341,19 +399,28 @@ if __name__ == '__main__':
         alignments_list = [line.split() for line in structures_file.readlines() if line[0] != '#']
     
     main_logger.info(f'A total of {len(alignments_list)*args.nIterations:,} alignments will be performed.')
+    
+    # create the list of future objects
     aln_futures = client.map(submit_subprocess_pipeline, 
                              alignments_list, 
-                             nIterations = args.nIterations, 
+                             nIterations = args.nIterations,
+                             USalign_executable_path = args.usalign_path,
                              pure=False)
 
+    # results_dict will be a dict of dicts, with keys being a str to identify 
+    # the alnment and values being the results subdict
     results_dict = {}
     aln_completed = as_completed(aln_futures)
+    # loop over completed tasks
     for finished_task in aln_completed:
+        # gather return values from the task
         hostname, worker_id, query, target, aln_method, start_time, stop_time, results = finished_task.result()
         main_logger.info(f'-mm {aln_method} alignment between {query} and {target} has finished.')
+        # prep the dict key
         query = Path(query).stem
         target = Path(target).stem
         identifier = f'{query}|{target}|mm{aln_method}'
+        # write timing info out to the csv file
         append_timings(timings_csv, 
                        timings_file, 
                        hostname, 
@@ -361,24 +428,28 @@ if __name__ == '__main__':
                        start_time, 
                        stop_time,
                        identifier)
+        # fill the results_dict
         results_dict[identifier] = results
-   
+
+    with open('USalign_subprocess_results.json','w') as json_out:
+        json.dump(results_dict, json_out, indent = 4)
+
     with open(f'USalign_subprocess_results.dat','w') as out_file:
         out_file.write('Query_Target_Method,TMscore1,TMscore2,RMSD,SeqIDAli,Len1,Len2,LenAligned),Avg Time (s),Stdev Time (s)\n')
         sorted_keys = list(results_dict.keys())
         for key in sorted_keys:
             results = results_dict[key]
-            dts = [results[f'iter_{i}'][7] for i in range(args.nIterations)]
-            assert results['iter_0'][0] == results['iter_1'][0]
+            dts = [results[f'iter_{i}']['dt'] for i in range(args.nIterations)]
+            assert results['iter_0']['RMSD'] == results['iter_1']['RMSD']
             avg_time = np.mean(dts)
             std_time = np.std(dts)
-            TMscore1 = results['iter_0'][0]
-            TMscore2 = results['iter_0'][1]
-            RMSD     = results['iter_0'][2]
-            SeqIDAli = results['iter_0'][3]
-            Len1     = results['iter_0'][4]
-            Len2     = results['iter_0'][5]
-            LenAlign = results['iter_0'][6]
+            TMscore1 = results['iter_0']['TMscore1']
+            TMscore2 = results['iter_0']['TMscore2']
+            RMSD     = results['iter_0']['RMSD']
+            SeqIDAli = results['iter_0']['SeqIDAli']
+            Len1     = results['iter_0']['Len1']
+            Len2     = results['iter_0']['Len2']
+            LenAlign = results['iter_0']['LenAligned']
             out_file.write(f'{key},{TMscore1},{TMscore2},{RMSD},{SeqIDAli},{Len1},{Len2},{LenAlign},{avg_time:.3f},{std_time:.3f}\n')
 
     timings_file.close()

@@ -1,0 +1,5 @@
+hostname,worker_id,start_time,stop_time,AlnID
+normandy,Worker-c71a68f6-0880-48b2-b4db-3ecfba1cac55,1724715279.9866865,1724715281.9391696,2pel_chainA|3cna_chainA|mm6
+normandy,Worker-e69d8c57-b31b-4230-aa94-219d6b22dc4c,1724715279.9881992,1724715281.9783032,2pel_chainA_onlyCAs|3cna_chainA_onlyCAs|mm6
+normandy,Worker-4a91ea8c-9be4-4500-b1cb-1742ec5f747f,1724715279.986085,1724715283.7130725,2pel_chainA|3cna_chainA|mm5
+normandy,Worker-f524ddaf-71d7-40ad-95f3-97c255bb3bbd,1724715279.98735,1724715283.7471712,2pel_chainA_onlyCAs|3cna_chainA_onlyCAs|mm5

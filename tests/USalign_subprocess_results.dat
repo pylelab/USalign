@@ -1,0 +1,5 @@
+Query_Target_Method,TMscore1,TMscore2,RMSD,SeqIDAli,Len1,Len2,LenAligned),Avg Time (s),Stdev Time (s)
+2pel_chainA|3cna_chainA|mm6,0.91045,0.89227,1.93,0.408,232.0,237.0,228.0,0.182,0.030
+2pel_chainA_onlyCAs|3cna_chainA_onlyCAs|mm6,0.91045,0.89227,1.93,0.408,232.0,237.0,228.0,0.185,0.028
+2pel_chainA|3cna_chainA|mm5,0.91034,0.89216,1.9,0.408,232.0,237.0,228.0,0.358,0.058
+2pel_chainA_onlyCAs|3cna_chainA_onlyCAs|mm5,0.91034,0.89216,1.9,0.408,232.0,237.0,228.0,0.363,0.061
