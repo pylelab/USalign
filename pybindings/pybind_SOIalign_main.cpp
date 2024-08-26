@@ -1,10 +1,10 @@
 //essential preamble for pybind11 casting
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-//#include <cmath>
+#include <cmath>
 #include <vector>
 #include <string>
-//#include <algorithm>
+#include <algorithm>
 
 //#include "SOIalign.h"	// 
 
@@ -448,17 +448,6 @@ class outputResults {
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
 /*******************************************************************************
  * TO REMIND MYSELF:
  * ! -> denotes an important func argument to be INPUT
@@ -538,150 +527,150 @@ class outputResults {
  * class or in the wrapper function.
  */
 
-///*******************************************************************************
-// * define the wrapper function that reads input, runs SOIalign_main, and 
-// * returns the output data.
-// ******************************************************************************/
-//
-//OutputResults runSOIalign_main( alnstruct& mobile_data, 
-//				alnstruct& target_data, 
-//				alnParameters& parameters)
-//{
-//    // create variables to be used/filled w/in the SOIalign_main() call
-//    double t0[3], u0[3][3];
-//    double TM1, TM2;
-//    double TM3, TM4, TM5; 
-//    double d0_0, TM_0;
-//    double d0A, d0B, d0u, d0a;
-//    double d0_out=5.0;
-//    string seqM, seqxA, seqyA;// for output alignment
-//    double rmsd0 = 0.0;
-//    int L_ali;                // Aligned length in standard_TMscore
-//    double Liden=0;
-//    double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
-//    int n_ali=0;
-//    int n_ali8=0;
-//    
-//    
-//    // hardcode some default parameters to avoid their implementation...
-//    // !!! design choice to still input these variables into the 
-//    //     SOIalign_main() call.
-//    int i_opt = 0;
-//    vector<string> sequence;
-//
-//    // convert input arrays to their USalign-like versions...
-//    int i,j,k;
-//
-//    // mobile coords
-//    double **mobile_coords;
-//    NewArray(&mobile_coords, mobile_data.len, 3);
-//    // get the buffer regions for the input array object
-//    py::buffer_info mobile_coords_info = mobile_data.coords.request();
-//    // create array filled with the pointers for the array elements
-//    auto mobile_coords_ptr  = static_cast <float *>(mobile_coords_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < mobile_data.len *  3; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 3;
-//	mobile_coords[j][k] = mobile_coords_ptr[i];
-//    }
-//   
-//    // mobile k_nearest array
-//    int **mobile_sec_bond;
-//    NewArray(&mobile_sec_bond, mobile_data.len, 2);
-//    // get the buffer regions for the input array object
-//    py::buffer_info mobile_sec_bond_info = mobile_data.sec_bond.request();
-//    // create array filled with the pointers for the array elements
-//    auto mobile_sec_bond_ptr  = static_cast <int *>(mobile_sec_bond_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < mobile_data.len * 2; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 2;
-//	mobile_sec_bond[j][k] = mobile_sec_bond_ptr[i];
-//    }
-//  
-//    // mobile k_nearest array
-//    double **mobile_k_nearest;
-//    NewArray(&mobile_k_nearest, mobile_data.len * parameters.closeK_opt, 3);
-//    // get the buffer regions for the input array object
-//    py::buffer_info mobile_k_nearest_info = mobile_data.k_nearest.request();
-//    // create array filled with the pointers for the array elements
-//    auto mobile_k_nearest_ptr  = static_cast <float *>(mobile_k_nearest_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < mobile_data.len * parameters.closeK_opt *  3; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 3;
-//	mobile_k_nearest[j][k] = mobile_k_nearest_ptr[i];
-//    }
-//  
-//    // convert std::string to c-like char pointers
-//    char *mobile_seq = mobile_data.seq.c_str();
-//    char *mobile_sec = mobile_data.sec.c_str();
-//
-//    
-//    // target coords
-//    double **target_coords;
-//    NewArray(&target_coords, target_data.len, 3);
-//    // get the buffer regions for the input array object
-//    py::buffer_info target_coords_info = target_data.coords.request();
-//    // create array filled with the pointers for the array elements
-//    auto target_coords_ptr  = static_cast <float *>(target_coords_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < mobile_data.len *  3; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 3;
-//	target_coords[j][k] = target_coords_ptr[i];
-//    }
-//   
-//    // target k_nearest array
-//    int **target_sec_bond;
-//    NewArray(&target_sec_bond, target_data.len, 2);
-//    // get the buffer regions for the input array object
-//    py::buffer_info target_sec_bond_info = target_data.sec_bond.request();
-//    // create array filled with the pointers for the array elements
-//    auto target_sec_bond_ptr  = static_cast <int *>(target_sec_bond_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < target_data.len * 2; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 2;
-//	target_sec_bond[j][k] = target_sec_bond_ptr[i];
-//    }
-//  
-//    // mobile k_nearest array
-//    double **target_k_nearest;
-//    NewArray(&target_k_nearest, target_data.len * parameters.closeK_opt, 3);
-//    // get the buffer regions for the input array object
-//    py::buffer_info target_k_nearest_info = target_data.k_nearest.request();
-//    // create array filled with the pointers for the array elements
-//    auto target_k_nearest_ptr  = static_cast <float *>(target_k_nearest_info.ptr);
-//    // py::array_t is flattened array, port it to the 2d USalign array
-//    for (int i = 0; i < target_data.len * parameters.closeK_opt *  3; i ++)
-//    {
-//	j = i / 3;
-//	k = i % 3;
-//	target_k_nearest[j][k] = target_k_nearest_ptr[i];
-//    }
-//  
-//    // convert std::string to c-like char pointers
-//    char *target_seq = target_data.seq.c_str();
-//    char *target_sec = target_data.sec.c_str();
-//
-//
-//    // prep other parameters
-//
-//    // if min of len values are too large (>1500), then do fast alignment 
-//    // method...
-//    bool force_fast_opt=(std::min(mobile_data.len,target_data.len)>1500)?true:fast_opt;
-//    
-//    // these lines aren't gonna work...
-//    int *invmap = new int[target_data.len+1];
-//    double *dist_list = new double[target_data.len+1];
-//   
+/*******************************************************************************
+ * define the wrapper function that reads input, runs SOIalign_main, and 
+ * returns the output data.
+ ******************************************************************************/
+
+outputResults runSOIalign( alnStruct& mobile_data, 
+			   alnStruct& target_data, 
+			   alnParameters& parameters)
+{
+    // create variables to be used/filled w/in the SOIalign_main() call
+    double t0[3], u0[3][3];
+    double TM1, TM2;
+    double TM3, TM4, TM5; 
+    double d0_0, TM_0;
+    double d0A, d0B, d0u, d0a;
+    double d0_out=5.0;
+    std::string seqM, seqxA, seqyA;// for output alignment
+    double rmsd0 = 0.0;
+    int L_ali;                // Aligned length in standard_TMscore
+    double Liden=0;
+    double TM_ali, rmsd_ali;  // TMscore and rmsd in standard_TMscore
+    int n_ali=0;
+    int n_ali8=0;
+    
+    
+    // hardcode some default parameters to avoid their implementation...
+    // !!! design choice to still input these variables into the 
+    //     SOIalign_main() call.
+    int i_opt = 0;
+    std::vector<std::string> sequence;
+
+    // convert input arrays to their USalign-like versions...
+    int i,j,k;
+
+    // mobile coords
+    double **mobile_coords;
+    NewArray(&mobile_coords, mobile_data.len, 3);
+    // get the buffer regions for the input array object
+    py::buffer_info mobile_coords_info = mobile_data.coords.request();
+    // create array filled with the pointers for the array elements
+    auto mobile_coords_ptr  = static_cast <float *>(mobile_coords_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < mobile_data.len *  3; i ++)
+    {
+	j = i / 3;
+	k = i % 3;
+	mobile_coords[j][k] = mobile_coords_ptr[i];
+    }
+   
+    // mobile k_nearest array
+    int **mobile_sec_bond;
+    NewArray(&mobile_sec_bond, mobile_data.len, 2);
+    // get the buffer regions for the input array object
+    py::buffer_info mobile_sec_bond_info = mobile_data.sec_bond.request();
+    // create array filled with the pointers for the array elements
+    auto mobile_sec_bond_ptr  = static_cast <int *>(mobile_sec_bond_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < mobile_data.len * 2; i ++)
+    {
+	j = i / 3;
+	k = i % 2;
+	mobile_sec_bond[j][k] = mobile_sec_bond_ptr[i];
+    }
+  
+    // mobile k_nearest array
+    double **mobile_k_nearest;
+    NewArray(&mobile_k_nearest, mobile_data.len * parameters.closeK_opt, 3);
+    // get the buffer regions for the input array object
+    py::buffer_info mobile_k_nearest_info = mobile_data.k_nearest.request();
+    // create array filled with the pointers for the array elements
+    auto mobile_k_nearest_ptr  = static_cast <float *>(mobile_k_nearest_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < mobile_data.len * parameters.closeK_opt *  3; i ++)
+    {
+	j = i / 3;
+	k = i % 3;
+	mobile_k_nearest[j][k] = mobile_k_nearest_ptr[i];
+    }
+  
+    // convert std::string to c-like char pointers
+    char *mobile_seq = mobile_data.seq.data();
+    char *mobile_sec = mobile_data.sec.data();
+
+    
+    // target coords
+    double **target_coords;
+    NewArray(&target_coords, target_data.len, 3);
+    // get the buffer regions for the input array object
+    py::buffer_info target_coords_info = target_data.coords.request();
+    // create array filled with the pointers for the array elements
+    auto target_coords_ptr  = static_cast <float *>(target_coords_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < mobile_data.len *  3; i ++)
+    {
+	j = i / 3;
+	k = i % 3;
+	target_coords[j][k] = target_coords_ptr[i];
+    }
+   
+    // target k_nearest array
+    int **target_sec_bond;
+    NewArray(&target_sec_bond, target_data.len, 2);
+    // get the buffer regions for the input array object
+    py::buffer_info target_sec_bond_info = target_data.sec_bond.request();
+    // create array filled with the pointers for the array elements
+    auto target_sec_bond_ptr  = static_cast <int *>(target_sec_bond_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < target_data.len * 2; i ++)
+    {
+	j = i / 3;
+	k = i % 2;
+	target_sec_bond[j][k] = target_sec_bond_ptr[i];
+    }
+  
+    // mobile k_nearest array
+    double **target_k_nearest;
+    NewArray(&target_k_nearest, target_data.len * parameters.closeK_opt, 3);
+    // get the buffer regions for the input array object
+    py::buffer_info target_k_nearest_info = target_data.k_nearest.request();
+    // create array filled with the pointers for the array elements
+    auto target_k_nearest_ptr  = static_cast <float *>(target_k_nearest_info.ptr);
+    // py::array_t is flattened array, port it to the 2d USalign array
+    for (i = 0; i < target_data.len * parameters.closeK_opt *  3; i ++)
+    {
+	j = i / 3;
+	k = i % 3;
+	target_k_nearest[j][k] = target_k_nearest_ptr[i];
+    }
+  
+    // convert std::string to c-like char pointers
+    char *target_seq = target_data.seq.data();
+    char *target_sec = target_data.sec.data();
+
+
+    // prep other parameters
+
+    // if min of len values are too large (>1500), then do fast alignment 
+    // method...
+    bool force_fast_opt=(std::min(mobile_data.len,target_data.len)>1500)?true:parameters.fast_opt;
+    
+    // these lines aren't gonna work...
+    int *invmap = new int[target_data.len+1];
+    double *dist_list = new double[target_data.len+1];
+   
 //    // run the SOIalign_main function as defined in the SOIalign.cpp file,
 //    // for all its faults
 //    SOIalign_main(mobile_coords, target_coords, 
@@ -704,108 +693,108 @@ class outputResults {
 //		  parameters.Lnorm_ass, parameters.d0_scale,
 //		  i_opt, 
 //		  parameters.a_opt, parameters.u_opt, parameters.d_opt, 
-//		  parameters.force_fast_opt,
+//		  force_fast_opt,
 //		  parameters.molec_types, dist_list,
 //		  mobile_sec_bond, target_sec_bond, parameters.mm_opt);
 //
-//    // gather only the necessary output and return them in the output class as
-//    // python accessible data types
-//
-//    OutputResults out; // instantiate the output object
-//
-//    // handling the translation and rotation arrays. flatten and return as 
-//    // py::array_t
-//    
-//    // define the translation array object to be filled
-//    auto trans_array = py::array_t<float>(3);
-//    // get the buffer regions for the array object
-//    py::buffer_info trans_info = trans_array.request();
-//    // create array filled with the pointers for the array elements
-//    auto trans_ptr = static_cast <float *>(trans_info.ptr);
-//    // fill those elements 
-//    for (int i = 0; i<3; i++)
-//    {
-//	trans_ptr[i] = t0[i];
-//    }
-//    out.translation_vector = trans_array;
-//
-//    // define the translation array object to be filled
-//    auto rot_array = py::array_t<float>(9);
-//    // get the buffer regions for the array object
-//    py::buffer_info rot_info = rot_array.request();
-//    // create array filled with the pointers for the array elements
-//    auto rot_ptr = static_cast <float *>(rot_info.ptr);
-//    // fill those elements 
-//    for (int i = 0; i<3; i++)
-//    {
-//	for (int j = 0; j<3; j++)
-//	{
-//	    k = i*3 + j; 
-//            rot_ptr[k] = u0[i][j];
-//	}
-//    }
-//    out.rotation_vector = rot_array;
-//
-//    // seq results are char* so need to convert it to a std::string
-//    out.seqM = str(seqM);
-//    out.seqA_mobile = str(seqxA);
-//    out.seqA_target = str(seqyA);
-//
-//    // handling tm score values
-//    out.TM1 = TM1;
-//    out.TM2 = TM2;
-//    if (parameters.a_opt > 0) 
-//    {
-//	out.TM3 = TM3;
-//	out.d0_a = d0a;
-//    }
-//    else 
-//    {
-//        out.TM3 = -1;
-//        out.d0a = -1;
-//    }
-//
-//    if (parameters.u_opt > 0) 
-//    {
-//	out.TM4 = TM4;
-//        out.d0u = d0u;
-//    }
-//    else 
-//    {
-//	out.TM4 = -1;
-//        out.d0u = -1;
-//    }
-//
-//    if (parameters.d_opt > 0) 
-//    {
-//	out.TM5 = TM5;
-//        out.d0_scale = parameters.d0_scale;
-//    }
-//    else 
-//    {
-//	out.TM5 = -1;
-//        out.d0_scale = -1;
-//    }
-//
-//    // handling other  value
-//    out.rmsd0 = rmsd0;
-//    out.d0_out = d0_out;
-//    out.Liden = Liden;
-//    out.n_ali8 = n_ali8;
-//    out.L_ali = L_ali;
-//    out.d0_mobile = d0A;
-//    out.d0_target = d0B;
-//
-//    // cleaning up
-//    DeleteArray(&mobile_coords, mobile_data.len);
-//    DeleteArray(&target_coords, target_data.len);
-//    DeleteArray(&mobile_sec_bond, mobile_data.len);
-//    DeleteArray(&target_sec_bond, target_data.len);
-//    DeleteArray(&mobile_k_nearest, mobile_data.len * parameters.closeK_opt);
-//    DeleteArray(&target_k_nearest, target_data.len * parameters.closeK_opt);
-//
-//    return out;
-//}
+    // gather only the necessary output and return them in the output class as
+    // python accessible data types
+
+    outputResults out; // instantiate the output object
+
+    // handling the translation and rotation arrays. flatten and return as 
+    // py::array_t
+    
+    // define the translation array object to be filled
+    auto trans_array = py::array_t<float>(3);
+    // get the buffer regions for the array object
+    py::buffer_info trans_info = trans_array.request();
+    // create array filled with the pointers for the array elements
+    auto trans_ptr = static_cast <float *>(trans_info.ptr);
+    // fill those elements 
+    for (i = 0; i<3; i++)
+    {
+	trans_ptr[i] = t0[i];
+    }
+    out.translation_vector = trans_array;
+
+    // define the translation array object to be filled
+    auto rot_array = py::array_t<float>(9);
+    // get the buffer regions for the array object
+    py::buffer_info rot_info = rot_array.request();
+    // create array filled with the pointers for the array elements
+    auto rot_ptr = static_cast <float *>(rot_info.ptr);
+    // fill those elements 
+    for (i = 0; i<3; i++)
+    {
+	for (int j = 0; j<3; j++)
+	{
+	    k = i*3 + j; 
+            rot_ptr[k] = u0[i][j];
+	}
+    }
+    out.rotation_matrix = rot_array;
+
+    // seq results are char* so need to convert it to a std::string
+    out.seqM = pybind11::str(seqM);
+    out.seqA_mobile = pybind11::str(seqxA);
+    out.seqA_target = pybind11::str(seqyA);
+
+    // handling tm score values
+    out.TM1 = TM1;
+    out.TM2 = TM2;
+    if (parameters.a_opt > 0) 
+    {
+	out.TM3 = TM3;
+	out.d0a = d0a;
+    }
+    else 
+    {
+        out.TM3 = -1;
+        out.d0a = -1;
+    }
+
+    if (parameters.u_opt > 0) 
+    {
+	out.TM4 = TM4;
+        out.d0u = d0u;
+    }
+    else 
+    {
+	out.TM4 = -1;
+        out.d0u = -1;
+    }
+
+    if (parameters.d_opt > 0) 
+    {
+	out.TM5 = TM5;
+        out.d0_scale = parameters.d0_scale;
+    }
+    else 
+    {
+	out.TM5 = -1;
+        out.d0_scale = -1;
+    }
+
+    // handling other  value
+    out.rmsd0 = rmsd0;
+    out.d0_out = d0_out;
+    out.Liden = Liden;
+    out.n_ali8 = n_ali8;
+    out.L_ali = L_ali;
+    out.d0_mobile = d0A;
+    out.d0_target = d0B;
+
+    // cleaning up
+    DeleteArray(&mobile_coords, mobile_data.len);
+    DeleteArray(&target_coords, target_data.len);
+    DeleteArray(&mobile_sec_bond, mobile_data.len);
+    DeleteArray(&target_sec_bond, target_data.len);
+    DeleteArray(&mobile_k_nearest, mobile_data.len * parameters.closeK_opt);
+    DeleteArray(&target_k_nearest, target_data.len * parameters.closeK_opt);
+
+    return out;
+}
 
 /*******************************************************************************
  * defining the pybind11 wrapper for SOIalign_main
@@ -907,7 +896,16 @@ PYBIND11_MODULE(SOIalign_main, m) {
 	.def_readwrite("L_ali", &outputResults::L_ali)
 	.def_readwrite("d0_mobile", &outputResults::d0_mobile)
 	.def_readwrite("d0_target", &outputResults::d0_target);
-    
+
+    m.def("runSOIalign",
+	  &runSOIalign,
+	  "wrapper function for the SOIalign_main cpp function",
+	  py::arg("mobile_data"),
+	  py::arg("target_data"),
+	  py::arg("parameters"),
+	  py::return_value_policy::copy);
+
+
 //    m.def("SOIalign_main", // define the function name
 //          &SOIalign_main,  // set pointer to hold this function
 //	  "function to calculate the Sequence-Order-Independent alignment between two sets of coordinates", // blurb about what the function does
