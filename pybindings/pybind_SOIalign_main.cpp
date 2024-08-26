@@ -6,7 +6,7 @@
 #include <string>
 #include <algorithm>
 
-//#include "SOIalign.h"	// 
+#include "SOIalign.h"	// 
 
 namespace py = pybind11;
 
@@ -22,64 +22,64 @@ namespace py = pybind11;
  * of length Narray2
  * PULLED DIRECTLY FROM USALIGN basic_fun.cpp file
  */ 
-template <class A> void NewArray(A *** array, int Narray1, int Narray2)
-{
-    *array=new A* [Narray1];
-    for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
-}
-
-// clean up the 2d matrix; have to loop through rows (Narray) since each row is 
-// itself an array object
-// PULLED DIRECTLY FROM USALIGN basic_fun.cpp file
-template <class A> void DeleteArray(A *** array, int Narray)
-{
-    for(int i=0; i<Narray; i++)
-        if(*(*array+i)) delete [] *(*array+i);
-    if(Narray) delete [] (*array);
-    (*array)=NULL;
-}
-
-// need to include the dist function from basic_fun.h for make_sec()
-// actually returns the dist**2
-double dist(double x[3], double y[3])
-{
-    double d1=x[0]-y[0];
-    double d2=x[1]-y[1];
-    double d3=x[2]-y[2];
- 
-    return (d1*d1 + d2*d2 + d3*d3);
-}
-
-/* secondary structure assignment for protein:
- * 1->coil, 2->helix, 3->turn, 4->strand 
- * for the set of distances provided, return a 2ndary structure character
- */
-char sec_str(double dis13, double dis14, double dis15,
-            double dis24, double dis25, double dis35)
-{
-    char s='C';
-    
-    double delta=2.1;
-    if (fabs(dis15-6.37)<delta && fabs(dis14-5.18)<delta && 
-        fabs(dis25-5.18)<delta && fabs(dis13-5.45)<delta &&
-        fabs(dis24-5.45)<delta && fabs(dis35-5.45)<delta)
-    {
-        s='H'; //helix                        
-        return s;
-    }
-
-    delta=1.42;
-    if (fabs(dis15-13  )<delta && fabs(dis14-10.4)<delta &&
-        fabs(dis25-10.4)<delta && fabs(dis13-6.1 )<delta &&
-        fabs(dis24-6.1 )<delta && fabs(dis35-6.1 )<delta)
-    {
-        s='E'; //strand
-        return s;
-    }
-
-    if (dis15 < 8) s='T'; //turn
-    return s;
-}
+//template <class A> void NewArray(A *** array, int Narray1, int Narray2)
+//{
+//    *array=new A* [Narray1];
+//    for(int i=0; i<Narray1; i++) *(*array+i)=new A [Narray2];
+//}
+//
+//// clean up the 2d matrix; have to loop through rows (Narray) since each row is 
+//// itself an array object
+//// PULLED DIRECTLY FROM USALIGN basic_fun.cpp file
+//template <class A> void DeleteArray(A *** array, int Narray)
+//{
+//    for(int i=0; i<Narray; i++)
+//        if(*(*array+i)) delete [] *(*array+i);
+//    if(Narray) delete [] (*array);
+//    (*array)=NULL;
+//}
+//
+//// need to include the dist function from basic_fun.h for make_sec()
+//// actually returns the dist**2
+//double dist(double x[3], double y[3])
+//{
+//    double d1=x[0]-y[0];
+//    double d2=x[1]-y[1];
+//    double d3=x[2]-y[2];
+// 
+//    return (d1*d1 + d2*d2 + d3*d3);
+//}
+//
+///* secondary structure assignment for protein:
+// * 1->coil, 2->helix, 3->turn, 4->strand 
+// * for the set of distances provided, return a 2ndary structure character
+// */
+//char sec_str(double dis13, double dis14, double dis15,
+//            double dis24, double dis25, double dis35)
+//{
+//    char s='C';
+//    
+//    double delta=2.1;
+//    if (fabs(dis15-6.37)<delta && fabs(dis14-5.18)<delta && 
+//        fabs(dis25-5.18)<delta && fabs(dis13-5.45)<delta &&
+//        fabs(dis24-5.45)<delta && fabs(dis35-5.45)<delta)
+//    {
+//        s='H'; //helix                        
+//        return s;
+//    }
+//
+//    delta=1.42;
+//    if (fabs(dis15-13  )<delta && fabs(dis14-10.4)<delta &&
+//        fabs(dis25-10.4)<delta && fabs(dis13-6.1 )<delta &&
+//        fabs(dis24-6.1 )<delta && fabs(dis35-6.1 )<delta)
+//    {
+//        s='E'; //strand
+//        return s;
+//    }
+//
+//    if (dis15 < 8) s='T'; //turn
+//    return s;
+//}
 
 
 /****************************************************************************
@@ -97,7 +97,7 @@ char sec_str(double dis13, double dis14, double dis15,
  * return the string associated with the 2ndary structure prediction.
  * how does this handle unresolved or broken backbone?
 */ 
-std::string make_sec(py::array_t<double> coords, 
+std::string make_sec_py(py::array_t<double> coords, 
 		     int len)
 {
     // fill a USalign-like array, xa, from the input array, coords
@@ -156,7 +156,7 @@ std::string make_sec(py::array_t<double> coords,
  * port the USalign function getCloseK()
  * !!! only used if closeK_opt > 3
 */ 
-py::array_t<double> getCloseK(py::array_t<double> coords, 
+py::array_t<double> getCloseK_py(py::array_t<double> coords, 
 		              const int len, 
 			      const int closeK_opt)
 {
@@ -273,7 +273,7 @@ py::array_t<double> getCloseK(py::array_t<double> coords,
  * !!! only used for sNS alignment (mm_opt==6)
  *
 */ 
-py::array_t<int> assign_sec_bond(const std::string sec, const int len)
+py::array_t<int> assign_sec_bond_py(const std::string sec, const int len)
 {
     //declare the USalign-like array of shape (len x 2)
     int **sec_bond;
@@ -671,32 +671,32 @@ outputResults runSOIalign( alnStruct& mobile_data,
     int *invmap = new int[target_data.len+1];
     double *dist_list = new double[target_data.len+1];
    
-//    // run the SOIalign_main function as defined in the SOIalign.cpp file,
-//    // for all its faults
-//    SOIalign_main(mobile_coords, target_coords, 
-//		  mobile_k_nearest, target_k_nearest,
-//		  parameters.closeK_opt,
-//		  mobile_seq, target_seq, mobile_sec, target_sec,
-//		  t0, u0,
-//		  TM1, TM2, TM3, TM4, TM5,
-//		  d0_0, TM_0,
-//		  d0A, d0B,
-//		  d0u, d0a, d0_out,
-//		  seqM, seqxA, seqyA,
-//		  invmap,
-//		  rmsd0,
-//		  L_ali, Liden,
-//		  TM_ali, rmsd_ali, n_ali,
-//		  n_ali8,
-//		  mobile_data.len, target_data.len, 
-//		  sequence,
-//		  parameters.Lnorm_ass, parameters.d0_scale,
-//		  i_opt, 
-//		  parameters.a_opt, parameters.u_opt, parameters.d_opt, 
-//		  force_fast_opt,
-//		  parameters.molec_types, dist_list,
-//		  mobile_sec_bond, target_sec_bond, parameters.mm_opt);
-//
+    // run the SOIalign_main function as defined in the SOIalign.cpp file,
+    // for all its faults
+    SOIalign_main(mobile_coords, target_coords, 
+		  mobile_k_nearest, target_k_nearest,
+		  parameters.closeK_opt,
+		  mobile_seq, target_seq, mobile_sec, target_sec,
+		  t0, u0,
+		  TM1, TM2, TM3, TM4, TM5,
+		  d0_0, TM_0,
+		  d0A, d0B,
+		  d0u, d0a, d0_out,
+		  seqM, seqxA, seqyA,
+		  invmap,
+		  rmsd0,
+		  L_ali, Liden,
+		  TM_ali, rmsd_ali, n_ali,
+		  n_ali8,
+		  mobile_data.len, target_data.len, 
+		  sequence,
+		  parameters.Lnorm_ass, parameters.d0_scale,
+		  i_opt, 
+		  parameters.a_opt, parameters.u_opt, parameters.d_opt, 
+		  force_fast_opt,
+		  parameters.molec_types, dist_list,
+		  mobile_sec_bond, target_sec_bond, parameters.mm_opt);
+
     // gather only the necessary output and return them in the output class as
     // python accessible data types
 
@@ -802,21 +802,21 @@ outputResults runSOIalign( alnStruct& mobile_data,
 
 PYBIND11_MODULE(SOIalign_main, m) {
     m.doc() = "pybind11 port of SOIalign_main and related functions from USalign codebase"; 
-    m.def("make_sec",
-	  &make_sec,
+    m.def("make_sec_py",
+	  &make_sec_py,
 	  "function to assign 2ndary structure character to each residue in the structure",
 	  py::arg("coords"), 
 	  py::arg("len"));
     
-    m.def("getCloseK",
-	  &getCloseK,
+    m.def("getCloseK_py",
+	  &getCloseK_py,
 	  "function to determine nearest neighbors for each residue",
 	  py::arg("coords"), 
 	  py::arg("len"),
 	  py::arg("closeK_opt"));
 
-    m.def("assign_sec_bond",
-	  &assign_sec_bond,
+    m.def("assign_sec_bond_py",
+	  &assign_sec_bond_py,
 	  "function to identify the boundaries of large helix/sheet 2ndary structure elements",
 	  py::arg("sec"), 
 	  py::arg("len"));
