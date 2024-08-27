@@ -157,8 +157,8 @@ std::string make_sec_py(py::array_t<double> coords,
  * !!! only used if closeK_opt > 3
 */ 
 py::array_t<double> getCloseK_py(py::array_t<double> coords, 
-		              const int len, 
-			      const int closeK_opt)
+		                 const int len, 
+			         const int closeK_opt)
 {
     // fill a USalign-like array, xa, from the input array, coords
     double **xa;
@@ -172,9 +172,7 @@ py::array_t<double> getCloseK_py(py::array_t<double> coords,
     // loop over input array dimensions and assign values to the USalign-like
     // array object
     int ndims = len * 3; // used to loop over indices of the coords array
-    int i; // index from ndims
-    int j; // row index
-    int k; // column index
+    int i, j, k, idx; // index from ndims, row index, column index, flat index
     for (i = 0; i < ndims; i++) 
     {
         j = i / 3;
@@ -186,38 +184,44 @@ py::array_t<double> getCloseK_py(py::array_t<double> coords,
     // a temp array to be filled with the dist**2 values between atoms in the
     // structure
     double **score;
-    NewArray(&score, len+1, len+1);
+    NewArray(&score, len, len);
 
     // calc dist**2_{i,j} "score" array
     for (i=0; i<len; i++)
     {
-        // fill diag elements of score array with zeroes
-	score[i+1][i+1]=0;
 	// fill off-diag elements with the dist**2 to atom i
-        for (j=i+1; j<len; j++) 
+        for (j=i; j<len; j++) 
 	{
-	    score[j+1][i+1] = score[i+1][j+1] = dist(xa[i], xa[j]);
+	    score[j][i] = score[i][j] = dist(xa[i], xa[j]);
 	}
     }
 
-    // create the USalign-like k_nearest array to return
-    // each row is filled with the cartesian coordinates for one of the 
-    // closeK_opt neighbors for a residue in the structure
-    // !!! maybe this array object doesn't need to be created
-    double **k_nearest;
-    NewArray(&k_nearest, len*closeK_opt, 3);
+    //// create the USalign-like k_nearest array to return
+    //// each row is filled with the cartesian coordinates for one of the 
+    //// closeK_opt neighbors for a residue in the structure
+    //// !!! maybe this array object doesn't need to be created
+    //double **k_nearest;
+    //NewArray(&k_nearest, len*closeK_opt, 3);
+    
     // create a fillable, sortable vector object to collect the distances and 
     // associated residue indices. these then get sorted to find the neighbors.
-    //auto pair = std::make_pair(0.0,0);
-    std::vector< std::pair< double, int > > close_idx_vec; //(len, pair);
+    std::vector< std::pair< double, int > > close_idx_vec(len, std::make_pair(0,0));
+    
+    // define the result array object to be filled
+    auto result = py::array_t<double>(len*closeK_opt*3);
+    // get the buffer regions for the array object
+    py::buffer_info res_info = result.request();
+    // create array filled with the pointers for the array elements
+    auto out_ptr = static_cast <double *>(res_info.ptr);
+    
     // loop over each residue to find its closest neighbors
     for (i=0; i<len; i++)
     {
         // loop over residues, filling the close_idx_vec with distance and res
-	// idx pairs
+	// idx pairs; will always find i=j; so closeK_opt should never == 1
 	for (j=0; j<len; j++)
         {
-            close_idx_vec[j].first=score[i+1][j+1];
+            close_idx_vec[j].first=score[i][j];
             close_idx_vec[j].second=j;
         }
         // sort the vector by the dist**2 values
@@ -226,33 +230,31 @@ py::array_t<double> getCloseK_py(py::array_t<double> coords,
         for (k=0; k<closeK_opt; k++)
         {
             // get the neighbor's res index
-	    j=close_idx_vec[k % len].second;
-            // assign the neighbor's cartesian coords to the k_nearest array
-	    // !!! for this port, maybe just go straight into the py::array_t 
-	    // object
-	    k_nearest[i*closeK_opt+k][0]=xa[j][0];
-            k_nearest[i*closeK_opt+k][1]=xa[j][1];
-            k_nearest[i*closeK_opt+k][2]=xa[j][2];
+	    j=close_idx_vec[k].second;
+	    // considering the flattened result array_t, get the index
+	    idx = i*closeK_opt + k;
+            // assign the neighbor's cartesian coords to the results array elements
+	    out_ptr[idx+0] = xa[j][0];
+	    out_ptr[idx+1] = xa[j][1];
+	    out_ptr[idx+2] = xa[j][2];
+	    //// !!! for this port, maybe just go straight into the py::array_t 
+	    //// object
+	    //k_nearest[i*closeK_opt+k][0]=xa[j][0];
+            //k_nearest[i*closeK_opt+k][1]=xa[j][1];
+            //k_nearest[i*closeK_opt+k][2]=xa[j][2];
         }
     }
 
-    // define the result array object to be filled
-    auto result = py::array_t<double>(len*closeK_opt*3);
-    // get the buffer regions for the array object
-    py::buffer_info res_info = result.request();
-    // create array filled with the pointers for the array elements
-    auto out_ptr = static_cast <double *>(res_info.ptr);
-    
-    // loop over dimensions of the k_nearest 2d array and update the results 
-    // array values
-    for (i = 0; i < len*closeK_opt; ++i) 
-    {
-        for (int j = 0; j < 3; ++j)
-	{
-	    k = i*3 + j;
-	    out_ptr[k] = k_nearest[i][j];
-	}
-    }
+    //// loop over dimensions of the k_nearest 2d array and update the results 
+    //// array values
+    //for (i = 0; i < len*closeK_opt; ++i) 
+    //{
+    //    for (int j = 0; j < 3; ++j)
+    //    {
+    //        k = i*3 + j;
+    //        out_ptr[k] = k_nearest[i][j];
+    //    }
+    //}
 
     // clean up 
     
@@ -261,8 +263,8 @@ py::array_t<double> getCloseK_py(py::array_t<double> coords,
     
     DeleteArray(&xa, len);
     DeleteArray(&score, len+1);
-    // maybe this array object isn't even necessary in the first place
-    DeleteArray(&k_nearest, len*closeK_opt);
+    //// maybe this array object isn't even necessary in the first place
+    //DeleteArray(&k_nearest, len*closeK_opt);
 
     return result;
 }
@@ -363,7 +365,7 @@ py::array_t<int> assign_sec_bond_py(const std::string sec, const int len)
     }
 
     // clean up
-    DeleteArray(&sec_bond, len);
+    //DeleteArray(&sec_bond, len);
 
     return result;
 }
@@ -800,7 +802,7 @@ outputResults runSOIalign( alnStruct& mobile_data,
  * defining the pybind11 wrapper for SOIalign_main
  ******************************************************************************/
 
-PYBIND11_MODULE(SOIalign_main, m) {
+PYBIND11_MODULE(pySOIalign, m) {
     m.doc() = "pybind11 port of SOIalign_main and related functions from USalign codebase"; 
     m.def("make_sec_py",
 	  &make_sec_py,
