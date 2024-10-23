@@ -712,7 +712,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     }
     if (i<xlen && j==ylen)
     {
-        for (i;i<xlen;i++)
+        for (;i<xlen;i++)
         {
             sequence[0]+=seqx[i];
             sequence[1]+='-';
@@ -720,7 +720,7 @@ int extract_aln_from_resi(vector<string> &sequence, char *seqx, char *seqy,
     }
     else if (i==xlen && j<ylen)
     {
-        for (j;j<ylen;j++)
+        for (;j<ylen;j++)
         {
             sequence[0]+='-';
             sequence[1]+=seqy[j];
