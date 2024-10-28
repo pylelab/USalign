@@ -110,10 +110,15 @@ version 12.0.5 or later and mingw-w64 version 9.3 or later.
 It is also possible to install using the package managers.
 
 If you are using Homebrew, run the following command.
+They are supposed to work on MacOS(x86_64, arm64) and Linux(x86_64).
+
 ```shell
 brew install brewsci/bio/usalign
 ```
+
 If you are using conda, run the following command.
+They are supposed to work on Linux(x86_64, aarch64), MacOS(x86_64, arm64) and windows(cygwin, mingw-w64).
+
 ```shell
 conda install -c bioconda usalign
 ```
