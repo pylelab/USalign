@@ -107,6 +107,22 @@ without WSL2 cannot parse gz compressed files.
 US-align is known to be compilable by g++ version 4.8.5 or later, clang++
 version 12.0.5 or later and mingw-w64 version 9.3 or later.
 
+It is also possible to install using the package managers.
+
+If you are using Homebrew, run the following command.
+The executable is supposed to work on MacOS (x86_64, arm64) and Linux (x86_64).
+
+```shell
+brew install brewsci/bio/usalign
+```
+
+If you are using conda, run the following command.
+The executable is supposed to work on Linux (x86_64, aarch64) and MacOS(x86_64, arm64).
+
+```shell
+conda install -c bioconda usalign
+```
+
 =====================
  How to use US-align
 =====================
