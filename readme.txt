@@ -117,7 +117,7 @@ brew install brewsci/bio/usalign
 ```
 
 If you are using conda, run the following command.
-The executable is supposed to work on Linux (x86_64, aarch64) and MacOS(x86_64, arm64).
+The executable is supposed to work on Linux (x86_64, aarch64) and MacOS (x86_64, arm64).
 
 ```shell
 conda install -c bioconda usalign
