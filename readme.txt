@@ -123,7 +123,7 @@ The executable is supposed to work on Linux (x86_64, aarch64) and MacOS (x86_64,
 conda install -c bioconda usalign
 ```
 
-Note that the Homebrew and conda packages may not have the most recent version of US-align.
+The Homebrew and conda packages may not have the most recent version of US-align.
 
 =====================
  How to use US-align
