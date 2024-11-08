@@ -1806,7 +1806,10 @@ void output_pymol(const string xname, const string yname,
                 <<"hide all atoms\n"
                 <<"hide all bonds\n"
                 <<"cartoon style protein modeh default arrows f xsect oval width 1 thick 1\n"
-                <<"cartoon style nucleic xsect oval width 1 thick 1\n";
+                <<"cartoon style nucleic xsect oval width 1 thick 1\n"
+                <<"hide all cartoon\n"
+                <<"show #1"<<chain1_sele<<" cartoon\n"
+                <<"show #2"<<chain2_sele<<" cartoon\n";
         }
         else if (p==3) // _all_atm.pml
         {
@@ -1814,12 +1817,13 @@ void output_pymol(const string xname, const string yname,
                 <<"show cartoon, structure1"<<chain1_sele<<"\n"
                 <<"show cartoon, structure2"<<chain2_sele<<"\n";
             else if (o_opt==3) buf_pymol
-                <<"hide ligand bonds\n"
-                <<"hide ligand atoms\n"
-                <<"hide solvent bonds\n"
-                <<"hide solvent atoms\n"
-                <<"hide ions bonds\n"
-                <<"hide ions atoms\n";
+                <<"hide all bonds\n"
+                <<"hide all atoms\n"
+                <<"hide all cartoon\n"
+                <<"show #1"<<chain1_sele<<" cartoon\n"
+                <<"show #1"<<chain1_sele<<" & nucleic cartoon,bonds\n"
+                <<"show #2"<<chain2_sele<<" cartoon\n"
+                <<"show #2"<<chain2_sele<<" & nucleic cartoon,bonds\n";
 
         }
         else if (p==4) // _all_atm_lig.pml
@@ -1829,6 +1833,8 @@ void output_pymol(const string xname, const string yname,
                 <<"show cartoon, structure2\n"
                 <<"show stick, not polymer\n"
                 <<"show sphere, not polymer\n";
+            else if (o_opt==3) buf_pymol
+                <<"show solvent atoms,bonds\n";
         }
         if (o_opt==1) buf_pymol
             <<"color blue, structure1\n"
