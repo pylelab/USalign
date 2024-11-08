@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20241030)                                      *\n"
+" * US-align (Version 20241108)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
@@ -218,6 +218,14 @@ void print_help(bool h_opt=false)
 "          $ rasmol -script sup_atm           # full-atom aligned region\n"
 "          $ rasmol -script sup_all_atm       # full-atom whole chain\n"
 "          $ rasmol -script sup_all_atm_lig   # full-atom with all molecules\n"
+"\n"
+"-chimerax Output superposed structure1 to sup.* for ChimeraX viewing.\n"
+"          $ USalign structure1.pdb structure2.pdb -chimerax sup\n"
+"          $ chimerax --script sup.cxc             # C-alpha trace aligned region\n"
+"          $ chimerax --script sup_all.cxc         # C-alpha trace whole chain\n"
+"          $ chimerax --script sup_atm.cxc         # full-atom aligned region\n"
+"          $ chimerax --script sup_all_atm.cxc     # full-atom whole chain\n"
+"          $ chimerax --script sup_all_atm_lig.cxc # full-atom with all molecules\n"
 "\n"
 "     -do  Output distance of aligned residue pairs\n"
 "\n"
@@ -2382,8 +2390,10 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
                 xname_vec,yname_vec, ut_mat, assign_list);
         }
 
-        if (o_opt) output_dock(chain_list, ter_opt, split_opt, 
-                infmt_opt, atom_opt, false, ut_mat, fname_super);
+        //if (o_opt) output_dock(chain_list, ter_opt, split_opt, 
+                //infmt_opt, atom_opt, false, ut_mat, fname_super);
+        if (o_opt) output_mTMalign_pymol(chain_list,
+            infmt_opt, ut_mat, fname_super);
         
         DeleteArray(&ut_mat,chain_num);
     }
@@ -2991,7 +3001,7 @@ int main(int argc, char *argv[])
     bool v_opt = false; // print version
     bool m_opt = false; // flag for -m, output rotation matrix
     int  i_opt = 0;     // 1 for -i, 3 for -I
-    int  o_opt = 0;     // 1 for -o, 2 for -rasmol
+    int  o_opt = 0;     // 1 for -o, 2 for -rasmol, 3 for -chimerax
     int  a_opt = 0;     // flag for -a, do not normalized by average length
     bool u_opt = false; // flag for -u, normalized by user specified length
     bool d_opt = false; // flag for -d, user specified d0
@@ -3038,6 +3048,8 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -o");
             if (o_opt==2)
                 cerr<<"Warning! -rasmol is already set. Ignore -o"<<endl;
+            else if (o_opt==3)
+                cerr<<"Warning! -chimerax is already set. Ignore -o"<<endl;
             else
             {
                 fname_super = argv[i + 1];
@@ -3051,10 +3063,27 @@ int main(int argc, char *argv[])
                 PrintErrorAndQuit("ERROR! Missing value for -rasmol");
             if (o_opt==1)
                 cerr<<"Warning! -o is already set. Ignore -rasmol"<<endl;
+            else if (o_opt==3)
+                cerr<<"Warning! -chimerax is already set. Ignore -rasmol"<<endl;
             else
             {
                 fname_super = argv[i + 1];
                 o_opt = 2;
+            }
+            i++;
+        }
+        else if ( !strcmp(argv[i],"-chimerax") )
+        {
+            if (i>=(argc-1)) 
+                PrintErrorAndQuit("ERROR! Missing value for -chimerax");
+            if (o_opt==1)
+                cerr<<"Warning! -o is already set. Ignore -chimerax"<<endl;
+            else if (o_opt==2)
+                cerr<<"Warning! -rasmol is already set. Ignore -chimerax"<<endl;
+            else
+            {
+                fname_super = argv[i + 1];
+                o_opt = 3;
             }
             i++;
         }
@@ -3402,9 +3431,11 @@ int main(int argc, char *argv[])
             <<"D amino acids may not be correctly aligned."<<endl;
 
     if (ter_opt<0)
+    {
         if (mm_opt==1 || mm_opt==2 || byresi_opt==2 || byresi_opt==3 || 
             byresi_opt==6 || byresi_opt==7) ter_opt=1;
         else ter_opt=2;
+    }
 
     if (mm_opt)
     {

@@ -1473,12 +1473,13 @@ double DP_iter(double **r1, double **r2, double **xtm, double **ytm,
 }
 
 
+/* script format: 0 - no script; 1 - pymol; 3 - chimerax */
 void output_pymol(const string xname, const string yname,
     const string fname_super, double t[3], double u[3][3], const int ter_opt, 
     const int mm_opt, const int split_opt, const int mirror_opt,
     const char *seqM, const char *seqxA, const char *seqyA,
     const vector<string>&resi_vec1, const vector<string>&resi_vec2,
-    const string chainID1, const string chainID2)
+    const string chainID1, const string chainID2, const int o_opt=1)
 {
     int compress_type=0; // uncompressed file
     ifstream fin;
@@ -1645,15 +1646,25 @@ void output_pymol(const string xname, const string yname,
     {
         if (split_opt==2 && ter_opt>=1) // align one chain from model 1
         {
-            chain1_sele=" and c. "+chainID1.substr(1);
-            chain2_sele=" and c. "+chainID2.substr(1);
+            if (o_opt==1)
+            {
+                chain1_sele=" and c. "+chainID1.substr(1);
+                chain2_sele=" and c. "+chainID2.substr(1);
+            }
+            else if (o_opt==3)
+            {
+                chain1_sele="/"+chainID1.substr(1);
+                chain2_sele="/"+chainID2.substr(1);
+            }
         }
         else if (split_opt==2 && ter_opt==0) // align one chain from each model
         {
             for (i=1;i<chainID1.size();i++) if (chainID1[i]==',') break;
-            chain1_sele=" and c. "+chainID1.substr(i+1);
+            if (o_opt==1) chain1_sele=" and c. "+chainID1.substr(i+1);
+            else if (o_opt==3) chain1_sele="/"+chainID1.substr(i+1);
             for (i=1;i<chainID2.size();i++) if (chainID2[i]==',') break;
-            chain2_sele=" and c. "+chainID2.substr(i+1);
+            if (o_opt==1) chain2_sele=" and c. "+chainID2.substr(i+1);
+            else if (o_opt==3) chain2_sele="/"+chainID2.substr(i+1);
         }
     }
 
@@ -1682,27 +1693,46 @@ void output_pymol(const string xname, const string yname,
             curr_resi1=resi_vec1[i1].substr(0,4);
             curr_resi2=resi_vec2[i2].substr(0,4);
             if (resi1_sele.size()==0)
-                resi1_sele =    "i. "+curr_resi1;
+            {
+                if (o_opt==1) resi1_sele =    "i. "+curr_resi1;
+                else if (o_opt==3) resi1_sele=":"+Trim(curr_resi1);
+            }
             else
             {
-                resi1_sele+=" or i. "+curr_resi1;
-                resi1_bond+="bond structure1 and i. "+prev_resi1+
+                if (o_opt==1)
+                {
+                    resi1_sele+=" or i. "+curr_resi1;
+                    resi1_bond+="bond structure1 and i. "+prev_resi1+
                                ", structure1 and i. "+curr_resi1+"\n";
+                }
+                else if (o_opt==3)
+                    resi1_sele+=","+Trim(curr_resi1);
             }
             if (resi2_sele.size()==0)
-                resi2_sele =    "i. "+curr_resi2;
+            {
+                if (o_opt==1) resi2_sele =    "i. "+curr_resi2;
+                else if (o_opt==3) resi2_sele=":"+Trim(curr_resi2);
+            }
             else
             {
-                resi2_sele+=" or i. "+curr_resi2;
-                resi2_bond+="bond structure2 and i. "+prev_resi2+
-                               ", structure2 and i. "+curr_resi2+"\n";
+                if (o_opt==1)
+                {
+                    resi2_sele+=" or i. "+curr_resi2;
+                    resi2_bond+="bond structure2 and i. "+prev_resi2+
+                                   ", structure2 and i. "+curr_resi2+"\n";
+                }
+                else if (o_opt==3)
+                    resi2_sele+=","+Trim(curr_resi2);
             }
             prev_resi1=curr_resi1;
             prev_resi2=curr_resi2;
             //if (seqM[i]!=':') continue;
         }
-        if (resi1_sele.size()) resi1_sele=" and ( "+resi1_sele+")";
-        if (resi2_sele.size()) resi2_sele=" and ( "+resi2_sele+")";
+        if (o_opt==1)
+        {
+            if (resi1_sele.size()) resi1_sele=" and ( "+resi1_sele+")";
+            if (resi2_sele.size()) resi2_sele=" and ( "+resi2_sele+")";
+        }
     }
 
     /* write pymol script */
@@ -1716,52 +1746,91 @@ void output_pymol(const string xname, const string yname,
     for (int p=0;p<pml_list.size();p++)
     {
         if (mm_opt && p<=1) continue;
-        buf_pymol
+        if (o_opt==1) buf_pymol
             <<"#!/usr/bin/env pymol\n"
             <<"cmd.load(\""<<fname_super_full<<"\", \"structure1\")\n"
             <<"cmd.load(\""<<yname<<"\", \"structure2\")\n"
             <<"hide all\n"
             <<"set all_states, "<<((ter_opt==0)?"on":"off")<<'\n';
+        else if (o_opt==3) buf_pymol
+            <<"#!/usr/bin/env chimerax --script\n"
+            <<"open \""<<fname_super_full<<"\" name structure1\n"
+            <<"open \""<<yname<<"\" name structure2\n";
         if (p==0) // .pml
         {
-            if (chain1_sele.size()) buf_pymol
-                <<"remove structure1 and not "<<chain1_sele.substr(4)<<"\n";
-            if (chain2_sele.size()) buf_pymol
-                <<"remove structure2 and not "<<chain2_sele.substr(4)<<"\n";
-            buf_pymol
-                <<"remove not n. CA and not n. C3'\n"
-                <<resi1_bond
-                <<resi2_bond
-                <<"show stick, structure1"<<chain1_sele<<resi1_sele<<"\n"
-                <<"show stick, structure2"<<chain2_sele<<resi2_sele<<"\n";
+            if (o_opt==1)
+            {
+                if (chain1_sele.size()) buf_pymol
+                    <<"remove structure1 and not "<<chain1_sele.substr(4)<<"\n";
+                if (chain2_sele.size()) buf_pymol
+                    <<"remove structure2 and not "<<chain2_sele.substr(4)<<"\n";
+                buf_pymol
+                    <<"remove not n. CA and not n. C3'\n"
+                    <<resi1_bond
+                    <<resi2_bond
+                    <<"show stick, structure1"<<chain1_sele<<resi1_sele<<"\n"
+                    <<"show stick, structure2"<<chain2_sele<<resi2_sele<<"\n";
+            }
+            else if (o_opt==3)
+            {
+                buf_pymol
+                    <<"hide all cartoon\n"
+                    <<"hide all atoms\n"
+                    <<"hide all bonds\n"
+                    <<"show #1"<<chain1_sele<<resi1_sele<<" cartoon\n"
+                    <<"show #2"<<chain2_sele<<resi2_sele<<" cartoon\n"
+                    <<"cartoon style protein modeh default arrows f xsect oval width 1 thick 1\n"
+                    <<"cartoon style nucleic xsect oval width 1 thick 1\n";
+            }
         }
         else if (p==1) // _atm.pml
         {
-            buf_pymol
+            if (o_opt==1) buf_pymol
                 <<"show cartoon, structure1"<<chain1_sele<<resi1_sele<<"\n"
                 <<"show cartoon, structure2"<<chain2_sele<<resi2_sele<<"\n";
+            else if (o_opt==3) buf_pymol
+                <<"hide all cartoon\n"
+                <<"hide all atoms\n"
+                <<"hide all bonds\n"
+                <<"show #1"<<chain1_sele<<resi1_sele<<" & protein cartoon\n"
+                <<"show #1"<<chain1_sele<<resi1_sele<<" & nucleic cartoon,bonds\n"
+                <<"show #2"<<chain2_sele<<resi2_sele<<" & protein cartoon\n"
+                <<"show #2"<<chain2_sele<<resi2_sele<<" & nucleic cartoon,bonds\n";
         }
         else if (p==2) // _all.pml
         {
-            buf_pymol
+            if (o_opt==1) buf_pymol
                 <<"show ribbon, structure1"<<chain1_sele<<"\n"
                 <<"show ribbon, structure2"<<chain2_sele<<"\n";
+            else if (o_opt==3) buf_pymol
+                <<"hide all atoms\n"
+                <<"hide all bonds\n"
+                <<"cartoon style protein modeh default arrows f xsect oval width 1 thick 1\n"
+                <<"cartoon style nucleic xsect oval width 1 thick 1\n";
         }
         else if (p==3) // _all_atm.pml
         {
-            buf_pymol
+            if (o_opt==1) buf_pymol
                 <<"show cartoon, structure1"<<chain1_sele<<"\n"
                 <<"show cartoon, structure2"<<chain2_sele<<"\n";
+            else if (o_opt==3) buf_pymol
+                <<"hide ligand bonds\n"
+                <<"hide ligand atoms\n"
+                <<"hide solvent bonds\n"
+                <<"hide solvent atoms\n"
+                <<"hide ions bonds\n"
+                <<"hide ions atoms\n";
+
         }
         else if (p==4) // _all_atm_lig.pml
         {
-            buf_pymol
+            if (o_opt==1) buf_pymol
                 <<"show cartoon, structure1\n"
                 <<"show cartoon, structure2\n"
                 <<"show stick, not polymer\n"
                 <<"show sphere, not polymer\n";
         }
-        buf_pymol
+        if (o_opt==1) buf_pymol
             <<"color blue, structure1\n"
             <<"color red, structure2\n"
             <<"set ribbon_width, 6\n"
@@ -1773,8 +1842,16 @@ void output_pymol(const string xname, const string yname,
             <<"zoom polymer and ((structure1"<<chain1_sele
             <<") or (structure2"<<chain2_sele<<"))\n"
             <<endl;
+        else if (o_opt==3) buf_pymol
+            <<"color #1 blue\n"
+            <<"color #2 red\n"
+            <<"set bgColor white\n"
+            <<endl;
 
-        fp.open((pml_list[p]+".pml").c_str());
+        if (o_opt==1) // pymol
+            fp.open((pml_list[p]+".pml").c_str());
+        else if (o_opt==3) // chimerax
+            fp.open((pml_list[p]+".cxc").c_str());
         fp<<buf_pymol.str();
         fp.close();
         buf_pymol.str(string());
@@ -1797,6 +1874,228 @@ void output_pymol(const string xname, const string yname,
 
     chain1_sele.clear();
     chain2_sele.clear();
+}
+
+void output_mTMalign_pymol(const vector<string>&chain_list,
+    const int infmt_opt, double **ut_mat, const string &fname_super)
+{
+    int compress_type=0; // uncompressed file
+    size_t m;
+    string name;
+    double t[3];
+    double u[3][3];
+    int ui,uj;
+    string filename;
+    vector<string> color_list;
+    color_list.push_back("red");
+    color_list.push_back("green");
+    color_list.push_back("blue");
+    color_list.push_back("yellow");
+    color_list.push_back("violet");
+    color_list.push_back("cyan");
+    color_list.push_back("salmon");
+    color_list.push_back("lime");
+    color_list.push_back("pink");
+    color_list.push_back("slate");
+    color_list.push_back("magenta");
+    color_list.push_back("orange");
+    color_list.push_back("marine");
+    color_list.push_back("olive");
+    color_list.push_back("purple");
+    color_list.push_back("teal");
+    color_list.push_back("forest");
+    color_list.push_back("firebrick");
+    color_list.push_back("chocolate");
+    color_list.push_back("wheat");
+    color_list.push_back("white");
+    color_list.push_back("grey");
+
+    stringstream buf_pymol;
+    buf_pymol<<"#!/usr/bin/env pymol\n";
+    for (m=0;m<chain_list.size();m++)
+    {
+        name=chain_list[m];
+
+        ifstream fin;
+#ifndef REDI_PSTREAM_H_SEEN
+        ifstream fin_gz;
+#else
+        redi::ipstream fin_gz; // if file is compressed
+        if (name.size()>=3 && 
+            name.substr(name.size()-3,3)==".gz")
+        {
+            fin_gz.open("gunzip -c "+name);
+            compress_type=1;
+        }
+        else if (name.size()>=4 && 
+            name.substr(name.size()-4,4)==".bz2")
+        {
+            fin_gz.open("bzcat "+name);
+            compress_type=2;
+        }
+        else
+#endif
+        fin.open(name.c_str());
+
+        stringstream buf;
+        buf<<fname_super<<'.'<<m<<".pdb";
+        filename=buf.str();
+        buf.str(string());
+        for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) u[ui][uj]=ut_mat[m][ui*3+uj];
+        for (uj=0;uj<3;uj++) t[uj]=ut_mat[m][9+uj];
+
+
+        string line;
+        double x[3];  // before transform
+        double x1[3]; // after transform
+
+        /* for PDBx/mmCIF only */
+        map<string,int> _atom_site;
+        size_t atom_site_pos;
+        vector<string> line_vec;
+        int infmt=-1; // 0 - PDB, 3 - PDBx/mmCIF
+
+        while (compress_type?fin_gz.good():fin.good())
+        {
+            if (compress_type) getline(fin_gz, line);
+            else               getline(fin, line);
+            if (line.compare(0, 6, "ATOM  ")==0 || 
+                line.compare(0, 6, "HETATM")==0) // PDB format
+            {
+                infmt=0;
+                x[0]=atof(line.substr(30,8).c_str());
+                x[1]=atof(line.substr(38,8).c_str());
+                x[2]=atof(line.substr(46,8).c_str());
+                transform(t, u, x, x1);
+                buf<<line.substr(0,30)<<setiosflags(ios::fixed)
+                    <<setprecision(3)
+                    <<setw(8)<<x1[0] <<setw(8)<<x1[1] <<setw(8)<<x1[2]
+                    <<line.substr(54)<<'\n';
+            }
+            else if (line.compare(0,5,"loop_")==0) // PDBx/mmCIF
+            {
+                infmt=3;
+                buf<<line<<'\n';
+                while(1)
+                {
+                    if (compress_type) 
+                    {
+                        if (fin_gz.good()) getline(fin_gz, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+name);
+                    }
+                    else
+                    {
+                        if (fin.good()) getline(fin, line);
+                        else PrintErrorAndQuit("ERROR! Unexpected end of "+name);
+                    }
+                    if (line.size()) break;
+                }
+                buf<<line<<'\n';
+                if (line.compare(0,11,"_atom_site.")) continue;
+                _atom_site.clear();
+                atom_site_pos=0;
+                _atom_site[Trim(line.substr(11))]=atom_site_pos;
+                while(1)
+                {
+                    while(1)
+                    {
+                        if (compress_type) 
+                        {
+                            if (fin_gz.good()) getline(fin_gz, line);
+                            else PrintErrorAndQuit("ERROR! Unexpected end of "+name);
+                        }
+                        else
+                        {
+                            if (fin.good()) getline(fin, line);
+                            else PrintErrorAndQuit("ERROR! Unexpected end of "+name);
+                        }
+                        if (line.size()) break;
+                    }
+                    if (line.compare(0,11,"_atom_site.")) break;
+                    _atom_site[Trim(line.substr(11))]=++atom_site_pos;
+                    buf<<line<<'\n';
+                }
+
+                if (_atom_site.count("group_PDB")*
+                    _atom_site.count("Cartn_x")*
+                    _atom_site.count("Cartn_y")*
+                    _atom_site.count("Cartn_z")==0)
+                {
+                    buf<<line<<'\n';
+                    cerr<<"Warning! Missing one of the following _atom_site data items: group_PDB, Cartn_x, Cartn_y, Cartn_z"<<endl;
+                    continue;
+                }
+
+                while(1)
+                {
+                    line_vec.clear();
+                    split(line,line_vec);
+                    if (line_vec[_atom_site["group_PDB"]]!="ATOM" &&
+                        line_vec[_atom_site["group_PDB"]]!="HETATM") break;
+
+                    x[0]=atof(line_vec[_atom_site["Cartn_x"]].c_str());
+                    x[1]=atof(line_vec[_atom_site["Cartn_y"]].c_str());
+                    x[2]=atof(line_vec[_atom_site["Cartn_z"]].c_str());
+                    transform(t, u, x, x1);
+
+                    for (atom_site_pos=0; atom_site_pos<_atom_site.size();
+                         atom_site_pos++)
+                    {
+                        if (atom_site_pos==_atom_site["Cartn_x"])
+                            buf<<setiosflags(ios::fixed)<<setprecision(3)
+                                <<setw(8)<<x1[0]<<' ';
+                        else if (atom_site_pos==_atom_site["Cartn_y"])
+                            buf<<setiosflags(ios::fixed)<<setprecision(3)
+                                <<setw(8)<<x1[1]<<' ';
+                        else if (atom_site_pos==_atom_site["Cartn_z"])
+                            buf<<setiosflags(ios::fixed)<<setprecision(3)
+                                <<setw(8)<<x1[2]<<' ';
+                        else buf<<line_vec[atom_site_pos]<<' ';
+                    }
+                    buf<<'\n';
+
+                    if (compress_type && fin_gz.good()) getline(fin_gz, line);
+                    else if (!compress_type && fin.good()) getline(fin, line);
+                    else break;
+                }
+                if (compress_type?fin_gz.good():fin.good()) buf<<line<<'\n';
+            }
+            else if (line.size()) buf<<line<<'\n';
+        }
+        if (compress_type) fin_gz.close();
+        else               fin.close();
+
+        ofstream fp;
+        fp.open(filename.c_str());
+        fp<<buf.str();
+        fp.close();
+        buf.str(string()); // clear stream
+
+        buf_pymol<<"cmd.load(\""<<filename<<"\",\"structure"<<m<<"\")\n"
+            <<"color "<<color_list[m%color_list.size()]<<", structure"<<m<<"\n";
+    }
+    buf_pymol<<"hide all\n"
+        <<"show cartoon\n"
+        <<"set ribbon_width, 6\n"
+        <<"set stick_radius, 0.3\n"
+        <<"set sphere_scale, 0.25\n"
+        <<"set ray_shadow, 0\n"
+        <<"bg_color white\n"
+        <<"set transparency=0.2\n"
+        <<endl;
+
+    ofstream fp;
+    fp.open((fname_super+"_all_atm.pml").c_str());
+    fp<<buf_pymol.str();
+    fp.close();
+    fp.open((fname_super+"_all_atm_lig.pml").c_str());
+    fp<<buf_pymol.str()
+        <<"show stick, not polymer\n"
+        <<"show sphere, not polymer\n"
+        <<endl;
+    fp.close();
+    buf_pymol.str(string());
+    vector<string> ().swap(color_list);
 }
 
 void output_rasmol(const string xname, const string yname,
@@ -2179,7 +2478,7 @@ void output_rasmol(const string xname, const string yname,
             lig_idx2++;
             buf_all_atm_lig<<line.substr(0,6)<<setw(5)<<lig_idx1+lig_idx2
                 <<line.substr(11,9)<<" B"<<line.substr(22,32)<<'\n';
-            if (chain1_sele.size() && line[21]!=chain1_sele[0]) continue;
+            if (chain2_sele.size() && line[21]!=chain2_sele[0]) continue;
             if (after_ter || line.compare(0,6,"ATOM  ")) continue;
             if (ter_opt>=2)
             {
@@ -2576,10 +2875,10 @@ void output_results(const string xname, const string yname,
 
     if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
 
-    if (o_opt==1)
+    if (o_opt==1 || o_opt==3)
         output_pymol(xname, yname, fname_super, t, u, ter_opt,
             mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
-            resi_vec1, resi_vec2, chainID1, chainID2);
+            resi_vec1, resi_vec2, chainID1, chainID2, o_opt);
     else if (o_opt==2)
         output_rasmol(xname, yname, fname_super, t, u, ter_opt,
             mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
@@ -2652,10 +2951,10 @@ void output_mTMalign_results(const string xname, const string yname,
 
     if (strlen(fname_matrix)) output_rotation_matrix(fname_matrix, t, u);
 
-    if (o_opt==1)
+    if (o_opt==1 || o_opt==3)
         output_pymol(xname, yname, fname_super, t, u, ter_opt,
             mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
-            resi_vec1, resi_vec2, chainID1, chainID2);
+            resi_vec1, resi_vec2, chainID1, chainID2, o_opt);
     else if (o_opt==2)
         output_rasmol(xname, yname, fname_super, t, u, ter_opt,
             mm_opt, split_opt, mirror_opt, seqM, seqxA, seqyA,
