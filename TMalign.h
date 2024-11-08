@@ -1877,7 +1877,8 @@ void output_pymol(const string xname, const string yname,
 }
 
 void output_mTMalign_pymol(const vector<string>&chain_list,
-    const int infmt_opt, double **ut_mat, const string &fname_super)
+    const int infmt_opt, double **ut_mat, const string &fname_super,
+    const int o_opt=1)
 {
     int compress_type=0; // uncompressed file
     size_t m;
@@ -1911,7 +1912,10 @@ void output_mTMalign_pymol(const vector<string>&chain_list,
     color_list.push_back("grey");
 
     stringstream buf_pymol;
-    buf_pymol<<"#!/usr/bin/env pymol\n";
+    if (o_opt==1)
+        buf_pymol<<"#!/usr/bin/env pymol\n";
+    else if (o_opt==3)
+        buf_pymol<<"#!/usr/bin/env chimerax --script\n";
     for (m=0;m<chain_list.size();m++)
     {
         name=chain_list[m];
@@ -2071,10 +2075,16 @@ void output_mTMalign_pymol(const vector<string>&chain_list,
         fp.close();
         buf.str(string()); // clear stream
 
-        buf_pymol<<"cmd.load(\""<<filename<<"\",\"structure"<<m<<"\")\n"
+        if (o_opt==1) buf_pymol
+            <<"cmd.load(\""<<filename<<"\",\"structure"<<m<<"\")\n"
             <<"color "<<color_list[m%color_list.size()]<<", structure"<<m<<"\n";
+        else if (o_opt==3) buf_pymol
+            <<"open \""<<filename<<"\" name structure"<<m<<"\n"
+            <<"color #"<<m+1<<" "<<color_list[m%color_list.size()]<<"\n";
+
     }
-    buf_pymol<<"hide all\n"
+    if (o_opt==1) buf_pymol
+        <<"hide all\n"
         <<"show cartoon\n"
         <<"set ribbon_width, 6\n"
         <<"set stick_radius, 0.3\n"
@@ -2083,16 +2093,37 @@ void output_mTMalign_pymol(const vector<string>&chain_list,
         <<"bg_color white\n"
         <<"set transparency=0.2\n"
         <<endl;
+    else if (o_opt==3) buf_pymol
+        <<"set bgColor white\n"<<endl;
 
     ofstream fp;
-    fp.open((fname_super+"_all_atm.pml").c_str());
-    fp<<buf_pymol.str();
-    fp.close();
-    fp.open((fname_super+"_all_atm_lig.pml").c_str());
-    fp<<buf_pymol.str()
-        <<"show stick, not polymer\n"
-        <<"show sphere, not polymer\n"
-        <<endl;
+    if (o_opt==1)
+    {
+        fp.open((fname_super+"_all_atm.pml").c_str());
+        fp<<buf_pymol.str();
+        fp.close();
+        fp.open((fname_super+"_all_atm_lig.pml").c_str());
+        fp<<buf_pymol.str()
+            <<"show stick, not polymer\n"
+            <<"show sphere, not polymer\n"
+            <<endl;
+    }
+    else if (o_opt==3)
+    {
+        fp.open((fname_super+"_all_atm.cxc").c_str());
+        fp<<buf_pymol.str()
+            <<"hide ligand bonds\n"
+            <<"hide ligand atoms\n"
+            <<"hide solvent bonds\n"
+            <<"hide solvent atoms\n"
+            <<"hide ions bonds\n"
+            <<"hide ions atoms\n"
+            <<endl;
+        fp.close();
+        fp.open((fname_super+"_all_atm_lig.cxc").c_str());
+        fp<<buf_pymol.str()<<endl;
+    }
+
     fp.close();
     buf_pymol.str(string());
     vector<string> ().swap(color_list);

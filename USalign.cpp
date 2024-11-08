@@ -2393,7 +2393,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         //if (o_opt) output_dock(chain_list, ter_opt, split_opt, 
                 //infmt_opt, atom_opt, false, ut_mat, fname_super);
         if (o_opt) output_mTMalign_pymol(chain_list,
-            infmt_opt, ut_mat, fname_super);
+            infmt_opt, ut_mat, fname_super, o_opt);
         
         DeleteArray(&ut_mat,chain_num);
     }
