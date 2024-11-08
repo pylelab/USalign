@@ -3303,33 +3303,40 @@ void output_dock_rotation_matrix(const char* fname_matrix,
     const vector<string>&xname_vec, const vector<string>&yname_vec,
     double ** ut_mat, int *assign1_list)
 {
-    fstream fout;
-    fout.open(fname_matrix, ios::out | ios::trunc);
-    if (fout)// succeed
+    stringstream ss;
+    int i,k;
+    for (i=0;i<xname_vec.size();i++)
     {
-        int i,k;
-        for (i=0;i<xname_vec.size();i++)
-        {
-            if (assign1_list[i]<0) continue;
-            fout << "------ The rotation matrix to rotate "
-                 <<xname_vec[i]<<" to "<<yname_vec[i]<<" ------\n"
-                 << "m               t[m]        u[m][0]        u[m][1]        u[m][2]\n";
-            for (k = 0; k < 3; k++)
-                fout<<k<<setiosflags(ios::fixed)<<setprecision(10)
-                    <<' '<<setw(18)<<ut_mat[i][9+k]
-                    <<' '<<setw(14)<<ut_mat[i][3*k+0]
-                    <<' '<<setw(14)<<ut_mat[i][3*k+1]
-                    <<' '<<setw(14)<<ut_mat[i][3*k+2]<<'\n';
-        }
-        fout << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
-                "for(i=0; i<L; i++)\n"
-                "{\n"
-                "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
-                "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
-                "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
-                "}"<<endl;
-        fout.close();
+        if (assign1_list[i]<0) continue;
+        ss << "------ The rotation matrix to rotate "
+             <<xname_vec[i]<<" to "<<yname_vec[i]<<" ------\n"
+             << "m               t[m]        u[m][0]        u[m][1]        u[m][2]\n";
+        for (k = 0; k < 3; k++)
+            ss<<k<<setiosflags(ios::fixed)<<setprecision(10)
+              <<' '<<setw(18)<<ut_mat[i][9+k]
+              <<' '<<setw(14)<<ut_mat[i][3*k+0]
+              <<' '<<setw(14)<<ut_mat[i][3*k+1]
+              <<' '<<setw(14)<<ut_mat[i][3*k+2]<<'\n';
     }
+    ss << "\nCode for rotating Structure 1 from (x,y,z) to (X,Y,Z):\n"
+          "for(i=0; i<L; i++)\n"
+          "{\n"
+          "   X[i] = t[0] + u[0][0]*x[i] + u[0][1]*y[i] + u[0][2]*z[i];\n"
+          "   Y[i] = t[1] + u[1][0]*x[i] + u[1][1]*y[i] + u[1][2]*z[i];\n"
+          "   Z[i] = t[2] + u[2][0]*x[i] + u[2][1]*y[i] + u[2][2]*z[i];\n"
+          "}"<<endl;
+    if (strcmp(fname_matrix,(char *)("-"))==0)
+       cout<<ss.str();
     else
-        cout << "Open file to output rotation matrix fail.\n";
+    {
+        fstream fout;
+        fout.open(fname_matrix, ios::out | ios::trunc);
+        if (fout)
+        {
+            fout<<ss.str();
+            fout.close();
+        }
+        else cout << "Open file to output rotation matrix fail.\n";
+    }
+    ss.str(string());
 }
