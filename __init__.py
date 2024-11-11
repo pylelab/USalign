@@ -16,6 +16,9 @@ INSTALLATION
     value within PyMOL by the following command:
     
     print(os.getenv('PATH'))
+
+    On Mac OS, the US-align binary executable can be installed by
+    conda install -c bioconda usalign
 '''
 #This script is partly based on tmalign plugin by Thomas Holder available at
 #https://github.com/Pymol-Scripts/Pymol-script-repo/blob/master/tmalign.py
@@ -32,16 +35,26 @@ import tempfile
 import os
 import platform
 
+def check_executable(exe="USalign"):
+    try:
+        process = subprocess.Popen(exe, stdout=subprocess.PIPE, shell=True,
+                universal_newlines=True)
+        if "version" in process.stdout.read():
+            return True
+    except OSError:
+        return False
+    return False
+
 def get_usalign_path(exe="USalign"):
     if platform.system().lower().startswith("win"):
         exe+=".exe"
     filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),exe)
-    if os.path.isfile(filename):
+    if os.path.isfile(filename) and check_executable(filename):
         return filename
     else:
         for p in os.getenv("PATH").split(os.pathsep):
             filename=os.path.join(p,exe)
-            if os.path.isfile(filename):
+            if os.path.isfile(filename) and check_executable(filename):
                 return filename
     print("ERROR! Cannot locate %s at %s or at %s"%(exe,
         os.path.dirname(os.path.abspath(__file__)),os.getenv("PATH")))
@@ -130,3 +143,4 @@ cmd.auto_arg[0].update({ 'usalign': cmd.auto_arg[0]['align'], })
 cmd.auto_arg[1].update({ 'usalign': cmd.auto_arg[1]['align'], })
 cmd.auto_arg[0].update({ 'USalign': cmd.auto_arg[0]['align'], })
 cmd.auto_arg[1].update({ 'USalign': cmd.auto_arg[1]['align'], })
+
