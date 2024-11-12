@@ -37,12 +37,14 @@ import platform
 
 def check_executable(exe="USalign"):
     try:
-        process = subprocess.Popen(exe, stdout=subprocess.PIPE, shell=True,
+        process = subprocess.Popen('"'+exe+'"', stdout=subprocess.PIPE, shell=True,
                 universal_newlines=True)
         if "version" in process.stdout.read():
             return True
     except OSError:
+        print(exe+" not executable")
         return False
+    print(exe+" not executable")
     return False
 
 def get_usalign_path(exe="USalign"):
@@ -100,7 +102,7 @@ CITATION
         args=args[1:-1]
     if not "-outfmt" in args:
         args+=" -outfmt -1"
-    args = ' '.join([exe, mobile_filename, target_filename, args, '-m -'])
+    args = ' '.join(['"'+exe+'"', mobile_filename, target_filename, args, '-m -'])
     print(args)
 
     try:
