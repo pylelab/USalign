@@ -26,7 +26,7 @@ INSTALLATION
 from __future__ import print_function
 
 __author__ = 'Chengxin Zhang'
-__version__ = '20220924'
+__version__ = '20241111'
 __license__ = 'BSD-2-Clause'
 
 from pymol import cmd, CmdException
