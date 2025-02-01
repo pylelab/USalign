@@ -98,7 +98,7 @@ or
     g++ -static -O3 -ffast-math -lm -o USalign USalign.cpp
 
 The '-static' flag should be removed on Mac OS, which does not support
-building static executables.
+building static executables. Compilation takes just a few seconds.
 
 USalign compiled on Linux, Mac OS and Linux Subsystem for Windows (WSL2) on
 Windows 10 onwards can read both uncompressed files and gz compressed
