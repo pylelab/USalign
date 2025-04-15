@@ -544,8 +544,8 @@ size_t get_PDB_lines(const string filename,
                 ) continue;
             
             atom=line_vec[_atom_site["label_atom_id"]];
-            if (atom[0]=='"') atom=atom.substr(1);
-            if (atom.size() && atom[atom.size()-1]=='"')
+            if ((atom[0]=='"') || (atom[0]=='\'')) atom=atom.substr(1);
+            if (atom.size() && (atom[atom.size()-1]=='"' || atom[atom.size()-1]=='\''))
                 atom=atom.substr(0,atom.size()-1);
             if (atom.size()==0) continue;
             if      (atom.size()==1) atom=" "+atom+"  ";
