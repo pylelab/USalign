@@ -547,6 +547,8 @@ size_t get_PDB_lines(const string filename,
             if (atom[0]=='"') atom=atom.substr(1);
             if (atom.size() && atom[atom.size()-1]=='"')
                 atom=atom.substr(0,atom.size()-1);
+            if (atom.size()>=3 && atom[0]=='\'' && atom[atom.size()-1]=='\'')
+                atom=atom.substr(1,atom.size()-2);
             if (atom.size()==0) continue;
             if      (atom.size()==1) atom=" "+atom+"  ";
             else if (atom.size()==2) atom=" "+atom+" "; // wrong for sidechain H
