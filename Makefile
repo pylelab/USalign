@@ -2,7 +2,7 @@ CC=g++
 MINGW=x86_64-w64-mingw32-g++ -static
 CFLAGS=-O3 -ffast-math
 LDFLAGS=#-static# -lm
-PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta pdb2ss NWalign HwRMSD cif2pdb pdbAtomName addChainID
+PROGRAM=qTMclust USalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta biounitasym pdb2ss NWalign HwRMSD cif2pdb pdbAtomName addChainID
 
 all: ${PROGRAM}
 
@@ -37,6 +37,9 @@ xyz_sfetch: xyz_sfetch.cpp
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 pdb2fasta: pdb2fasta.cpp basic_fun.h pstream.h
+	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
+
+biounitasym: biounitasym.cpp basic_fun.h pstream.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 NWalign: NWalign.cpp NWalign.h basic_fun.h pstream.h BLOSUM.h
