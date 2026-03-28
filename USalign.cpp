@@ -766,11 +766,12 @@ int MMalign(const string &xname, const string &yname,
     /* declare TM-score tables */
     int chain1_num=xa_vec.size();
     int chain2_num=ya_vec.size();
+    int chain_num =MAX(chain1_num,chain2_num);
     vector<string> tmp_str_vec(chain2_num,"");
     double **TMave_mat;
     double **ut_mat; // rotation matrices for all-against-all alignment
     int ui,uj,ut_idx;
-    NewArray(&TMave_mat,chain1_num,chain2_num);
+    NewArray(&TMave_mat,chain_num,chain_num);
     NewArray(&ut_mat,chain1_num*chain2_num,4*3);
     vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
     vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
@@ -786,7 +787,7 @@ int MMalign(const string &xname, const string &yname,
         xlen=xlen_vec[i];
         if (xlen<3)
         {
-            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=-1;
+            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=TMave_mat[j][i]=-1;
             continue;
         }
         seqx = new char[xlen+1];
@@ -806,19 +807,19 @@ int MMalign(const string &xname, const string &yname,
 
             if (mol_vec1[i]*mol_vec2[j]<0) //no protein-RNA alignment
             {
-                TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=TMave_mat[j][i]=-1;
                 continue;
             }
             if (chainmap.size() && (!chainmap.count(i) || chainmap[i]!=j))
             {
-                TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=TMave_mat[j][i]=-1;
                 continue;
             }
 
             ylen=ylen_vec[j];
             if (ylen<3)
             {
-                TMave_mat[i][j]=-1;
+                TMave_mat[i][j]=TMave_mat[j][i]=-1;
                 continue;
             }
             seqy = new char[ylen+1];
@@ -857,7 +858,7 @@ int MMalign(const string &xname, const string &yname,
                     for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) 
                         ut_mat[ut_idx][ui*3+uj]=(ui==uj)?1:0;
                     for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=0;
-                    TMave_mat[i][j]=0;
+                    TMave_mat[i][j]=TMave_mat[j][i]=0;
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
@@ -914,7 +915,7 @@ int MMalign(const string &xname, const string &yname,
             for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
             seqxA_mat[i][j]=seqxA;
             seqyA_mat[i][j]=seqyA;
-            TMave_mat[i][j]=TM4*Lnorm_tmp;
+            TMave_mat[i][j]=TMave_mat[j][i]=TM4*Lnorm_tmp;
             if (TMave_mat[i][j]>maxTMmono)
             {
                 maxTMmono=TMave_mat[i][j];
@@ -988,9 +989,19 @@ int MMalign(const string &xname, const string &yname,
         homo_refined_greedy_search(TMave_mat, assign1_list,
             assign2_list, chain1_num, chain2_num, xcentroids,
             ycentroids, d0MM, len_aa+len_na, ut_mat);
-        hetero_refined_greedy_search(TMave_mat, assign1_list,
-            assign2_list, chain1_num, chain2_num, xcentroids,
-            ycentroids, d0MM, len_aa+len_na);
+
+        if (chain1_num<=chain2_num)
+        {
+            hetero_refined_greedy_search(TMave_mat, assign1_list,
+                assign2_list, chain1_num, chain2_num, xcentroids,
+                ycentroids, d0MM, len_aa+len_na);
+        }
+        else
+        {
+            hetero_refined_greedy_search(TMave_mat, assign2_list,
+                assign1_list, chain2_num, chain1_num, ycentroids,
+                xcentroids, d0MM, len_aa+len_na);
+        }
 
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
@@ -1138,7 +1149,7 @@ int MMalign(const string &xname, const string &yname,
     /* clean up everything */
     delete [] assign1_list;
     delete [] assign2_list;
-    DeleteArray(&TMave_mat,chain1_num);
+    DeleteArray(&TMave_mat,chain_num);
     DeleteArray(&ut_mat,   chain1_num*chain2_num);
     vector<vector<string> >().swap(seqxA_mat);
     vector<vector<string> >().swap(seqM_mat);
