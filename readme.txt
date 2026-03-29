@@ -3,6 +3,8 @@
    and nucleic acids
 
    References:
+   * Chengxin Zhang, Lydia Freddolino, Yang Zhang
+     (2026) Nat Protoc. 21, 517-541.
    * Chengxin Zhang, Morgan Shine, Anna Marie Pyle, Yang Zhang
      (2022) Nat Methods. 19(9), 1109-1115.
    * Chengxin Zhang, Anna Marie Pyle (2022) iScience. 25(10), 105218.
@@ -35,29 +37,33 @@
                   in the Fortran version can be explored by TMalign -h
    2018/07/27: Added the -byresi option for TM-score superposition without
                re-alignment as in TMscore and TMscore -c
-   2018/08/07: Added the -dir option
-   2018/08/14: Added the -split option
+   2018/08/07: Added the -dir option for all-against-all alignment within a
+               folder
+   2018/08/14: Added the -split option to split input structure by chain or
+               by model
    2018/08/16: Added the -infmt1, -infmt2 options.
                TMalign can now read .gz and .bz2 compressed files.
    2018/10/20: C Zhang and S Gong updated the RNA alignment part of
                the program. Changes include:
-              (1) new d0 calculation for RNA.
-              (2) secondary structure assignment for RNA.
-              (3) automatic detection of molecule type (protein vs RNA).
+               (1) new d0 calculation for RNA.
+               (2) secondary structure assignment for RNA.
+               (3) automatic detection of molecule type (protein vs RNA).
    2019/01/07: C Zhang added support for PDBx/mmCIF format.
-   2019/02/09: Fixed asymmetric alignment bug.
+   2019/02/09: Fixed asymmetric alignment bug where the output result is
+               occasionally dependent on the order of input files.
    2019/03/17: Added the -cp option for circular permutation
    2019/03/27: Added the -mirror option for mirror structure alignment
    2019/04/25: The RNA-align algorithm was published by Bioinformatics
    2019/07/24: Fixed bug in displaying matching residues.
                Added GDT and MaxSub to TMscore program.
    2019/08/18: Prevent excessive circular permutation alignment by -cp.
-   2020/05/19: Add back rasmol output
+   2020/05/19: Add back rasmol output by -rasmol
    2020/12/12: Fixed bug in double precision coordinate mmcif alignment
-   2021/01/07: Fixed bug in TMscore -c
+   2021/01/07: Fixed bug in TMscore -c for TM-score superposition between
+               two oligomers
    2021/05/29: Remove unnecessary depedency on malloc.h, which prevent
                compilation on Mac OS
-   2021/08/17: Complete implementation of MMalign
+   2021/08/17: Complete implementation of MMalign for oligomer alignment
    2021/10/03: Support Windows
    2022/02/27: Add -seq (-byresi 4 & 5) for TM-score superimposition guided by
                sequence alignment.
@@ -66,25 +72,26 @@
    2022/05/24: Limited support for sequence order independent alignment
    2022/05/30: Correct atom pair output for -mm 5
    2022/06/07: Sequence order semi-independent alignment
-   2022/06/20: Sequentiality within SSE in sequence order semi-independent
-               alignment
+   2022/06/20: Ensure sequentiality within SSE in sequence order
+               semi-independent alignment
    2022/06/22: Fix infinite loop for mal-formatted PDB
    2022/06/23: Fix -m for Windows. Add pymol plugin.
-   2022/06/26: Add -full option for -mm 2 and 4
+   2022/06/26: Add -full option for -mm 2 and 4 to show chain level alignment
    2022/09/24: Support -TMscore for complex when the chain order is different
    2023/06/09: Correct atom name justification in PDB file for standard amino
                acids and nucleotides
    2023/12/13: Refine chain assignment for -TMscore >=6 for large complex
    2023/12/22: Forbid chain assignment refinment for -chainmap
-   2024/03/04: -chain1 and -chain2 option
-   2024/03/19: chain mapping for trimer -TMscore
-   2024/05/10: better handling of alternative location indicator, e.g., 5e1n
-   2024/06/02: implement -mm 4 -se
-   2024/07/05: implement -do
-   2024/07/30: implement -se -byresi 6 7
-   2024/10/30: set default for -ter and -split
-   2024/11/08: -chimerax
-   2026/03/28: fix -mm 1 asymmetric alignment
+   2024/03/04: Add -chain1 and -chain2 options to specify chains to align
+   2024/03/19: Chain mapping for trimer -TMscore
+   2024/05/10: Better handling of alternative location indicator, e.g., 5e1n
+   2024/06/02: Allow using -mm 4 with -se
+   2024/07/05: Add -do to output distances for aligned residue pairs
+   2024/07/30: Allow using -se with -byresi 6 7
+   2024/10/30: Set default for -ter and -split based on -mm output
+   2024/11/08: Add -chimerax for UCSF ChimeraX format output
+   2026/03/28: Fix -mm 1 asymmetric alignment bug where oligomer alignment
+	       output depends occasionally on input file order
 ===============================================================================
 
 =========================

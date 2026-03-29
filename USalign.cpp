@@ -11,9 +11,10 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20260328)                                      *\n"
+" * US-align (Version 20260329)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
-" * Reference: C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
+" * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
+" *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
 " * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
 " ********************************************************************"
