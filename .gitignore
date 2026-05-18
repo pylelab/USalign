@@ -20,6 +20,7 @@ HwRMSD
 MMalign
 TMscore
 pdbAtomName
+ca2rr
 *.exe
 *.zip
 

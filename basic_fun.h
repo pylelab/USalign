@@ -290,6 +290,12 @@ size_t get_PDB_lines(const string filename,
                          select_atom=(atom==" P  ")||(atom==" C4'");
                     else select_atom=(atom==" CA ");
                 }
+                else if (atom_opt==" CB ")
+                {
+                    if (line.compare(17,3, "GLY")==0)
+                         select_atom=(atom==" CA "); // glycine has no CB
+                    else select_atom=(atom==" CB ");
+                }
                 else     select_atom=(atom==atom_opt);
                 if (select_atom)
                 {
