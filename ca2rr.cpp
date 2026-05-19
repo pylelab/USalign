@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("-sep must be non-negative");
     if (mdl_opt<3)
         PrintErrorAndQuit("-mdl must be >=3");
-    if (hinge_opt<=1 || hinge_opt>10)
-        PrintErrorAndQuit("ERROR! -hinge must be >1 and <=10");
+    if (hinge_opt<=1)// || hinge_opt>10)
+        PrintErrorAndQuit("ERROR! -hinge must be >=2");
 
     /* declare previously global variables */
     vector<vector<string> >PDB_lines; // text of chain
@@ -284,7 +284,8 @@ int main(int argc, char *argv[])
                     {
                         d_start=(r1==0)?0:l_vec[r1-1];
                         d_end  =(r1==l_vec.size())?xlen:l_vec[r1];
-                        string filename=xname+"_"+char('0'+r1)+".pdb";
+                        string suffix=to_string(r1);
+                        string filename=xname+'_'+suffix+".pdb";
                         cout<<'('<<1+d_start<<','<<d_end<<") "<<filename<<endl;
                         ofstream fout(filename);
                         for (r=d_start;r<d_end;r++)
