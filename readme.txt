@@ -91,7 +91,8 @@
    2024/10/30: Set default for -ter and -split based on -mm output
    2024/11/08: Add -chimerax for UCSF ChimeraX format output
    2026/03/28: Fix -mm 1 asymmetric alignment bug where oligomer alignment
-	       output depends occasionally on input file order
+	           output depends occasionally on input file order
+   2026/05/27: Allow both -mm 1 and -dir/-dir1/-dir2
 ===============================================================================
 
 =========================
