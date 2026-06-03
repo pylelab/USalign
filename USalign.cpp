@@ -2966,8 +2966,6 @@ int flexalign_fatcat_main(double **xa, double **ya,
 {
     // FATCAT base parameters
     int fragLen = 8;
-    double rmsdCut = 3.0;
-    double badRmsd = 4.0;
     double resScore = 3.0;
     double gap_ext = -0.5;
     double disCut = 5.0;
@@ -3007,259 +3005,263 @@ int flexalign_fatcat_main(double **xa, double **ya,
     }
 
     // ==========================================
-    // Step 1: Extract initial AFPs in batches
+    // NEW LOGIC: Wrapper for generating bounds with specific parameter sets
     // ==========================================
-    std::vector<FATCAT_AFP> initial_afps;
-    int step = sparse_val + 1;
-
-    double r1_static[8][3], r2_static[8][3];
-    double *r1[8], *r2[8];
-    for (int k = 0; k < 8; k++)
+    auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int>>
     {
-        r1[k] = r1_static[k];
-        r2[k] = r2_static[k];
-    }
+        // ==========================================
+        // Step 1: Extract initial AFPs in batches
+        // ==========================================
+        std::vector<FATCAT_AFP> initial_afps;
+        int step = sparse_val + 1;
 
-    for (int i = 0; i <= xlen - fragLen; i += step)
-    {
-        for (int j = 0; j <= ylen - fragLen; j += step)
+        double r1_static[8][3], r2_static[8][3];
+        double *r1[8], *r2[8];
+        for (int k = 0; k < 8; k++)
         {
-            int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
-            if (d3_term < 0.3 * std::min(xlen, ylen))
-                continue;
+            r1[k] = r1_static[k];
+            r2[k] = r2_static[k];
+        }
 
-            double dist1 = disTable1[i][fragLen - 1]; // Precomputed end-to-end distance
-            double dist2 = disTable2[j][fragLen - 1];
-
-            if (std::fabs(dist1 - dist2) > 2.0 * rmsdCut)
-                continue;
-
-            for (int k = 0; k < fragLen; k++)
+        for (int i = 0; i <= xlen - fragLen; i += step)
+        {
+            for (int j = 0; j <= ylen - fragLen; j += step)
             {
-                r1[k][0] = xa[i + k][0];
-                r1[k][1] = xa[i + k][1];
-                r1[k][2] = xa[i + k][2];
-                r2[k][0] = ya[j + k][0];
-                r2[k][1] = ya[j + k][1];
-                r2[k][2] = ya[j + k][2];
-            }
+                int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
+                if (d3_term < 0.3 * std::min(xlen, ylen))
+                    continue;
 
-            double rms_sum_sq, t_tmp[3], u_tmp[3][3];
-            Kabsch(r1, r2, fragLen, 0, &rms_sum_sq, t_tmp, u_tmp);
-            double rmsd_tmp = std::sqrt(rms_sum_sq / fragLen);
+                double dist1 = disTable1[i][fragLen - 1]; // Precomputed end-to-end distance
+                double dist2 = disTable2[j][fragLen - 1];
 
-            if (rmsd_tmp < rmsdCut)
-            {
-                FATCAT_AFP afp;
-                afp.i = i;
-                afp.j = j;
-                afp.len = fragLen;
-                afp.score = resScore * fragLen * (1.0 - (rmsd_tmp / badRmsd) * (rmsd_tmp / badRmsd));
-                for (int a = 0; a < 3; a++)
+                if (std::fabs(dist1 - dist2) > 2.0 * cur_rmsdCut)
+                    continue;
+
+                for (int k = 0; k < fragLen; k++)
                 {
-                    afp.t[a] = t_tmp[a];
-                    for (int b = 0; b < 3; b++)
-                        afp.R[a][b] = u_tmp[a][b];
+                    r1[k][0] = xa[i + k][0];
+                    r1[k][1] = xa[i + k][1];
+                    r1[k][2] = xa[i + k][2];
+                    r2[k][0] = ya[j + k][0];
+                    r2[k][1] = ya[j + k][1];
+                    r2[k][2] = ya[j + k][2];
                 }
-                initial_afps.push_back(afp);
+
+                double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                Kabsch(r1, r2, fragLen, 0, &rms_sum_sq, t_tmp, u_tmp);
+                double rmsd_tmp = std::sqrt(rms_sum_sq / fragLen);
+
+                if (rmsd_tmp < cur_rmsdCut)
+                {
+                    FATCAT_AFP afp;
+                    afp.i = i;
+                    afp.j = j;
+                    afp.len = fragLen;
+                    afp.score = resScore * fragLen * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                    for (int a = 0; a < 3; a++)
+                    {
+                        afp.t[a] = t_tmp[a];
+                        for (int b = 0; b < 3; b++)
+                            afp.R[a][b] = u_tmp[a][b];
+                    }
+                    initial_afps.push_back(afp);
+                }
             }
         }
-    }
 
-    // ==========================================
-    // Step 2: Merge diagonal AFPs
-    // ==========================================
-    int max_diagonal_idx = xlen + ylen + 1;
-    std::vector<std::vector<FATCAT_AFP>> diagonals(max_diagonal_idx);
-    for (size_t k = 0; k < initial_afps.size(); k++)
-    {
-        diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
-    }
-
-    std::vector<FATCAT_AFP> merged_afps;
-    int max_merge_len = std::min(xlen, ylen);
-    double **r1_merge, **r2_merge;
-    NewArray(&r1_merge, max_merge_len, 3);
-    NewArray(&r2_merge, max_merge_len, 3);
-
-    for (int d = 0; d < max_diagonal_idx; d++)
-    {
-        if (diagonals[d].empty())
-            continue;
-        std::vector<FATCAT_AFP> &group = diagonals[d];
-
-        std::sort(group.begin(), group.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
-                  { return a.i < b.i; });
-
-        int n_group = group.size();
-        std::vector<bool> invalid(n_group, false);
-        for (int idx = 0; idx < n_group; idx++)
+        // ==========================================
+        // Step 2: Merge diagonal AFPs
+        // ==========================================
+        int max_diagonal_idx = xlen + ylen + 1;
+        std::vector<std::vector<FATCAT_AFP>> diagonals(max_diagonal_idx);
+        for (size_t k = 0; k < initial_afps.size(); k++)
         {
-            if (invalid[idx])
+            diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
+        }
+
+        std::vector<FATCAT_AFP> merged_afps;
+        int max_merge_len = std::min(xlen, ylen);
+        double **r1_merge, **r2_merge;
+        NewArray(&r1_merge, max_merge_len, 3);
+        NewArray(&r2_merge, max_merge_len, 3);
+
+        for (int d = 0; d < max_diagonal_idx; d++)
+        {
+            if (diagonals[d].empty())
                 continue;
-            FATCAT_AFP curr = group[idx];
-            for (int nxt_idx = idx + 1; nxt_idx < n_group; nxt_idx++)
+            std::vector<FATCAT_AFP> &group = diagonals[d];
+
+            std::sort(group.begin(), group.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+                      { return a.i < b.i; });
+
+            int n_group = group.size();
+            std::vector<bool> invalid(n_group, false);
+            for (int idx = 0; idx < n_group; idx++)
             {
-                FATCAT_AFP nxt = group[nxt_idx];
-                if (nxt.i > curr.i + curr.len)
-                    break;
-
-                if (nxt.i + nxt.len > curr.i + curr.len)
+                if (invalid[idx])
+                    continue;
+                FATCAT_AFP curr = group[idx];
+                for (int nxt_idx = idx + 1; nxt_idx < n_group; nxt_idx++)
                 {
-                    int new_len = (nxt.i + nxt.len) - curr.i;
+                    FATCAT_AFP nxt = group[nxt_idx];
+                    if (nxt.i > curr.i + curr.len)
+                        break;
 
-                    for (int k = 0; k < new_len; k++)
+                    if (nxt.i + nxt.len > curr.i + curr.len)
                     {
-                        r1_merge[k][0] = xa[curr.i + k][0];
-                        r1_merge[k][1] = xa[curr.i + k][1];
-                        r1_merge[k][2] = xa[curr.i + k][2];
-                        r2_merge[k][0] = ya[curr.j + k][0];
-                        r2_merge[k][1] = ya[curr.j + k][1];
-                        r2_merge[k][2] = ya[curr.j + k][2];
-                    }
+                        int new_len = (nxt.i + nxt.len) - curr.i;
 
-                    double rms_sum_sq, t_tmp[3], u_tmp[3][3];
-                    Kabsch(r1_merge, r2_merge, new_len, 0, &rms_sum_sq, t_tmp, u_tmp);
-                    double rmsd_tmp = std::sqrt(rms_sum_sq / new_len);
-
-                    if (rmsd_tmp < rmsdCut)
-                    {
-                        curr.len = new_len;
-                        for (int a = 0; a < 3; a++)
+                        for (int k = 0; k < new_len; k++)
                         {
-                            curr.t[a] = t_tmp[a];
-                            for (int b = 0; b < 3; b++)
-                                curr.R[a][b] = u_tmp[a][b];
+                            r1_merge[k][0] = xa[curr.i + k][0];
+                            r1_merge[k][1] = xa[curr.i + k][1];
+                            r1_merge[k][2] = xa[curr.i + k][2];
+                            r2_merge[k][0] = ya[curr.j + k][0];
+                            r2_merge[k][1] = ya[curr.j + k][1];
+                            r2_merge[k][2] = ya[curr.j + k][2];
                         }
-                        curr.score = resScore * new_len * (1.0 - (rmsd_tmp / badRmsd) * (rmsd_tmp / badRmsd));
-                        invalid[nxt_idx] = true;
+
+                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                        Kabsch(r1_merge, r2_merge, new_len, 0, &rms_sum_sq, t_tmp, u_tmp);
+                        double rmsd_tmp = std::sqrt(rms_sum_sq / new_len);
+
+                        if (rmsd_tmp < cur_rmsdCut)
+                        {
+                            curr.len = new_len;
+                            for (int a = 0; a < 3; a++)
+                            {
+                                curr.t[a] = t_tmp[a];
+                                for (int b = 0; b < 3; b++)
+                                    curr.R[a][b] = u_tmp[a][b];
+                            }
+                            curr.score = resScore * new_len * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                            invalid[nxt_idx] = true;
+                        }
                     }
                 }
+                merged_afps.push_back(curr);
             }
-            merged_afps.push_back(curr);
         }
-    }
-    DeleteArray(&r1_merge, max_merge_len);
-    DeleteArray(&r2_merge, max_merge_len);
+        DeleteArray(&r1_merge, max_merge_len);
+        DeleteArray(&r2_merge, max_merge_len);
 
-    std::sort(merged_afps.begin(), merged_afps.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
-              {
-        if (a.i == b.i) return a.j < b.j;
-        return a.i < b.i; });
+        std::sort(merged_afps.begin(), merged_afps.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+                  {
+            if (a.i == b.i) return a.j < b.j;
+            return a.i < b.i; });
 
-    int n_afps = merged_afps.size();
-    if (n_afps == 0)
-        return 0;
+        int n_afps = merged_afps.size();
+        std::vector<int> ret_b1, ret_b2;
+        if (n_afps == 0)
+            return std::make_pair(ret_b1, ret_b2);
 
-    // ==========================================
-    // Step 3 & 4: Dual Dynamic Programming and Domain Splitting
-    // ==========================================
-    std::vector<int> afp_aft_index(xlen * ylen, -1);
-    std::vector<int> afp_bef_index(xlen * ylen, -1);
+        // ==========================================
+        // Step 3 & 4: Dual Dynamic Programming and Domain Splitting
+        // ==========================================
+        std::vector<int> afp_aft_index(xlen * ylen, -1);
+        std::vector<int> afp_bef_index(xlen * ylen, -1);
 
-    std::vector<std::vector<std::pair<int, int>>> i_to_j(xlen);
-    for (int m = 0; m < n_afps; m++)
-    {
-        i_to_j[merged_afps[m].i].push_back(std::make_pair(merged_afps[m].j, m));
-    }
-
-    for (int i_val = 0; i_val < xlen; i_val++)
-    {
-        if (i_to_j[i_val].empty())
-            continue;
-        for (size_t p = 0; p < i_to_j[i_val].size(); p++)
+        std::vector<std::vector<std::pair<int, int>>> i_to_j(xlen);
+        for (int m = 0; m < n_afps; m++)
         {
-            int j_val = i_to_j[i_val][p].first;
-            afp_aft_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
-            afp_bef_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+            i_to_j[merged_afps[m].i].push_back(std::make_pair(merged_afps[m].j, m));
         }
-        int curr_bef = -1;
-        for (int j_val = 0; j_val < ylen; j_val++)
-        {
-            if (afp_bef_index[i_val * ylen + j_val] != -1)
-                curr_bef = afp_bef_index[i_val * ylen + j_val];
-            else
-                afp_bef_index[i_val * ylen + j_val] = curr_bef;
-        }
-        int curr_aft = -1;
-        for (int j_val = ylen - 1; j_val >= 0; j_val--)
-        {
-            if (afp_aft_index[i_val * ylen + j_val] != -1)
-                curr_aft = afp_aft_index[i_val * ylen + j_val];
-            else
-                afp_aft_index[i_val * ylen + j_val] = curr_aft;
-        }
-    }
 
-    auto get_dvar = [&](const FATCAT_AFP &prv, const FATCAT_AFP &curr) -> double
-    {
-        double rms_sq = 0;
-        for (int i_idx = 0; i_idx < fragLen; i_idx++)
+        for (int i_val = 0; i_val < xlen; i_val++)
         {
-            for (int j_idx = 0; j_idx < fragLen; j_idx++)
+            if (i_to_j[i_val].empty())
+                continue;
+            for (size_t p = 0; p < i_to_j[i_val].size(); p++)
             {
-                double dist1, dist2;
-                int idx1_a = curr.i + i_idx, idx1_b = prv.i + j_idx;
-                if (idx1_a >= idx1_b)
-                    dist1 = disTable1[idx1_b][idx1_a - idx1_b];
-                else
-                    dist1 = disTable1[idx1_a][idx1_b - idx1_a];
-
-                int idx2_a = curr.j + i_idx, idx2_b = prv.j + j_idx;
-                if (idx2_a >= idx2_b)
-                    dist2 = disTable2[idx2_b][idx2_a - idx2_b];
-                else
-                    dist2 = disTable2[idx2_a][idx2_b - idx2_a];
-
-                rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                int j_val = i_to_j[i_val][p].first;
+                afp_aft_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+                afp_bef_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
             }
-        }
-        if (rms_sq > afp_dis_cut)
-            return 1e9;
-        return std::sqrt(rms_sq / (fragLen * fragLen));
-    };
-
-    auto calc_block_rmsd = [&](const std::vector<FATCAT_AFP> &afp_list) -> double
-    {
-        std::vector<int> r1, r2;
-        for (size_t a = 0; a < afp_list.size(); a++)
-        {
-            for (int l = 0; l < afp_list[a].len; l++)
+            int curr_bef = -1;
+            for (int j_val = 0; j_val < ylen; j_val++)
             {
-                r1.push_back(afp_list[a].i + l);
-                r2.push_back(afp_list[a].j + l);
+                if (afp_bef_index[i_val * ylen + j_val] != -1)
+                    curr_bef = afp_bef_index[i_val * ylen + j_val];
+                else
+                    afp_bef_index[i_val * ylen + j_val] = curr_bef;
+            }
+            int curr_aft = -1;
+            for (int j_val = ylen - 1; j_val >= 0; j_val--)
+            {
+                if (afp_aft_index[i_val * ylen + j_val] != -1)
+                    curr_aft = afp_aft_index[i_val * ylen + j_val];
+                else
+                    afp_aft_index[i_val * ylen + j_val] = curr_aft;
             }
         }
-        int n = r1.size();
-        if (n < 3)
-            return 0.0;
-        double **p1;
-        NewArray(&p1, n, 3);
-        double **p2;
-        NewArray(&p2, n, 3);
-        for (int i = 0; i < n; i++)
+
+        auto get_dvar = [&](const FATCAT_AFP &prv, const FATCAT_AFP &curr) -> double
         {
-            p1[i][0] = xa[r1[i]][0];
-            p1[i][1] = xa[r1[i]][1];
-            p1[i][2] = xa[r1[i]][2];
-            p2[i][0] = ya[r2[i]][0];
-            p2[i][1] = ya[r2[i]][1];
-            p2[i][2] = ya[r2[i]][2];
-        }
-        double rms_sq_sum, t_tmp[3], u_tmp[3][3];
-        Kabsch(p1, p2, n, 0, &rms_sq_sum, t_tmp, u_tmp);
-        DeleteArray(&p1, n);
-        DeleteArray(&p2, n);
-        return std::sqrt(rms_sq_sum / n);
-    };
+            double rms_sq = 0;
+            for (int i_idx = 0; i_idx < fragLen; i_idx++)
+            {
+                for (int j_idx = 0; j_idx < fragLen; j_idx++)
+                {
+                    double dist1, dist2;
+                    int idx1_a = curr.i + i_idx, idx1_b = prv.i + j_idx;
+                    if (idx1_a >= idx1_b)
+                        dist1 = disTable1[idx1_b][idx1_a - idx1_b];
+                    else
+                        dist1 = disTable1[idx1_a][idx1_b - idx1_a];
 
-    struct Region
-    {
-        int s1, e1, s2, e2;
-    };
+                    int idx2_a = curr.j + i_idx, idx2_b = prv.j + j_idx;
+                    if (idx2_a >= idx2_b)
+                        dist2 = disTable2[idx2_b][idx2_a - idx2_b];
+                    else
+                        dist2 = disTable2[idx2_a][idx2_b - idx2_a];
 
-    auto run_dp_and_split = [&](int logic_type) -> std::pair<std::vector<int>, std::vector<int>>
-    {
+                    rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                }
+            }
+            if (rms_sq > afp_dis_cut)
+                return 1e9;
+            return std::sqrt(rms_sq / (fragLen * fragLen));
+        };
+
+        auto calc_block_rmsd = [&](const std::vector<FATCAT_AFP> &afp_list) -> double
+        {
+            std::vector<int> r1, r2;
+            for (size_t a = 0; a < afp_list.size(); a++)
+            {
+                for (int l = 0; l < afp_list[a].len; l++)
+                {
+                    r1.push_back(afp_list[a].i + l);
+                    r2.push_back(afp_list[a].j + l);
+                }
+            }
+            int n = r1.size();
+            if (n < 3)
+                return 0.0;
+            double **p1;
+            NewArray(&p1, n, 3);
+            double **p2;
+            NewArray(&p2, n, 3);
+            for (int i = 0; i < n; i++)
+            {
+                p1[i][0] = xa[r1[i]][0];
+                p1[i][1] = xa[r1[i]][1];
+                p1[i][2] = xa[r1[i]][2];
+                p2[i][0] = ya[r2[i]][0];
+                p2[i][1] = ya[r2[i]][1];
+                p2[i][2] = ya[r2[i]][2];
+            }
+            double rms_sq_sum, t_tmp[3], u_tmp[3][3];
+            Kabsch(p1, p2, n, 0, &rms_sq_sum, t_tmp, u_tmp);
+            DeleteArray(&p1, n);
+            DeleteArray(&p2, n);
+            return std::sqrt(rms_sq_sum / n);
+        };
+
+        struct Region
+        {
+            int s1, e1, s2, e2;
+        };
+
         std::vector<double> sco(n_afps);
         std::vector<int> twi(n_afps, 0);
         std::vector<int> pre(n_afps, -1);
@@ -3278,10 +3280,10 @@ int flexalign_fatcat_main(double **xa, double **ya,
             int b1 = std::max(0, curr_j - maxGapFrag);
 
             std::vector<int> valid_prevs;
-            for (int step = 0; step < 2; step++)
+            for (int st = 0; st < 2; st++)
             {
                 int a_s, a_e, b_s, b_e;
-                if (step == 0)
+                if (st == 0)
                 {
                     a_s = std::max(a1, 0);
                     a_e = std::min(a3, xlen - 1);
@@ -3320,20 +3322,14 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 int gap_j = curr_j - (merged_afps[prev].j + merged_afps[prev].len);
                 int m_gap = std::max(gap_i, gap_j);
 
+                // unified gap penalty logic
                 double gp = 0.0;
-                if (logic_type == 0)
-                {
-                    gp = gap_ext * m_gap;
-                }
-                else
-                {
-                    int m_mis = 0;
-                    if (gap_i < 0 || gap_j < 0)
-                        m_mis = (gap_i < gap_j) ? -gap_i : -gap_j;
-                    gp = gap_ext * m_mis;
-                    if (m_gap > 0)
-                        gp += gap_ext * m_gap;
-                }
+                int m_mis = 0;
+                if (gap_i < 0 || gap_j < 0)
+                    m_mis = (gap_i < gap_j) ? -gap_i : -gap_j;
+                gp = gap_ext * m_mis;
+                if (m_gap > 0)
+                    gp += gap_ext * m_gap;
 
                 if (gp < max_penalty)
                     gp = max_penalty;
@@ -3401,9 +3397,8 @@ int flexalign_fatcat_main(double **xa, double **ya,
         }
         std::reverse(path.begin(), path.end());
 
-        std::vector<int> b1, b2;
         if (path.empty())
-            return std::make_pair(b1, b2);
+            return std::make_pair(ret_b1, ret_b2);
 
         struct Block
         {
@@ -3438,8 +3433,6 @@ int flexalign_fatcat_main(double **xa, double **ya,
         if (!curr_block.afps.empty())
             blocks.push_back(curr_block);
 
-        double local_badRmsd = 4.0;
-
         bool splitted = true;
         while (splitted && blocks.size() < (size_t)(max_twists + 1))
         {
@@ -3460,7 +3453,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 }
             }
 
-            if (max_rmsd >= local_badRmsd && target_b != -1)
+            if (max_rmsd >= cur_local_badRmsd && target_b != -1)
             {
                 double max_t = 0;
                 int cut_idx = 0;
@@ -3524,7 +3517,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 }
             }
 
-            if (min_rmsd < local_badRmsd && min_b != -1)
+            if (min_rmsd < cur_local_badRmsd && min_b != -1)
             {
                 blocks[min_b].afps.insert(blocks[min_b].afps.end(), blocks[min_b + 1].afps.begin(), blocks[min_b + 1].afps.end());
                 blocks.erase(blocks.begin() + min_b + 1);
@@ -3568,23 +3561,23 @@ int flexalign_fatcat_main(double **xa, double **ya,
         }
 
         if (real_blocks.empty())
-            return std::make_pair(b1, b2);
+            return std::make_pair(ret_b1, ret_b2);
 
-        b1.push_back(0);
-        b2.push_back(0);
+        ret_b1.push_back(0);
+        ret_b2.push_back(0);
         for (size_t k = 0; k < real_blocks.size() - 1; k++)
         {
-            b1.push_back((real_blocks[k].e1 + real_blocks[k + 1].s1) / 2);
-            b2.push_back((real_blocks[k].e2 + real_blocks[k + 1].s2) / 2);
+            ret_b1.push_back((real_blocks[k].e1 + real_blocks[k + 1].s1) / 2);
+            ret_b2.push_back((real_blocks[k].e2 + real_blocks[k + 1].s2) / 2);
         }
-        b1.push_back(xlen);
-        b2.push_back(ylen);
+        ret_b1.push_back(xlen);
+        ret_b2.push_back(ylen);
 
-        return std::make_pair(b1, b2);
+        return std::make_pair(ret_b1, ret_b2);
     };
 
-    auto bounds_fatcat = run_dp_and_split(0);
-    auto bounds_strict = run_dp_and_split(1);
+    auto bounds_fatcat = generate_bounds(2.5, 3.0, 5.0);
+    auto bounds_strict = generate_bounds(3.0, 4.0, 4.0);
 
     // ==========================================
     // NEW LOGIC: Run through both sets of bounds (fatcat and strict)
@@ -4009,7 +4002,6 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
     return tu_vec.size();
 }
-
 // Unified engine replacing flexalign, flexalign_best, and flexalign_fatcat
 int flexalign_unified(string &xname, string &yname, const string &fname_super,
                       const string &fname_lign, const string &fname_matrix,
