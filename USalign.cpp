@@ -2962,7 +2962,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
                           const double d0_scale, const int i_opt, const int a_opt,
                           const bool u_opt, const bool d_opt, const bool fast_opt,
                           const int mol_type, const int hinge_opt, const int ss_opt,
-                          int sparse_val = 0)
+                          int sparse_val = 0, bool hinge_set = false)
 {
     // ==========================================
     // TRUE -mm 9 BASELINE (Defender)
@@ -2990,7 +2990,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
             xa, ya, (char*)seqx, (char*)seqy, (char*)secx, (char*)secy,
             xlen, ylen, local_sequence, Lnorm_ass, d0_scale,
             i_opt, a_opt, u_opt, d_opt, force_fast_opt_global,
-            mol_type, 9, cur_ss_opt, base_res); // -mm 9 explicitly uses 9 hinges
+            mol_type, hinge_opt, cur_ss_opt, base_res); // -mm 9 explicitly uses 9 hinges
 
         double cur_max_TM = (base_res.TM1 > base_res.TM2) ? base_res.TM1 : base_res.TM2;
         if (cur_max_TM > best_global_max_TM)
@@ -3568,6 +3568,80 @@ int flexalign_fatcat_main(double **xa, double **ya,
         // std::cout << "[DEBUG] ----------------------------\n" << std::endl;
         // =================== DEBUG END ===================
 
+        // Precalculate distributed local_hinge_opt for each block when hinge_set is true
+        int num_blocks = bounds1.size() - 1;
+        std::vector<int> precalc_local_hinge(num_blocks, 0);
+
+        if (hinge_set)
+        {
+            struct BlockMeta {
+                int index;
+                double rmsd;
+            };
+            std::vector<BlockMeta> valid_blocks;
+            
+            // Calculate target hinges to distribute based on requested hinge_opt and current implicit blocks
+            int target_total_hinges = std::max(0, hinge_opt + 1 - num_blocks);
+            
+            // Calculate base amount of hinges per block
+            int base_hinge = (hinge_opt + 1) / num_blocks - 1;
+            if (base_hinge < 0) base_hinge = 0;
+
+            for (int k = 0; k < num_blocks; k++)
+            {
+                int L1_sub = bounds1[k + 1] - bounds1[k];
+                int L2_sub = bounds2[k + 1] - bounds2[k];
+                int min_L = std::min(L1_sub, L2_sub);
+
+                if (min_L < 2 * fragLen)
+                {
+                    precalc_local_hinge[k] = 0; // Length < 2*fragLen gets 0
+                }
+                else
+                {
+                    // Calculate rough RMSD for this unaligned block section
+                    double block_rmsd = 0.0;
+                    if (min_L >= 3)
+                    {
+                        double **p1, **p2;
+                        NewArray(&p1, min_L, 3);
+                        NewArray(&p2, min_L, 3);
+                        for (int i = 0; i < min_L; i++) {
+                            p1[i][0] = xa[bounds1[k] + i][0]; p1[i][1] = xa[bounds1[k] + i][1]; p1[i][2] = xa[bounds1[k] + i][2];
+                            p2[i][0] = ya[bounds2[k] + i][0]; p2[i][1] = ya[bounds2[k] + i][1]; p2[i][2] = ya[bounds2[k] + i][2];
+                        }
+                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                        Kabsch(p1, p2, min_L, 0, &rms_sum_sq, t_tmp, u_tmp);
+                        block_rmsd = std::sqrt(rms_sum_sq / min_L);
+                        DeleteArray(&p1, min_L);
+                        DeleteArray(&p2, min_L);
+                    }
+                    valid_blocks.push_back({k, block_rmsd});
+                    precalc_local_hinge[k] = base_hinge; // Assign base hinges to valid blocks
+                }
+            }
+
+            // Distribute remaining hinges strictly prioritizing top RMSD blocks
+            int assigned = valid_blocks.size() * base_hinge;
+            int remainder = target_total_hinges - assigned;
+
+            if (remainder > 0 && !valid_blocks.empty())
+            {
+                // Sort valid blocks by RMSD descending
+                std::sort(valid_blocks.begin(), valid_blocks.end(), [](const BlockMeta& a, const BlockMeta& b) {
+                    return a.rmsd > b.rmsd;
+                });
+                
+                int v_idx = 0;
+                while (remainder > 0)
+                {
+                    precalc_local_hinge[valid_blocks[v_idx].index]++; // Give +1 to the front runners
+                    remainder--;
+                    v_idx = (v_idx + 1) % valid_blocks.size();
+                }
+            }
+        }
+
         // Step 5: Iteratively align each block
         std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
         cur_global_seqM.reserve(xlen + ylen + max_gap);
@@ -3626,8 +3700,18 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
             bool force_fast_opt = (std::min(L1_sub, L2_sub) > 1500) ? true : fast_opt;
 
-            // Set hinge_opt to 0 if the block length is less than 2 * fragLen
-            int local_hinge_opt = (std::min(L1_sub, L2_sub) < 2 * fragLen) ? 0 : hinge_opt;
+            // Determine local_hinge_opt based on user requirements.
+            // If hinge_set is true, we use the precalculated distributed hinges.
+            // Otherwise, set to 0 if the block length is less than 2 * fragLen, else 2.
+            int local_hinge_opt;
+            if (hinge_set)
+            {
+                local_hinge_opt = precalc_local_hinge[k];
+            }
+            else
+            {
+                local_hinge_opt = (std::min(L1_sub, L2_sub) < 2 * fragLen) ? 0 : 2;
+            }
 
             for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
             {
@@ -3850,7 +3934,7 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                       const vector<string> &model2parse1, const vector<string> &model2parse2,
                       const int byresi_opt, const vector<string> &chain1_list,
                       const vector<string> &chain2_list, const int hinge_opt, const int ss_opt,
-                      FlexAlignMode mode = FLEX_STANDARD)
+                      FlexAlignMode mode = FLEX_STANDARD, bool hinge_set = false)
 {
     vector<vector<string>> PDB_lines1;
     vector<vector<string>> PDB_lines2;
@@ -3946,7 +4030,7 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                             fatcat_res.TM_ali, fatcat_res.rmsd_ali, fatcat_res.n_ali, fatcat_res.n_ali8,
                             xlen, ylen, sequence, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt, force_fast_opt,
-                            mol_vec1[chain_i] + mol_vec2[chain_j], hinge_opt, ss_opt, 0 /* sparse_val */
+                            mol_vec1[chain_i] + mol_vec2[chain_j], hinge_opt, ss_opt, 0, hinge_set
                         );
 
                         if (outfmt_opt == 0)
@@ -4066,9 +4150,9 @@ int flexalign_best(string &xname, string &yname, const string &fname_super, cons
     return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt is ignored in BEST mode */, FLEX_BEST);
 }
 
-int flexalign_fatcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt)
+int flexalign_fatcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt, bool hinge_set = false)
 {
-    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_FATCAT);
+    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_FATCAT, hinge_set);
 }
 
 int main(int argc, char *argv[])
@@ -4113,6 +4197,7 @@ int main(int argc, char *argv[])
     int closeK_opt = -1;        // number of atoms for SOI initial alignment.
                                 // 5 and 0 for -mm 5 and 6
     int hinge_opt = 9;          // maximum number of hinge allowed for flexible
+    bool hinge_set = false;
     int mirror_opt = 0;         // do not align mirror
     int het_opt = 0;            // do not read HETATM residues
     int mm_opt = 0;             // do not perform MM-align
@@ -4238,6 +4323,7 @@ int main(int argc, char *argv[])
         {
             if (i >= (argc - 1))
                 PrintErrorAndQuit("ERROR! Missing value for -hinge");
+            hinge_set = true;
             hinge_opt = atoi(argv[i + 1]);
             i++;
         }
@@ -4658,6 +4744,9 @@ int main(int argc, char *argv[])
     {
         if (mm_opt == 2)
             cout << "#Query\tTemplate\tTM" << endl;
+        else if (mm_opt >= 7)
+            cout << "#PDBchain1\tPDBchain2\tTM1\tTM2\t"
+                 << "RMSD\tID1\tID2\tIDali\tL1\tL2\tLali\tNblk" << endl;
         else
             cout << "#PDBchain1\tPDBchain2\tTM1\tTM2\t"
                  << "RMSD\tID1\tID2\tIDali\tL1\tL2\tLali" << endl;
@@ -4786,7 +4875,7 @@ int main(int argc, char *argv[])
                          split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
                          atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
                          dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2,
-                         byresi_opt, chain1_list, chain2_list, hinge_opt);
+                         byresi_opt, chain1_list, chain2_list, hinge_opt, hinge_set);
     else
         cerr << "WARNING! -mm " << mm_opt << " not implemented" << endl;
 

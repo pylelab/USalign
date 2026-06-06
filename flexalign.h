@@ -2032,10 +2032,10 @@ void output_flexalign_results(const string xname, const string yname,
     }
     else if (outfmt_opt == 2)
     {
-        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d",
+        printf("%s%s\t%s%s\t%.4f\t%.4f\t%.2f\t%4.3f\t%4.3f\t%4.3f\t%d\t%d\t%d\t%d",
                xname.c_str(), chainID1.c_str(), yname.c_str(), chainID2.c_str(),
                TM2, TM1, rmsd, Liden / xlen, Liden / ylen, (n_ali8 > 0) ? Liden / n_ali8 : 0,
-               xlen, ylen, n_ali8);
+               xlen, ylen, n_ali8, (int)tu_vec.size());
     }
     cout << endl;
 
