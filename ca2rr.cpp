@@ -7,7 +7,7 @@ void print_help()
     cout <<
 "Calculate C beta atom contact map from C alpha atoms in PDB file(s).\n"
 "\n"
-"Usage: ca2ct pdb.pdb > pdb.rr\n"
+"Usage: ca2rr pdb.pdb > pdb.rr\n"
 "\n"
 "    -atom    4-character atom name used to represent a residue.\n"
 "             \" CA \": (default) infer C beta contact from C alpha atoms\n"
