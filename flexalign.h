@@ -1999,7 +1999,7 @@ void output_flexalign_results(const string xname, const string yname,
         printf("(You should use TM-score normalized by length of the reference structure)\n");
 
         // output alignment
-        printf("\n([0-9] denote different aligned fragment pairs separated by different hinges)\n");
+        printf("\n([0-9,a-z,A-Z] denote different aligned fragment pairs separated by different hinges)\n");
         printf("%s\n", seqxA);
         printf("%s\n", seqM);
         printf("%s\n", seqyA);

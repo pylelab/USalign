@@ -3486,7 +3486,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
             std::vector<FATCAT_AFP> afps;
             std::vector<double> dvars;
         };
-        std::vector<Block> blocks;
+        std::vector<Block> candidate_blocks;
         Block curr_block;
         curr_block.afps.push_back(merged_afps[path[0]]);
         curr_block.dvars.push_back(0.0);
@@ -3499,7 +3499,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
             if (dvar >= disCut)
             {
-                blocks.push_back(curr_block);
+                candidate_blocks.push_back(curr_block);
                 curr_block.afps.clear();
                 curr_block.dvars.clear();
                 curr_block.afps.push_back(curr);
@@ -3512,20 +3512,20 @@ int flexalign_fatcat_main(double **xa, double **ya,
             }
         }
         if (!curr_block.afps.empty())
-            blocks.push_back(curr_block);
+            candidate_blocks.push_back(curr_block);
 
         bool splitted = true;
-        while (splitted && blocks.size() < (size_t)(max_twists + 1))
+        while (splitted && candidate_blocks.size() < (size_t)(max_twists + 1))
         {
             splitted = false;
             double max_rmsd = 0.0;
             int target_b = -1;
 
-            for (size_t b = 0; b < blocks.size(); b++)
+            for (size_t b = 0; b < candidate_blocks.size(); b++)
             {
-                if (blocks[b].afps.size() > 2)
+                if (candidate_blocks[b].afps.size() > 2)
                 {
-                    double cur_rmsd = calc_block_rmsd(blocks[b].afps);
+                    double cur_rmsd = calc_block_rmsd(candidate_blocks[b].afps);
                     if (cur_rmsd > max_rmsd)
                     {
                         max_rmsd = cur_rmsd;
@@ -3538,11 +3538,11 @@ int flexalign_fatcat_main(double **xa, double **ya,
             {
                 double max_t = 0;
                 int cut_idx = 0;
-                for (size_t i = 1; i < blocks[target_b].afps.size(); i++)
+                for (size_t i = 1; i < candidate_blocks[target_b].afps.size(); i++)
                 {
-                    if (blocks[target_b].dvars[i] > max_t)
+                    if (candidate_blocks[target_b].dvars[i] > max_t)
                     {
-                        max_t = blocks[target_b].dvars[i];
+                        max_t = candidate_blocks[target_b].dvars[i];
                         cut_idx = i;
                     }
                 }
@@ -3550,44 +3550,44 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 if (cut_idx > 0)
                 {
                     Block right_blk;
-                    right_blk.afps.assign(blocks[target_b].afps.begin() + cut_idx, blocks[target_b].afps.end());
-                    right_blk.dvars.assign(blocks[target_b].dvars.begin() + cut_idx, blocks[target_b].dvars.end());
+                    right_blk.afps.assign(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    right_blk.dvars.assign(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
                     right_blk.dvars[0] = 0.0;
-                    blocks[target_b].afps.erase(blocks[target_b].afps.begin() + cut_idx, blocks[target_b].afps.end());
-                    blocks[target_b].dvars.erase(blocks[target_b].dvars.begin() + cut_idx, blocks[target_b].dvars.end());
-                    blocks.insert(blocks.begin() + target_b + 1, right_blk);
+                    candidate_blocks[target_b].afps.erase(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    candidate_blocks[target_b].dvars.erase(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
+                    candidate_blocks.insert(candidate_blocks.begin() + target_b + 1, right_blk);
                     splitted = true;
                 }
             }
         }
 
-        for (int b = 0; b < (int)blocks.size(); b++)
+        for (int b = 0; b < (int)candidate_blocks.size(); b++)
         {
-            if (blocks[b].afps.size() <= 1)
+            if (candidate_blocks[b].afps.size() <= 1)
             {
-                int e1 = (b < (int)blocks.size() - 1) ? blocks[b + 1].afps.front().i : xlen;
-                int e2 = (b < (int)blocks.size() - 1) ? blocks[b + 1].afps.front().j : ylen;
-                int b1 = (b > 0) ? blocks[b - 1].afps.back().i + blocks[b - 1].afps.back().len : 0;
-                int b2 = (b > 0) ? blocks[b - 1].afps.back().j + blocks[b - 1].afps.back().len : 0;
+                int e1 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().i : xlen;
+                int e2 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().j : ylen;
+                int b1 = (b > 0) ? candidate_blocks[b - 1].afps.back().i + candidate_blocks[b - 1].afps.back().len : 0;
+                int b2 = (b > 0) ? candidate_blocks[b - 1].afps.back().j + candidate_blocks[b - 1].afps.back().len : 0;
                 int span = std::min(e1 - b1, e2 - b2);
                 if (span < 2 * fragLen)
                 {
-                    blocks.erase(blocks.begin() + b);
+                    candidate_blocks.erase(candidate_blocks.begin() + b);
                     b--;
                 }
             }
         }
 
         bool merged = true;
-        while (merged && blocks.size() > 1)
+        while (merged && candidate_blocks.size() > 1)
         {
             merged = false;
             double min_rmsd = 1e9;
             int min_b = -1;
-            for (size_t b = 0; b < blocks.size() - 1; b++)
+            for (size_t b = 0; b < candidate_blocks.size() - 1; b++)
             {
-                std::vector<FATCAT_AFP> temp_merged = blocks[b].afps;
-                temp_merged.insert(temp_merged.end(), blocks[b + 1].afps.begin(), blocks[b + 1].afps.end());
+                std::vector<FATCAT_AFP> temp_merged = candidate_blocks[b].afps;
+                temp_merged.insert(temp_merged.end(), candidate_blocks[b + 1].afps.begin(), candidate_blocks[b + 1].afps.end());
                 double cur_rmsd = calc_block_rmsd(temp_merged);
                 if (cur_rmsd < min_rmsd)
                 {
@@ -3598,20 +3598,20 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
             if (min_rmsd < cur_local_badRmsd && min_b != -1)
             {
-                blocks[min_b].afps.insert(blocks[min_b].afps.end(), blocks[min_b + 1].afps.begin(), blocks[min_b + 1].afps.end());
-                blocks.erase(blocks.begin() + min_b + 1);
+                candidate_blocks[min_b].afps.insert(candidate_blocks[min_b].afps.end(), candidate_blocks[min_b + 1].afps.begin(), candidate_blocks[min_b + 1].afps.end());
+                candidate_blocks.erase(candidate_blocks.begin() + min_b + 1);
                 merged = true;
             }
         }
 
-        std::vector<Region> real_blocks;
+        std::vector<Region> fatcat_domains;
         int last_i = 0, last_j = 0;
-        for (size_t b = 0; b < blocks.size(); b++)
+        for (size_t b = 0; b < candidate_blocks.size(); b++)
         {
             int b_s1 = -1, b_e1 = -1, b_s2 = -1, b_e2 = -1;
-            for (size_t a = 0; a < blocks[b].afps.size(); a++)
+            for (size_t a = 0; a < candidate_blocks[b].afps.size(); a++)
             {
-                FATCAT_AFP afp = blocks[b].afps[a];
+                FATCAT_AFP afp = candidate_blocks[b].afps[a];
                 int skip = std::max(std::max(last_i - afp.i, last_j - afp.j), 0);
                 if (skip >= afp.len)
                     continue;
@@ -3634,20 +3634,20 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 if (b_e1 - b_s1 >= 4 && b_e2 - b_s2 >= 4)
                 {
                     Region r = {b_s1, b_e1, b_s2, b_e2};
-                    real_blocks.push_back(r);
+                    fatcat_domains.push_back(r);
                 }
             }
         }
 
-        if (real_blocks.empty())
+        if (fatcat_domains.empty())
             return std::make_pair(ret_b1, ret_b2);
 
         ret_b1.push_back(0);
         ret_b2.push_back(0);
-        for (size_t k = 0; k < real_blocks.size() - 1; k++)
+        for (size_t k = 0; k < fatcat_domains.size() - 1; k++)
         {
-            ret_b1.push_back((real_blocks[k].e1 + real_blocks[k + 1].s1) / 2);
-            ret_b2.push_back((real_blocks[k].e2 + real_blocks[k + 1].s2) / 2);
+            ret_b1.push_back((fatcat_domains[k].e1 + fatcat_domains[k + 1].s1) / 2);
+            ret_b2.push_back((fatcat_domains[k].e2 + fatcat_domains[k + 1].s2) / 2);
         }
         ret_b1.push_back(xlen);
         ret_b2.push_back(ylen);
