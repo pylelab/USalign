@@ -2054,4 +2054,1280 @@ void output_flexalign_results(const string xname, const string yname,
                                 xlen, ylen, d0A, n_ali8, rmsd, TM1, Liden);
 }
 
+// Data structure to hold outputs of flexalign_main to avoid parameter clutter
+struct FlexAlignResult
+{
+    double t0[3];
+    double u0[3][3];
+    vector<vector<double>> tu_vec;
+    double TM1, TM2, TM3, TM4, TM5;
+    double d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out;
+    string seqM, seqxA, seqyA;
+    vector<double> do_vec;
+    double rmsd0, Liden, TM_ali, rmsd_ali;
+    int L_ali, n_ali, n_ali8, hingeNum;
+
+    FlexAlignResult() : TM1(-1.0), TM2(-1.0), TM3(-1.0), TM4(-1.0), TM5(-1.0),
+                        d0_0(0.0), TM_0(0.0), d0A(0.0), d0B(0.0), d0u(0.0), d0a(0.0), d0_out(5.0),
+                        rmsd0(0.0), Liden(0.0), TM_ali(0.0), rmsd_ali(0.0),
+                        L_ali(0), n_ali(0), n_ali8(0), hingeNum(0)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            t0[i] = 0.0;
+            for (int j = 0; j < 3; j++)
+                u0[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+};
+
+enum FlexAlignMode
+{
+    FLEX_STANDARD = 0,
+    FLEX_BEST = 1,
+    FLEX_FATCAT = 2
+};
+
+// Encapsulates the execution of flexalign_main and its fallback refinement logic
+void execute_flexalign_with_fallback(
+    double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
+    int xlen, int ylen, vector<string> &sequence, const double Lnorm_ass, const double d0_scale,
+    const int i_opt, const int a_opt, const bool u_opt, const bool d_opt, const bool force_fast_opt,
+    const int mol_type, const int hinge_opt, const int ss_opt, FlexAlignResult &res)
+{
+    res.hingeNum = flexalign_main(
+        xa, ya, seqx, seqy, secx, secy,
+        res.t0, res.u0, res.tu_vec, res.TM1, res.TM2, res.TM3, res.TM4, res.TM5,
+        res.d0_0, res.TM_0, res.d0A, res.d0B, res.d0u, res.d0a, res.d0_out,
+        res.seqM, res.seqxA, res.seqyA, res.do_vec,
+        res.rmsd0, res.L_ali, res.Liden, res.TM_ali, res.rmsd_ali, res.n_ali, res.n_ali8,
+        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+        i_opt, a_opt, u_opt, d_opt, force_fast_opt,
+        mol_type, hinge_opt, ss_opt);
+
+    // Fallback compensation when too few hinges are found
+    if (hinge_opt && res.hingeNum <= 1 && res.n_ali8 < 0.6 * getmin(xlen, ylen))
+    {
+        FlexAlignResult res_h;
+        res_h.tu_vec.push_back(res.tu_vec[0]);
+        tu2t_u(res.tu_vec[0], res_h.t0, res_h.u0);
+
+        res_h.hingeNum = flexalign_main(
+            xa, ya, seqx, seqy, secx, secy,
+            res_h.t0, res_h.u0, res_h.tu_vec,
+            res_h.TM1, res_h.TM2, res_h.TM3, res_h.TM4, res_h.TM5,
+            res_h.d0_0, res_h.TM_0, res.d0A, res.d0B, res.d0u, res.d0a, res_h.d0_out,
+            res_h.seqM, res_h.seqxA, res_h.seqyA, res_h.do_vec,
+            res_h.rmsd0, res_h.L_ali, res_h.Liden, res_h.TM_ali, res_h.rmsd_ali,
+            res_h.n_ali, res_h.n_ali8,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+            a_opt, u_opt, d_opt, force_fast_opt,
+            mol_type, hinge_opt, ss_opt);
+
+        double TM = (res.TM1 > res.TM2) ? res.TM1 : res.TM2;
+        double TM_h = (res_h.TM1 > res_h.TM2) ? res_h.TM1 : res_h.TM2;
+        if (TM_h > TM)
+        {
+            res = res_h; // Safely overwrite with the better refined results
+        }
+    }
+}
+
+// ==========================================
+// FATCAT Core Algorithm (flexalign_fatcat_main)
+// ==========================================
+struct FATCAT_AFP
+{
+    int i, j, len;
+    double score;
+};
+
+int flexalign_fatcat_main(double **xa, double **ya,
+                          const char *seqx, const char *seqy, const char *secx, const char *secy,
+                          double t0[3], double u0[3][3], std::vector<std::vector<double>> &tu_vec,
+                          double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
+                          double &d0_0, double &TM_0,
+                          double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
+                          std::string &seqM, std::string &seqxA, std::string &seqyA, std::vector<double> &do_vec,
+                          double &rmsd0, int &L_ali, double &Liden,
+                          double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
+                          const int xlen, const int ylen,
+                          const std::vector<std::string> sequence, const double Lnorm_ass,
+                          const double d0_scale, const int i_opt, const int a_opt,
+                          const bool u_opt, const bool d_opt, const bool fast_opt,
+                          const int mol_type, const int hinge_opt, const int ss_opt,
+                          int sparse_val = 0, bool hinge_set = false)
+{
+    // ==========================================
+    // TRUE flexalign_greedy BASELINE (Defender)
+    // Run full sequence without generate_bounds slicing!
+    // This perfectly simulates FLEX_BEST (flexalign_greedy) behavior.
+    // ==========================================
+    double best_global_max_TM = -1.0;
+    std::vector<std::vector<double>> best_tu_vec;
+    double best_t0[3], best_u0[3][3];
+    double best_TM1 = 0.0, best_TM2 = 0.0, best_TM3 = 0.0, best_TM4 = 0.0, best_TM5 = 0.0;
+    double best_rmsd0 = 0.0, best_Liden = 0.0, best_TM_ali = 0.0, best_rmsd_ali = 0.0;
+    int best_L_ali = 0, best_n_ali = 0, best_n_ali8 = 0;
+    std::string best_seqM = "", best_seqxA = "", best_seqyA = "";
+    std::vector<double> best_do_vec;
+    double best_d0A = 0.0, best_d0B = 0.0, best_d0a = 0.0, best_d0u = 0.0;
+
+    bool force_fast_opt_global = (std::min(xlen, ylen) > 1500) ? true : fast_opt;
+    std::vector<std::string> local_sequence = sequence;
+
+    for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
+    {
+        FlexAlignResult base_res;
+        // Pass full unbroken sequences directly to flexalign (identical to flexalign_greedy)
+        execute_flexalign_with_fallback(
+            xa, ya, (char *)seqx, (char *)seqy, (char *)secx, (char *)secy,
+            xlen, ylen, local_sequence, Lnorm_ass, d0_scale,
+            i_opt, a_opt, u_opt, d_opt, force_fast_opt_global,
+            mol_type, hinge_opt, cur_ss_opt, base_res); // flexalign_greedy explicitly uses 9 hinges
+
+        double cur_max_TM = (base_res.TM1 > base_res.TM2) ? base_res.TM1 : base_res.TM2;
+        if (cur_max_TM > best_global_max_TM)
+        {
+            best_global_max_TM = cur_max_TM;
+            for (int a = 0; a < 3; a++)
+            {
+                best_t0[a] = base_res.t0[a];
+                for (int b = 0; b < 3; b++)
+                    best_u0[a][b] = base_res.u0[a][b];
+            }
+            best_tu_vec = base_res.tu_vec;
+            best_TM1 = base_res.TM1;
+            best_TM2 = base_res.TM2;
+            best_TM3 = base_res.TM3;
+            best_TM4 = base_res.TM4;
+            best_TM5 = base_res.TM5;
+            best_rmsd0 = base_res.rmsd0;
+            best_Liden = base_res.Liden;
+            best_TM_ali = base_res.TM_ali;
+            best_rmsd_ali = base_res.rmsd_ali;
+            best_L_ali = base_res.L_ali;
+            best_n_ali = base_res.n_ali;
+            best_n_ali8 = base_res.n_ali8;
+            best_seqM = base_res.seqM;
+            best_seqxA = base_res.seqxA;
+            best_seqyA = base_res.seqyA;
+            best_do_vec = base_res.do_vec;
+            best_d0A = base_res.d0A;
+            best_d0B = base_res.d0B;
+            best_d0a = base_res.d0a;
+            best_d0u = base_res.d0u;
+        }
+    }
+
+    // Early exit if the true flexalign_greedy baseline is already excellent
+    if (best_global_max_TM >= 0.85)
+    {
+        // <--- ADD DEBUG HERE: Output early exit confirmation
+        // std::cout << "[DEBUG] MM9" << std::endl;
+
+        TM1 = best_TM1;
+        TM2 = best_TM2;
+        TM3 = best_TM3;
+        TM4 = best_TM4;
+        TM5 = best_TM5;
+        rmsd0 = best_rmsd0;
+        Liden = best_Liden;
+        TM_ali = best_TM_ali;
+        rmsd_ali = best_rmsd_ali;
+        L_ali = best_L_ali;
+        n_ali = best_n_ali;
+        n_ali8 = best_n_ali8;
+        seqM = best_seqM;
+        seqxA = best_seqxA;
+        seqyA = best_seqyA;
+        do_vec = best_do_vec;
+        tu_vec = best_tu_vec;
+        d0A = best_d0A;
+        d0B = best_d0B;
+        d0a = best_d0a;
+        d0u = best_d0u;
+        for (int a = 0; a < 3; a++)
+        {
+            t0[a] = best_t0[a];
+            for (int b = 0; b < 3; b++)
+                u0[a][b] = best_u0[a][b];
+        }
+        return tu_vec.size();
+    }
+
+    // ==========================================
+    // Proceed to FATCAT sliced bounds logic...
+    // ==========================================
+
+    // FATCAT base parameters
+    int fragLen = 8;
+    double resScore = 3.0;
+    double gap_ext = -0.5;
+    double disCut = 5.0;
+    double disSmooth = 4.0;
+    double twist_pen = -25.0;
+    int max_gap = 40;
+    double max_penalty = -5.0;
+    int misCut = 2 * fragLen;
+    int maxGapFrag = fragLen + max_gap;
+    double afp_dis_cut = fragLen * fragLen * (disCut * disCut);
+    int max_twists = hinge_opt;
+
+    // OPTIMIZATION 1: Precompute local intra-protein distance matrices
+    int max_dist_window = max_gap + 2 * fragLen + 1;
+    std::vector<std::vector<double>> disTable1(xlen, std::vector<double>(max_dist_window, 0.0));
+    std::vector<std::vector<double>> disTable2(ylen, std::vector<double>(max_dist_window, 0.0));
+
+    for (int i = 0; i < xlen; i++)
+    {
+        for (int j = i; j < std::min(xlen, i + max_dist_window); j++)
+            disTable1[i][j - i] = std::sqrt(dist(xa[i], xa[j]));
+    }
+    for (int i = 0; i < ylen; i++)
+    {
+        for (int j = i; j < std::min(ylen, i + max_dist_window); j++)
+            disTable2[i][j - i] = std::sqrt(dist(ya[i], ya[j]));
+    }
+
+    // Wrapper for generating bounds
+    auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int>>
+    {
+        // Step 1: Extract initial AFPs in batches
+        std::vector<FATCAT_AFP> initial_afps;
+        int step = sparse_val + 1;
+
+        double r1_static[8][3], r2_static[8][3];
+        double *r1[8], *r2[8];
+        for (int k = 0; k < 8; k++)
+        {
+            r1[k] = r1_static[k];
+            r2[k] = r2_static[k];
+        }
+
+        for (int i = 0; i <= xlen - fragLen; i += step)
+        {
+            for (int j = 0; j <= ylen - fragLen; j += step)
+            {
+                int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
+                if (d3_term < 0.3 * std::min(xlen, ylen))
+                    continue;
+
+                double dist1 = disTable1[i][fragLen - 1];
+                double dist2 = disTable2[j][fragLen - 1];
+
+                if (std::fabs(dist1 - dist2) > 2.0 * cur_rmsdCut)
+                    continue;
+
+                for (int k = 0; k < fragLen; k++)
+                {
+                    r1[k][0] = xa[i + k][0];
+                    r1[k][1] = xa[i + k][1];
+                    r1[k][2] = xa[i + k][2];
+                    r2[k][0] = ya[j + k][0];
+                    r2[k][1] = ya[j + k][1];
+                    r2[k][2] = ya[j + k][2];
+                }
+
+                double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                Kabsch(r1, r2, fragLen, 0, &rms_sum_sq, t_tmp, u_tmp);
+                double rmsd_tmp = std::sqrt(rms_sum_sq / fragLen);
+
+                if (rmsd_tmp < cur_rmsdCut)
+                {
+                    FATCAT_AFP afp;
+                    afp.i = i;
+                    afp.j = j;
+                    afp.len = fragLen;
+                    afp.score = resScore * fragLen * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                    initial_afps.push_back(afp);
+                }
+            }
+        }
+
+        // Step 2: Merge diagonal AFPs
+        int max_diagonal_idx = xlen + ylen + 1;
+        std::vector<std::vector<FATCAT_AFP>> diagonals(max_diagonal_idx);
+        for (size_t k = 0; k < initial_afps.size(); k++)
+        {
+            diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
+        }
+
+        std::vector<FATCAT_AFP> merged_afps;
+        int max_merge_len = std::min(xlen, ylen);
+        double **r1_merge, **r2_merge;
+        NewArray(&r1_merge, max_merge_len, 3);
+        NewArray(&r2_merge, max_merge_len, 3);
+
+        for (int d = 0; d < max_diagonal_idx; d++)
+        {
+            if (diagonals[d].empty())
+                continue;
+            std::vector<FATCAT_AFP> &group = diagonals[d];
+
+            std::sort(group.begin(), group.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+                      { return a.i < b.i; });
+
+            int n_group = group.size();
+            std::vector<bool> invalid(n_group, false);
+            for (int idx = 0; idx < n_group; idx++)
+            {
+                if (invalid[idx])
+                    continue;
+                FATCAT_AFP curr = group[idx];
+                for (int nxt_idx = idx + 1; nxt_idx < n_group; nxt_idx++)
+                {
+                    FATCAT_AFP nxt = group[nxt_idx];
+                    if (nxt.i > curr.i + curr.len)
+                        break;
+
+                    if (nxt.i + nxt.len > curr.i + curr.len)
+                    {
+                        int new_len = (nxt.i + nxt.len) - curr.i;
+
+                        for (int k = 0; k < new_len; k++)
+                        {
+                            r1_merge[k][0] = xa[curr.i + k][0];
+                            r1_merge[k][1] = xa[curr.i + k][1];
+                            r1_merge[k][2] = xa[curr.i + k][2];
+                            r2_merge[k][0] = ya[curr.j + k][0];
+                            r2_merge[k][1] = ya[curr.j + k][1];
+                            r2_merge[k][2] = ya[curr.j + k][2];
+                        }
+
+                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                        Kabsch(r1_merge, r2_merge, new_len, 0, &rms_sum_sq, t_tmp, u_tmp);
+                        double rmsd_tmp = std::sqrt(rms_sum_sq / new_len);
+
+                        if (rmsd_tmp < cur_rmsdCut)
+                        {
+                            curr.len = new_len;
+                            curr.score = resScore * new_len * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                            invalid[nxt_idx] = true;
+                        }
+                    }
+                }
+                merged_afps.push_back(curr);
+            }
+        }
+        DeleteArray(&r1_merge, max_merge_len);
+        DeleteArray(&r2_merge, max_merge_len);
+
+        std::sort(merged_afps.begin(), merged_afps.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+                  {
+            if (a.i == b.i) return a.j < b.j;
+            return a.i < b.i; });
+
+        int n_afps = merged_afps.size();
+        std::vector<int> ret_b1, ret_b2;
+        if (n_afps == 0)
+            return std::make_pair(ret_b1, ret_b2);
+
+        // Step 3 & 4: Dual Dynamic Programming and Domain Splitting
+        std::vector<int> afp_aft_index(xlen * ylen, -1);
+        std::vector<int> afp_bef_index(xlen * ylen, -1);
+
+        std::vector<std::vector<std::pair<int, int>>> i_to_j(xlen);
+        for (int m = 0; m < n_afps; m++)
+        {
+            i_to_j[merged_afps[m].i].push_back(std::make_pair(merged_afps[m].j, m));
+        }
+
+        for (int i_val = 0; i_val < xlen; i_val++)
+        {
+            if (i_to_j[i_val].empty())
+                continue;
+            for (size_t p = 0; p < i_to_j[i_val].size(); p++)
+            {
+                int j_val = i_to_j[i_val][p].first;
+                afp_aft_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+                afp_bef_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+            }
+            int curr_bef = -1;
+            for (int j_val = 0; j_val < ylen; j_val++)
+            {
+                if (afp_bef_index[i_val * ylen + j_val] != -1)
+                    curr_bef = afp_bef_index[i_val * ylen + j_val];
+                else
+                    afp_bef_index[i_val * ylen + j_val] = curr_bef;
+            }
+            int curr_aft = -1;
+            for (int j_val = ylen - 1; j_val >= 0; j_val--)
+            {
+                if (afp_aft_index[i_val * ylen + j_val] != -1)
+                    curr_aft = afp_aft_index[i_val * ylen + j_val];
+                else
+                    afp_aft_index[i_val * ylen + j_val] = curr_aft;
+            }
+        }
+
+        auto get_dvar = [&](const FATCAT_AFP &prv, const FATCAT_AFP &curr) -> double
+        {
+            double rms_sq = 0;
+            for (int i_idx = 0; i_idx < fragLen; i_idx++)
+            {
+                for (int j_idx = 0; j_idx < fragLen; j_idx++)
+                {
+                    double dist1, dist2;
+                    int idx1_a = curr.i + i_idx, idx1_b = prv.i + j_idx;
+                    if (idx1_a >= idx1_b)
+                        dist1 = disTable1[idx1_b][idx1_a - idx1_b];
+                    else
+                        dist1 = disTable1[idx1_a][idx1_b - idx1_a];
+
+                    int idx2_a = curr.j + i_idx, idx2_b = prv.j + j_idx;
+                    if (idx2_a >= idx2_b)
+                        dist2 = disTable2[idx2_b][idx2_a - idx2_b];
+                    else
+                        dist2 = disTable2[idx2_a][idx2_b - idx2_a];
+
+                    rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                }
+            }
+            if (rms_sq > afp_dis_cut)
+                return 1e9;
+            return std::sqrt(rms_sq / (fragLen * fragLen));
+        };
+
+        auto calc_block_rmsd = [&](const std::vector<FATCAT_AFP> &afp_list) -> double
+        {
+            std::vector<int> r1, r2;
+            for (size_t a = 0; a < afp_list.size(); a++)
+            {
+                for (int l = 0; l < afp_list[a].len; l++)
+                {
+                    r1.push_back(afp_list[a].i + l);
+                    r2.push_back(afp_list[a].j + l);
+                }
+            }
+            int n = r1.size();
+            if (n < 3)
+                return 0.0;
+            double **p1;
+            NewArray(&p1, n, 3);
+            double **p2;
+            NewArray(&p2, n, 3);
+            for (int i = 0; i < n; i++)
+            {
+                p1[i][0] = xa[r1[i]][0];
+                p1[i][1] = xa[r1[i]][1];
+                p1[i][2] = xa[r1[i]][2];
+                p2[i][0] = ya[r2[i]][0];
+                p2[i][1] = ya[r2[i]][1];
+                p2[i][2] = ya[r2[i]][2];
+            }
+            double rms_sq_sum, t_tmp[3], u_tmp[3][3];
+            Kabsch(p1, p2, n, 0, &rms_sq_sum, t_tmp, u_tmp);
+            DeleteArray(&p1, n);
+            DeleteArray(&p2, n);
+            return std::sqrt(rms_sq_sum / n);
+        };
+
+        struct Region
+        {
+            int s1, e1, s2, e2;
+        };
+
+        std::vector<double> sco(n_afps);
+        std::vector<int> twi(n_afps, 0);
+        std::vector<int> pre(n_afps, -1);
+        for (int m = 0; m < n_afps; m++)
+            sco[m] = merged_afps[m].score;
+
+        for (int m = 0; m < n_afps; m++)
+        {
+            int curr_i = merged_afps[m].i;
+            int curr_j = merged_afps[m].j;
+            int a3 = curr_i - fragLen;
+            int a2 = std::max(0, a3 - misCut);
+            int a1 = std::max(0, curr_i - maxGapFrag);
+            int b3 = curr_j - fragLen;
+            int b2 = std::max(0, b3 - misCut);
+            int b1 = std::max(0, curr_j - maxGapFrag);
+
+            std::vector<int> valid_prevs;
+            for (int st = 0; st < 2; st++)
+            {
+                int a_s, a_e, b_s, b_e;
+                if (st == 0)
+                {
+                    a_s = std::max(a1, 0);
+                    a_e = std::min(a3, xlen - 1);
+                    b_s = std::max(b2, 0);
+                    b_e = std::min(b3, ylen - 1);
+                }
+                else
+                {
+                    a_s = std::max(a2, 0);
+                    a_e = std::min(a3, xlen - 1);
+                    b_s = std::max(b1, 0);
+                    b_e = std::min(b2 - 1, ylen - 1);
+                }
+
+                if (b_s >= ylen || b_e < 0)
+                    continue;
+                for (int prev_i = a_s; prev_i <= a_e; prev_i++)
+                {
+                    int s1 = afp_aft_index[prev_i * ylen + b_s];
+                    int s2 = afp_bef_index[prev_i * ylen + b_e];
+                    if (s1 != -1 && s2 != -1 && s1 <= s2)
+                        for (int s = s1; s <= s2; s++)
+                            valid_prevs.push_back(s);
+                }
+            }
+
+            double curr_sco = merged_afps[m].score;
+            for (size_t v = 0; v < valid_prevs.size(); v++)
+            {
+                int prev = valid_prevs[v];
+                int prev_twi = twi[prev];
+                if (prev_twi > max_twists)
+                    continue;
+
+                int gap_i = curr_i - (merged_afps[prev].i + merged_afps[prev].len);
+                int gap_j = curr_j - (merged_afps[prev].j + merged_afps[prev].len);
+                int m_gap = std::max(gap_i, gap_j);
+
+                double gp = 0.0;
+                int m_mis = 0;
+                if (gap_i < 0 || gap_j < 0)
+                    m_mis = (gap_i < gap_j) ? -gap_i : -gap_j;
+                gp = gap_ext * m_mis;
+                if (m_gap > 0)
+                    gp += gap_ext * m_gap;
+                if (gp < max_penalty)
+                    gp = max_penalty;
+
+                double rms_sq = 0;
+                for (int k = 0; k < fragLen; k++)
+                {
+                    for (int l = 0; l < fragLen; l++)
+                    {
+                        double dist1, dist2;
+                        int idx1_a = curr_i + k, idx1_b = merged_afps[prev].i + l;
+                        if (idx1_a >= idx1_b)
+                            dist1 = disTable1[idx1_b][idx1_a - idx1_b];
+                        else
+                            dist1 = disTable1[idx1_a][idx1_b - idx1_a];
+
+                        int idx2_a = curr_j + k, idx2_b = merged_afps[prev].j + l;
+                        if (idx2_a >= idx2_b)
+                            dist2 = disTable2[idx2_b][idx2_a - idx2_b];
+                        else
+                            dist2 = disTable2[idx2_a][idx2_b - idx2_a];
+
+                        rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                    }
+                }
+
+                double tp = 0.0;
+                int is_twist = 0;
+                if (rms_sq >= afp_dis_cut)
+                {
+                    tp = twist_pen;
+                    is_twist = 1;
+                }
+                else
+                {
+                    double dvar = std::sqrt(rms_sq / (fragLen * fragLen));
+                    if (dvar > disCut - disSmooth)
+                        tp = twist_pen * std::sqrt((dvar - disCut + disSmooth) / disSmooth);
+                }
+
+                if (prev_twi + is_twist > max_twists)
+                    continue;
+
+                double stmp = sco[prev] + curr_sco + tp + gp;
+                if (stmp > sco[m])
+                {
+                    sco[m] = stmp;
+                    pre[m] = prev;
+                    twi[m] = prev_twi + is_twist;
+                }
+            }
+        }
+
+        int best_m = 0;
+        for (int m = 1; m < n_afps; m++)
+            if (sco[m] > sco[best_m])
+                best_m = m;
+
+        std::vector<int> path;
+        int curr_m = best_m;
+        while (curr_m != -1)
+        {
+            path.push_back(curr_m);
+            curr_m = pre[curr_m];
+        }
+        std::reverse(path.begin(), path.end());
+
+        if (path.empty())
+            return std::make_pair(ret_b1, ret_b2);
+
+        struct Block
+        {
+            std::vector<FATCAT_AFP> afps;
+            std::vector<double> dvars;
+        };
+        std::vector<Block> candidate_blocks;
+        Block curr_block;
+        curr_block.afps.push_back(merged_afps[path[0]]);
+        curr_block.dvars.push_back(0.0);
+
+        for (size_t k = 1; k < path.size(); k++)
+        {
+            FATCAT_AFP curr = merged_afps[path[k]];
+            FATCAT_AFP prv = merged_afps[path[k - 1]];
+            double dvar = get_dvar(prv, curr);
+
+            if (dvar >= disCut)
+            {
+                candidate_blocks.push_back(curr_block);
+                curr_block.afps.clear();
+                curr_block.dvars.clear();
+                curr_block.afps.push_back(curr);
+                curr_block.dvars.push_back(0.0);
+            }
+            else
+            {
+                curr_block.afps.push_back(curr);
+                curr_block.dvars.push_back(dvar);
+            }
+        }
+        if (!curr_block.afps.empty())
+            candidate_blocks.push_back(curr_block);
+
+        bool splitted = true;
+        while (splitted && candidate_blocks.size() < (size_t)(max_twists + 1))
+        {
+            splitted = false;
+            double max_rmsd = 0.0;
+            int target_b = -1;
+
+            for (size_t b = 0; b < candidate_blocks.size(); b++)
+            {
+                if (candidate_blocks[b].afps.size() > 2)
+                {
+                    double cur_rmsd = calc_block_rmsd(candidate_blocks[b].afps);
+                    if (cur_rmsd > max_rmsd)
+                    {
+                        max_rmsd = cur_rmsd;
+                        target_b = b;
+                    }
+                }
+            }
+
+            if (max_rmsd >= cur_local_badRmsd && target_b != -1)
+            {
+                double max_t = 0;
+                int cut_idx = 0;
+                for (size_t i = 1; i < candidate_blocks[target_b].afps.size(); i++)
+                {
+                    if (candidate_blocks[target_b].dvars[i] > max_t)
+                    {
+                        max_t = candidate_blocks[target_b].dvars[i];
+                        cut_idx = i;
+                    }
+                }
+
+                if (cut_idx > 0)
+                {
+                    Block right_blk;
+                    right_blk.afps.assign(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    right_blk.dvars.assign(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
+                    right_blk.dvars[0] = 0.0;
+                    candidate_blocks[target_b].afps.erase(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    candidate_blocks[target_b].dvars.erase(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
+                    candidate_blocks.insert(candidate_blocks.begin() + target_b + 1, right_blk);
+                    splitted = true;
+                }
+            }
+        }
+
+        for (int b = 0; b < (int)candidate_blocks.size(); b++)
+        {
+            if (candidate_blocks[b].afps.size() <= 1)
+            {
+                int e1 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().i : xlen;
+                int e2 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().j : ylen;
+                int b1 = (b > 0) ? candidate_blocks[b - 1].afps.back().i + candidate_blocks[b - 1].afps.back().len : 0;
+                int b2 = (b > 0) ? candidate_blocks[b - 1].afps.back().j + candidate_blocks[b - 1].afps.back().len : 0;
+                int span = std::min(e1 - b1, e2 - b2);
+                if (span < 2 * fragLen)
+                {
+                    candidate_blocks.erase(candidate_blocks.begin() + b);
+                    b--;
+                }
+            }
+        }
+
+        bool merged = true;
+        while (merged && candidate_blocks.size() > 1)
+        {
+            merged = false;
+            double min_rmsd = 1e9;
+            int min_b = -1;
+            for (size_t b = 0; b < candidate_blocks.size() - 1; b++)
+            {
+                std::vector<FATCAT_AFP> temp_merged = candidate_blocks[b].afps;
+                temp_merged.insert(temp_merged.end(), candidate_blocks[b + 1].afps.begin(), candidate_blocks[b + 1].afps.end());
+                double cur_rmsd = calc_block_rmsd(temp_merged);
+                if (cur_rmsd < min_rmsd)
+                {
+                    min_rmsd = cur_rmsd;
+                    min_b = b;
+                }
+            }
+
+            if (min_rmsd < cur_local_badRmsd && min_b != -1)
+            {
+                candidate_blocks[min_b].afps.insert(candidate_blocks[min_b].afps.end(), candidate_blocks[min_b + 1].afps.begin(), candidate_blocks[min_b + 1].afps.end());
+                candidate_blocks.erase(candidate_blocks.begin() + min_b + 1);
+                merged = true;
+            }
+        }
+
+        std::vector<Region> fatcat_domains;
+        int last_i = 0, last_j = 0;
+        for (size_t b = 0; b < candidate_blocks.size(); b++)
+        {
+            int b_s1 = -1, b_e1 = -1, b_s2 = -1, b_e2 = -1;
+            for (size_t a = 0; a < candidate_blocks[b].afps.size(); a++)
+            {
+                FATCAT_AFP afp = candidate_blocks[b].afps[a];
+                int skip = std::max(std::max(last_i - afp.i, last_j - afp.j), 0);
+                if (skip >= afp.len)
+                    continue;
+
+                int eff_i = afp.i + skip;
+                int eff_j = afp.j + skip;
+                int eff_L = afp.len - skip;
+                if (b_s1 == -1)
+                {
+                    b_s1 = eff_i;
+                    b_s2 = eff_j;
+                }
+                b_e1 = eff_i + eff_L;
+                b_e2 = eff_j + eff_L;
+                last_i = b_e1;
+                last_j = b_e2;
+            }
+            if (b_s1 != -1)
+            {
+                if (b_e1 - b_s1 >= 4 && b_e2 - b_s2 >= 4)
+                {
+                    Region r = {b_s1, b_e1, b_s2, b_e2};
+                    fatcat_domains.push_back(r);
+                }
+            }
+        }
+
+        if (fatcat_domains.empty())
+            return std::make_pair(ret_b1, ret_b2);
+
+        ret_b1.push_back(0);
+        ret_b2.push_back(0);
+        for (size_t k = 0; k < fatcat_domains.size() - 1; k++)
+        {
+            ret_b1.push_back((fatcat_domains[k].e1 + fatcat_domains[k + 1].s1) / 2);
+            ret_b2.push_back((fatcat_domains[k].e2 + fatcat_domains[k + 1].s2) / 2);
+        }
+        ret_b1.push_back(xlen);
+        ret_b2.push_back(ylen);
+
+        return std::make_pair(ret_b1, ret_b2);
+    };
+
+    auto bounds_fatcat = generate_bounds(3.0, 4.0, 4.0);
+    auto bounds_strict = generate_bounds(2.0, 3.0, 2.0);
+
+    std::vector<std::pair<std::vector<int>, std::vector<int>>> all_bounds;
+    all_bounds.push_back(bounds_fatcat);
+    if (bounds_strict.first != bounds_fatcat.first || bounds_strict.second != bounds_fatcat.second)
+    {
+        all_bounds.push_back(bounds_strict);
+    }
+
+    // Loop through both bound sets, updating best_global_max_TM if we beat the flexalign_greedy defender
+    for (size_t b_idx = 0; b_idx < all_bounds.size(); b_idx++)
+    {
+        std::vector<int> &bounds1 = all_bounds[b_idx].first;
+        std::vector<int> &bounds2 = all_bounds[b_idx].second;
+
+        // Skip if only one interval (block) is generated, as the full unbroken sequence
+        // has already been processed by the baseline (flexalign_greedy) above.
+        if (bounds1.size() <= 2)
+            continue;
+
+        // ================== DEBUG START ==================
+        // Output the interval mapping for the current boundary set
+        // std::cout << "\n[DEBUG] --- Region Mapping Table ---" << std::endl;
+        // std::cout << "[DEBUG] Mode: " << (b_idx == 0 ? "FATCAT Bounds" : "Strict Bounds") << std::endl;
+        // std::cout << "[DEBUG] Total Blocks: " << (bounds1.size() - 1) << std::endl;
+
+        // for (size_t k = 0; k < bounds1.size() - 1; k++)
+        // {
+        //     std::cout << "[DEBUG] Block " << (k + 1) << ": "
+        //               << "Chain1 [" << bounds1[k] << " -> " << bounds1[k + 1] << "]  <==>  "
+        //               << "Chain2 [" << bounds2[k] << " -> " << bounds2[k + 1] << "]"
+        //               << std::endl;
+        // }
+        // std::cout << "[DEBUG] ----------------------------\n" << std::endl;
+        // =================== DEBUG END ===================
+
+        // Precalculate distributed local_hinge_opt for each block when hinge_set is true
+        int num_blocks = bounds1.size() - 1;
+        std::vector<int> precalc_local_hinge(num_blocks, 0);
+
+        if (hinge_set)
+        {
+            struct BlockMeta
+            {
+                int index;
+                double rmsd;
+            };
+            std::vector<BlockMeta> valid_blocks;
+
+            // Calculate target hinges to distribute based on requested hinge_opt and current implicit blocks
+            int target_total_hinges = std::max(0, hinge_opt + 1 - num_blocks);
+
+            // Calculate base amount of hinges per block
+            int base_hinge = (hinge_opt + 1) / num_blocks - 1;
+            if (base_hinge < 0)
+                base_hinge = 0;
+
+            for (int k = 0; k < num_blocks; k++)
+            {
+                int L1_sub = bounds1[k + 1] - bounds1[k];
+                int L2_sub = bounds2[k + 1] - bounds2[k];
+                int min_L = std::min(L1_sub, L2_sub);
+
+                if (min_L < 2 * fragLen)
+                {
+                    precalc_local_hinge[k] = 0; // Length < 2*fragLen gets 0
+                }
+                else
+                {
+                    // Calculate rough RMSD for this unaligned block section
+                    double block_rmsd = 0.0;
+                    if (min_L >= 3)
+                    {
+                        double **p1, **p2;
+                        NewArray(&p1, min_L, 3);
+                        NewArray(&p2, min_L, 3);
+                        for (int i = 0; i < min_L; i++)
+                        {
+                            p1[i][0] = xa[bounds1[k] + i][0];
+                            p1[i][1] = xa[bounds1[k] + i][1];
+                            p1[i][2] = xa[bounds1[k] + i][2];
+                            p2[i][0] = ya[bounds2[k] + i][0];
+                            p2[i][1] = ya[bounds2[k] + i][1];
+                            p2[i][2] = ya[bounds2[k] + i][2];
+                        }
+                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                        Kabsch(p1, p2, min_L, 0, &rms_sum_sq, t_tmp, u_tmp);
+                        block_rmsd = std::sqrt(rms_sum_sq / min_L);
+                        DeleteArray(&p1, min_L);
+                        DeleteArray(&p2, min_L);
+                    }
+                    valid_blocks.push_back({k, block_rmsd});
+                    precalc_local_hinge[k] = base_hinge; // Assign base hinges to valid blocks
+                }
+            }
+
+            // Distribute remaining hinges strictly prioritizing top RMSD blocks
+            int assigned = valid_blocks.size() * base_hinge;
+            int remainder = target_total_hinges - assigned;
+
+            if (remainder > 0 && !valid_blocks.empty())
+            {
+                // Sort valid blocks by RMSD descending
+                std::sort(valid_blocks.begin(), valid_blocks.end(), [](const BlockMeta &a, const BlockMeta &b)
+                          { return a.rmsd > b.rmsd; });
+
+                int v_idx = 0;
+                while (remainder > 0)
+                {
+                    precalc_local_hinge[valid_blocks[v_idx].index]++; // Give +1 to the front runners
+                    remainder--;
+                    v_idx = (v_idx + 1) % valid_blocks.size();
+                }
+            }
+        }
+
+        // Step 5: Iteratively align each block
+        std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
+        cur_global_seqM.reserve(xlen + ylen + max_gap);
+        cur_global_seqxA.reserve(xlen + ylen + max_gap);
+        cur_global_seqyA.reserve(xlen + ylen + max_gap);
+
+        std::vector<std::vector<double>> cur_tu_vec;
+        std::vector<int> cur_global_res_tu(xlen, -1);
+
+        for (size_t k = 0; k < bounds1.size() - 1; k++)
+        {
+            int x_s = bounds1[k], x_e = bounds1[k + 1];
+            int y_s = bounds2[k], y_e = bounds2[k + 1];
+            int L1_sub = x_e - x_s;
+            int L2_sub = y_e - y_s;
+
+            if (L1_sub < 3 || L2_sub < 3)
+            {
+                for (int i = 0; i < L1_sub; i++)
+                {
+                    cur_global_seqxA += seqx[x_s + i];
+                    cur_global_seqyA += '-';
+                    cur_global_seqM += ' ';
+                }
+                for (int i = 0; i < L2_sub; i++)
+                {
+                    cur_global_seqxA += '-';
+                    cur_global_seqyA += seqy[y_s + i];
+                    cur_global_seqM += ' ';
+                }
+                continue;
+            }
+
+            double **xa_sub, **ya_sub;
+            NewArray(&xa_sub, L1_sub, 3);
+            NewArray(&ya_sub, L2_sub, 3);
+            char *seqx_sub = new char[L1_sub + 1];
+            char *seqy_sub = new char[L2_sub + 1];
+            char *secx_sub = new char[L1_sub + 1];
+            char *secy_sub = new char[L2_sub + 1];
+
+            for (int i = 0; i < L1_sub; i++)
+            {
+                xa_sub[i][0] = xa[x_s + i][0];
+                xa_sub[i][1] = xa[x_s + i][1];
+                xa_sub[i][2] = xa[x_s + i][2];
+                seqx_sub[i] = seqx[x_s + i];
+                secx_sub[i] = secx[x_s + i];
+            }
+            seqx_sub[L1_sub] = '\0';
+            secx_sub[L1_sub] = '\0';
+
+            for (int i = 0; i < L2_sub; i++)
+            {
+                ya_sub[i][0] = ya[y_s + i][0];
+                ya_sub[i][1] = ya[y_s + i][1];
+                ya_sub[i][2] = ya[y_s + i][2];
+                seqy_sub[i] = seqy[y_s + i];
+                secy_sub[i] = secy[y_s + i];
+            }
+            seqy_sub[L2_sub] = '\0';
+            secy_sub[L2_sub] = '\0';
+
+            double t0_best[3], u0_best[3][3];
+            double TM_best_max = -1.0;
+            std::string seqM_best, seqxA_best, seqyA_best;
+            std::vector<std::vector<double>> tu_vec_best;
+
+            bool force_fast_opt = (std::min(L1_sub, L2_sub) > 1500) ? true : fast_opt;
+
+            // Determine local_hinge_opt based on user requirements.
+            // If hinge_set is true, we use the precalculated distributed hinges.
+            // Otherwise, set to 0 if the block length is less than 2 * fragLen, else 2.
+            int local_hinge_opt;
+            if (hinge_set)
+            {
+                local_hinge_opt = precalc_local_hinge[k];
+            }
+            else
+            {
+                local_hinge_opt = (std::min(L1_sub, L2_sub) < 2 * fragLen) ? 0 : 2;
+            }
+
+            for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
+            {
+                FlexAlignResult cur_res;
+                execute_flexalign_with_fallback(
+                    xa_sub, ya_sub, seqx_sub, seqy_sub, secx_sub, secy_sub,
+                    L1_sub, L2_sub, local_sequence, Lnorm_ass, d0_scale,
+                    i_opt, a_opt, u_opt, d_opt, force_fast_opt,
+                    mol_type, local_hinge_opt, cur_ss_opt, cur_res);
+
+                double cur_max_TM = (cur_res.TM1 > cur_res.TM2) ? cur_res.TM1 : cur_res.TM2;
+                if (cur_max_TM > TM_best_max)
+                {
+                    TM_best_max = cur_max_TM;
+                    for (int a = 0; a < 3; a++)
+                    {
+                        t0_best[a] = cur_res.t0[a];
+                        for (int b = 0; b < 3; b++)
+                            u0_best[a][b] = cur_res.u0[a][b];
+                    }
+                    seqM_best = cur_res.seqM;
+                    seqxA_best = cur_res.seqxA;
+                    seqyA_best = cur_res.seqyA;
+                    tu_vec_best = cur_res.tu_vec;
+                }
+            }
+
+            if (TM_best_max <= 0)
+            {
+                for (int i = 0; i < L1_sub; i++)
+                {
+                    cur_global_seqxA += seqx_sub[i];
+                    cur_global_seqyA += '-';
+                    cur_global_seqM += ' ';
+                }
+                for (int i = 0; i < L2_sub; i++)
+                {
+                    cur_global_seqxA += '-';
+                    cur_global_seqyA += seqy_sub[i];
+                    cur_global_seqM += ' ';
+                }
+                DeleteArray(&xa_sub, L1_sub);
+                DeleteArray(&ya_sub, L2_sub);
+                delete[] seqx_sub;
+                delete[] seqy_sub;
+                delete[] secx_sub;
+                delete[] secy_sub;
+                continue;
+            }
+
+            if (tu_vec_best.empty())
+            {
+                std::vector<double> tu_tmp(12);
+                t_u2tu(t0_best, u0_best, tu_tmp);
+                tu_vec_best.push_back(tu_tmp);
+            }
+
+            int base_tu_idx = cur_tu_vec.size();
+            for (size_t m = 0; m < tu_vec_best.size(); m++)
+                cur_tu_vec.push_back(tu_vec_best[m]);
+
+            int rx = x_s;
+            int current_global_idx = base_tu_idx;
+
+            for (size_t i = 0; i < seqxA_best.length(); i++)
+            {
+                char c = seqM_best[i];
+
+                if (c != ' ' && c != '.' && c != ':')
+                {
+                    int local_hinge_idx = -1;
+                    if (c >= '0' && c <= '9')
+                        local_hinge_idx = c - '0';
+                    else if (c >= 'a' && c <= 'z')
+                        local_hinge_idx = c - 'a' + 10;
+                    else if (c >= 'A' && c <= 'Z')
+                        local_hinge_idx = c - 'A' + 36;
+                    if (local_hinge_idx >= 0 && local_hinge_idx < tu_vec_best.size())
+                        current_global_idx = base_tu_idx + local_hinge_idx;
+                }
+
+                if (seqxA_best[i] != '-')
+                {
+                    cur_global_res_tu[rx] = current_global_idx;
+                    rx++;
+                }
+
+                if (seqxA_best[i] != '-' && seqyA_best[i] != '-')
+                {
+                    if (c != ' ' && c != '.' && c != ':')
+                    {
+                        char global_c;
+                        if (current_global_idx < 10)
+                            global_c = '0' + current_global_idx;
+                        else if (current_global_idx < 36)
+                            global_c = 'a' + (current_global_idx - 10);
+                        else if (current_global_idx < 62)
+                            global_c = 'A' + (current_global_idx - 36);
+                        else
+                            global_c = '*';
+                        seqM_best[i] = global_c;
+                    }
+                    else
+                    {
+                        seqM_best[i] = c;
+                    }
+                }
+                else
+                {
+                    seqM_best[i] = ' ';
+                }
+            }
+
+            cur_global_seqM += seqM_best;
+            cur_global_seqxA += seqxA_best;
+            cur_global_seqyA += seqyA_best;
+
+            DeleteArray(&xa_sub, L1_sub);
+            DeleteArray(&ya_sub, L2_sub);
+            delete[] seqx_sub;
+            delete[] seqy_sub;
+            delete[] secx_sub;
+            delete[] secy_sub;
+        }
+
+        // Step 6: Recalculate global metrics correctly for current DP boundary
+        // Variables to receive dummy outputs from parameter_set4final
+        double dummy_D0_MIN, dummy_Lnorm, dummy_d0_search;
+        double cur_d0A, cur_d0B, cur_d0a, cur_d0u = 0.0;
+
+        // Calculate d0 using parameter_set4final to correctly handle both proteins and RNA/DNA,
+        // and to prevent std::pow domain errors (NaN) when sequence length <= 15.
+        parameter_set4final(ylen, dummy_D0_MIN, dummy_Lnorm, cur_d0A, dummy_d0_search, mol_type);
+        parameter_set4final(xlen, dummy_D0_MIN, dummy_Lnorm, cur_d0B, dummy_d0_search, mol_type);
+        parameter_set4final((xlen + ylen) * 0.5, dummy_D0_MIN, dummy_Lnorm, cur_d0a, dummy_d0_search, mol_type);
+
+        if (u_opt)
+        {
+            parameter_set4final(Lnorm_ass, dummy_D0_MIN, dummy_Lnorm, cur_d0u, dummy_d0_search, mol_type);
+        }
+
+        double cur_TM1 = 0.0, cur_TM2 = 0.0, cur_TM3 = 0.0, cur_TM4 = 0.0, cur_TM5 = 0.0;
+        double cur_rmsd0 = 0.0, cur_Liden = 0.0;
+        int cur_n_ali8 = 0, cur_n_ali = 0;
+        std::vector<double> cur_do_vec;
+
+        int i_res = 0, j_res = 0;
+        for (size_t r = 0; r < cur_global_seqxA.length(); r++)
+        {
+            bool x_valid = (cur_global_seqxA[r] != '-');
+            bool y_valid = (cur_global_seqyA[r] != '-');
+
+            if (x_valid && y_valid)
+            {
+                int matrix_idx = cur_global_res_tu[i_res];
+                if (matrix_idx >= 0 && matrix_idx < cur_tu_vec.size())
+                {
+                    double t_k[3], u_k[3][3];
+                    tu2t_u(cur_tu_vec[matrix_idx], t_k, u_k);
+
+                    double x_rot[3];
+                    transform(t_k, u_k, xa[i_res], x_rot);
+                    double dist2 = dist(x_rot, ya[j_res]);
+                    double d = std::sqrt(dist2);
+
+                    cur_TM2 += 1.0 / (1.0 + dist2 / (cur_d0B * cur_d0B));
+                    cur_TM1 += 1.0 / (1.0 + dist2 / (cur_d0A * cur_d0A));
+                    if (a_opt)
+                        cur_TM3 += 1.0 / (1.0 + dist2 / (cur_d0a * cur_d0a));
+                    if (u_opt)
+                        cur_TM4 += 1.0 / (1.0 + dist2 / (cur_d0u * cur_d0u));
+                    if (d_opt)
+                        cur_TM5 += 1.0 / (1.0 + dist2 / (d0_scale * d0_scale));
+
+                    cur_n_ali++;
+                    cur_do_vec.push_back(d);
+
+                    if (d <= d0_out)
+                    {
+                        cur_rmsd0 += dist2;
+                        cur_n_ali8++;
+                        if (seqx[i_res] == seqy[j_res])
+                            cur_Liden += 1.0;
+                    }
+                }
+                else
+                {
+                    cur_do_vec.push_back(-1);
+                }
+            }
+            else
+            {
+                cur_do_vec.push_back(-1);
+            }
+
+            if (x_valid)
+                i_res++;
+            if (y_valid)
+                j_res++;
+        }
+
+        // Normalize TM-scores
+        cur_TM2 /= xlen;
+        cur_TM1 /= ylen;
+        if (a_opt)
+            cur_TM3 /= (xlen + ylen) * 0.5;
+        if (u_opt)
+            cur_TM4 /= Lnorm_ass;
+        if (d_opt)
+            cur_TM5 /= ylen;
+        if (cur_n_ali8 > 0)
+            cur_rmsd0 = std::sqrt(cur_rmsd0 / cur_n_ali8);
+        else
+            cur_rmsd0 = 0.0;
+
+        // Compare against the flexalign_greedy defender!
+        double cur_global_max_TM = (cur_TM1 > cur_TM2) ? cur_TM1 : cur_TM2;
+
+        if (cur_global_max_TM > best_global_max_TM)
+        {
+            // <--- ADD DEBUG HERE
+            // if (b_idx == 1)
+            // {
+            //     std::cout << "[DEBUG] strict" << std::endl;
+            // }
+
+            best_global_max_TM = cur_global_max_TM;
+            best_tu_vec = cur_tu_vec;
+            best_TM1 = cur_TM1;
+            best_TM2 = cur_TM2;
+            best_TM3 = cur_TM3;
+            best_TM4 = cur_TM4;
+            best_TM5 = cur_TM5;
+            best_rmsd0 = cur_rmsd0;
+            best_Liden = cur_Liden;
+            best_TM_ali = cur_TM1;
+            best_rmsd_ali = cur_rmsd0;
+            best_L_ali = cur_n_ali;
+            best_n_ali = cur_n_ali;
+            best_n_ali8 = cur_n_ali8;
+            best_seqM = cur_global_seqM;
+            best_seqxA = cur_global_seqxA;
+            best_seqyA = cur_global_seqyA;
+            best_do_vec = cur_do_vec;
+            best_d0A = cur_d0A;
+            best_d0B = cur_d0B;
+            best_d0a = cur_d0a;
+            best_d0u = cur_d0u;
+
+            if (!best_tu_vec.empty())
+            {
+                tu2t_u(best_tu_vec[0], best_t0, best_u0);
+            }
+        }
+    }
+
+    // Safety check
+    if (best_global_max_TM < 0)
+        return 0;
+
+    // Output best values back to the reference parameters
+    TM1 = best_TM1;
+    TM2 = best_TM2;
+    TM3 = best_TM3;
+    TM4 = best_TM4;
+    TM5 = best_TM5;
+    rmsd0 = best_rmsd0;
+    Liden = best_Liden;
+    TM_ali = best_TM_ali;
+    rmsd_ali = best_rmsd_ali;
+    L_ali = best_L_ali;
+    n_ali = best_n_ali;
+    n_ali8 = best_n_ali8;
+    seqM = best_seqM;
+    seqxA = best_seqxA;
+    seqyA = best_seqyA;
+    do_vec = best_do_vec;
+    tu_vec = best_tu_vec;
+    d0A = best_d0A;
+    d0B = best_d0B;
+    d0a = best_d0a;
+    d0u = best_d0u;
+
+    for (int a = 0; a < 3; a++)
+    {
+        t0[a] = best_t0[a];
+        for (int b = 0; b < 3; b++)
+            u0[a][b] = best_u0[a][b];
+    }
+
+    return tu_vec.size();
+}
+
 #endif
