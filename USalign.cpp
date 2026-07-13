@@ -94,8 +94,8 @@ void print_extra_help()
             "\n"
             " -hinge   Maximum number of hinge allowed in flexible alignment. default: 9\n"
             "\n"
-            " -fatcat  Enable FATCAT-based alignment mechanism. Only functional\n"
-            "          when used in combination with '-mm 7' (calls flexalign_fatcat).\n"
+            " -usbcat  Enable USBCAT mechanism. Only functional when used in combination\n"
+            "          with '-mm 7' (calls flexalign_usbcat).\n"
             "\n"
             "   -se    Do not perform superposition. Useful for extracting alignment from\n"
             "          superposed structure pairs\n"
@@ -2856,7 +2856,7 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
     return 0;
 }
 
-// Unified engine replacing flexalign_greedy and flexalign_fatcat
+// Unified engine replacing flexalign_greedy and flexalign_usbcat
 int flexalign_unified(string &xname, string &yname, const string &fname_super,
                       const string &fname_lign, const string &fname_matrix,
                       vector<string> &sequence, const double Lnorm_ass, const double d0_scale,
@@ -2951,20 +2951,20 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                         extract_aln_from_resi(sequence, seqx, seqy, resi_vec1, resi_vec2, byresi_opt);
 
                     // --- CORE DISPATCH LOGIC START ---
-                    if (mode == FLEX_FATCAT)
+                    if (mode == FLEX_USBCAT)
                     {
-                        FlexAlignResult fatcat_res;
+                        FlexAlignResult usbcat_res;
                         bool force_fast_opt = (getmin(xlen, ylen) > 1500) ? true : fast_opt;
 
-                        fatcat_res.hingeNum = flexalign_fatcat_main(
+                        usbcat_res.hingeNum = flexalign_usbcat_main(
                             xa, ya, seqx, seqy, secx, secy,
-                            fatcat_res.t0, fatcat_res.u0, fatcat_res.tu_vec,
-                            fatcat_res.TM1, fatcat_res.TM2, fatcat_res.TM3, fatcat_res.TM4, fatcat_res.TM5,
-                            fatcat_res.d0_0, fatcat_res.TM_0,
-                            fatcat_res.d0A, fatcat_res.d0B, fatcat_res.d0u, fatcat_res.d0a, fatcat_res.d0_out,
-                            fatcat_res.seqM, fatcat_res.seqxA, fatcat_res.seqyA, fatcat_res.do_vec,
-                            fatcat_res.rmsd0, fatcat_res.L_ali, fatcat_res.Liden,
-                            fatcat_res.TM_ali, fatcat_res.rmsd_ali, fatcat_res.n_ali, fatcat_res.n_ali8,
+                            usbcat_res.t0, usbcat_res.u0, usbcat_res.tu_vec,
+                            usbcat_res.TM1, usbcat_res.TM2, usbcat_res.TM3, usbcat_res.TM4, usbcat_res.TM5,
+                            usbcat_res.d0_0, usbcat_res.TM_0,
+                            usbcat_res.d0A, usbcat_res.d0B, usbcat_res.d0u, usbcat_res.d0a, usbcat_res.d0_out,
+                            usbcat_res.seqM, usbcat_res.seqxA, usbcat_res.seqyA, usbcat_res.do_vec,
+                            usbcat_res.rmsd0, usbcat_res.L_ali, usbcat_res.Liden,
+                            usbcat_res.TM_ali, usbcat_res.rmsd_ali, usbcat_res.n_ali, usbcat_res.n_ali8,
                             xlen, ylen, sequence, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt, force_fast_opt,
                             mol_vec1[chain_i] + mol_vec2[chain_j], hinge_opt, ss_opt, 0, hinge_set);
@@ -2975,13 +2975,13 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                             xname.substr(dir1_opt.size() + dir_opt.size() + dirpair_opt.size()),
                             yname.substr(dir2_opt.size() + dir_opt.size() + dirpair_opt.size()),
                             chainID_list1[chain_i], chainID_list2[chain_j],
-                            xlen, ylen, fatcat_res.t0, fatcat_res.u0, fatcat_res.tu_vec,
-                            fatcat_res.TM1, fatcat_res.TM2, fatcat_res.TM3, fatcat_res.TM4, fatcat_res.TM5,
-                            fatcat_res.rmsd0, fatcat_res.d0_out, fatcat_res.seqM.c_str(),
-                            fatcat_res.seqxA.c_str(), fatcat_res.seqyA.c_str(), fatcat_res.Liden,
-                            fatcat_res.n_ali8, fatcat_res.L_ali, fatcat_res.TM_ali, fatcat_res.rmsd_ali,
-                            fatcat_res.TM_0, fatcat_res.d0_0,
-                            fatcat_res.d0A, fatcat_res.d0B, Lnorm_ass, d0_scale, fatcat_res.d0a, fatcat_res.d0u,
+                            xlen, ylen, usbcat_res.t0, usbcat_res.u0, usbcat_res.tu_vec,
+                            usbcat_res.TM1, usbcat_res.TM2, usbcat_res.TM3, usbcat_res.TM4, usbcat_res.TM5,
+                            usbcat_res.rmsd0, usbcat_res.d0_out, usbcat_res.seqM.c_str(),
+                            usbcat_res.seqxA.c_str(), usbcat_res.seqyA.c_str(), usbcat_res.Liden,
+                            usbcat_res.n_ali8, usbcat_res.L_ali, usbcat_res.TM_ali, usbcat_res.rmsd_ali,
+                            usbcat_res.TM_0, usbcat_res.d0_0,
+                            usbcat_res.d0A, usbcat_res.d0B, Lnorm_ass, d0_scale, usbcat_res.d0a, usbcat_res.d0u,
                             (m_opt ? fname_matrix : "").c_str(),
                             outfmt_opt, ter_opt, false, split_opt, o_opt,
                             fname_super, i_opt, a_opt, u_opt, d_opt, mirror_opt,
@@ -3086,9 +3086,9 @@ int flexalign_greedy(string &xname, string &yname, const string &fname_super, co
     return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt is ignored in BEST mode */, FLEX_BEST);
 }
 
-int flexalign_fatcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt, bool hinge_set = false)
+int flexalign_usbcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt, bool hinge_set = false)
 {
-    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_FATCAT, hinge_set);
+    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_USBCAT, hinge_set);
 }
 
 int main(int argc, char *argv[])
@@ -3137,7 +3137,7 @@ int main(int argc, char *argv[])
     int mirror_opt = 0;         // do not align mirror
     int het_opt = 0;            // do not read HETATM residues
     int mm_opt = 0;             // do not perform MM-align
-    bool fatcat_opt = false;    // flag for -fatcat, only valid with -mm 7
+    bool usbcat_opt = false;    // flag for -usbcat, only valid with -mm 7
     string atom_opt = "auto";   // use C alpha atom for protein and C3' for RNA
     string mol_opt = "auto";    // auto-detect the molecule type as protein/RNA
     string suffix_opt = "";     // set -suffix to empty
@@ -3490,9 +3490,9 @@ int main(int argc, char *argv[])
             mm_opt = atoi(argv[i + 1]);
             i++;
         }
-        else if (!strcmp(argv[i], "-fatcat"))
+        else if (!strcmp(argv[i], "-usbcat"))
         {
-            fatcat_opt = true;
+            usbcat_opt = true;
         }
         else if (xname.size() == 0)
             xname = argv[i];
@@ -3651,8 +3651,8 @@ int main(int argc, char *argv[])
     if (mm_opt >= 7 && hinge_opt >= 10)
         PrintErrorAndQuit("ERROR! -hinge must be <10");
 
-    if (fatcat_opt && mm_opt != 7)
-        PrintErrorAndQuit("ERROR! -fatcat parameter can only be used when -mm 7 is set");
+    if (usbcat_opt && mm_opt != 7)
+        PrintErrorAndQuit("ERROR! -usbcat parameter can only be used when -mm 7 is set");
 
     if (chainmapfile.size() && mm_opt != 1)
         PrintErrorAndQuit("ERROR! -chainmap must be used with -mm 1");
@@ -3798,8 +3798,8 @@ int main(int argc, char *argv[])
                  chain1_list, chain2_list, se_opt, closeK_opt, mm_opt);
     else if (mm_opt == 7)
     {
-        if (fatcat_opt)
-            flexalign_fatcat(xname, yname, fname_super, fname_lign,
+        if (usbcat_opt)
+            flexalign_usbcat(xname, yname, fname_super, fname_lign,
                              fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
                              a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
                              split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,

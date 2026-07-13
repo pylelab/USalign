@@ -2085,7 +2085,7 @@ enum FlexAlignMode
 {
     FLEX_STANDARD = 0,
     FLEX_BEST = 1,
-    FLEX_FATCAT = 2
+    FLEX_USBCAT = 2
 };
 
 // Encapsulates the execution of flexalign_main and its fallback refinement logic
@@ -2134,15 +2134,15 @@ void execute_flexalign_with_fallback(
 }
 
 // ==========================================
-// FATCAT Core Algorithm (flexalign_fatcat_main)
+// USBCAT Core Algorithm (flexalign_usbcat_main)
 // ==========================================
-struct FATCAT_AFP
+struct USBCAT_AFP
 {
     int i, j, len;
     double score;
 };
 
-int flexalign_fatcat_main(double **xa, double **ya,
+int flexalign_usbcat_main(double **xa, double **ya,
                           const char *seqx, const char *seqy, const char *secx, const char *secy,
                           double t0[3], double u0[3][3], std::vector<std::vector<double>> &tu_vec,
                           double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
@@ -2257,10 +2257,10 @@ int flexalign_fatcat_main(double **xa, double **ya,
     }
 
     // ==========================================
-    // Proceed to FATCAT sliced bounds logic...
+    // Proceed to USBCAT sliced bounds logic...
     // ==========================================
 
-    // FATCAT base parameters
+    // USBCAT base parameters
     int fragLen = 8;
     double resScore = 3.0;
     double gap_ext = -0.5;
@@ -2294,7 +2294,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
     auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int>>
     {
         // Step 1: Extract initial AFPs in batches
-        std::vector<FATCAT_AFP> initial_afps;
+        std::vector<USBCAT_AFP> initial_afps;
         int step = sparse_val + 1;
 
         double r1_static[8][3], r2_static[8][3];
@@ -2335,7 +2335,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
                 if (rmsd_tmp < cur_rmsdCut)
                 {
-                    FATCAT_AFP afp;
+                    USBCAT_AFP afp;
                     afp.i = i;
                     afp.j = j;
                     afp.len = fragLen;
@@ -2347,13 +2347,13 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
         // Step 2: Merge diagonal AFPs
         int max_diagonal_idx = xlen + ylen + 1;
-        std::vector<std::vector<FATCAT_AFP>> diagonals(max_diagonal_idx);
+        std::vector<std::vector<USBCAT_AFP>> diagonals(max_diagonal_idx);
         for (size_t k = 0; k < initial_afps.size(); k++)
         {
             diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
         }
 
-        std::vector<FATCAT_AFP> merged_afps;
+        std::vector<USBCAT_AFP> merged_afps;
         int max_merge_len = std::min(xlen, ylen);
         double **r1_merge, **r2_merge;
         NewArray(&r1_merge, max_merge_len, 3);
@@ -2363,9 +2363,9 @@ int flexalign_fatcat_main(double **xa, double **ya,
         {
             if (diagonals[d].empty())
                 continue;
-            std::vector<FATCAT_AFP> &group = diagonals[d];
+            std::vector<USBCAT_AFP> &group = diagonals[d];
 
-            std::sort(group.begin(), group.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+            std::sort(group.begin(), group.end(), [](const USBCAT_AFP &a, const USBCAT_AFP &b)
                       { return a.i < b.i; });
 
             int n_group = group.size();
@@ -2374,10 +2374,10 @@ int flexalign_fatcat_main(double **xa, double **ya,
             {
                 if (invalid[idx])
                     continue;
-                FATCAT_AFP curr = group[idx];
+                USBCAT_AFP curr = group[idx];
                 for (int nxt_idx = idx + 1; nxt_idx < n_group; nxt_idx++)
                 {
-                    FATCAT_AFP nxt = group[nxt_idx];
+                    USBCAT_AFP nxt = group[nxt_idx];
                     if (nxt.i > curr.i + curr.len)
                         break;
 
@@ -2413,7 +2413,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
         DeleteArray(&r1_merge, max_merge_len);
         DeleteArray(&r2_merge, max_merge_len);
 
-        std::sort(merged_afps.begin(), merged_afps.end(), [](const FATCAT_AFP &a, const FATCAT_AFP &b)
+        std::sort(merged_afps.begin(), merged_afps.end(), [](const USBCAT_AFP &a, const USBCAT_AFP &b)
                   {
             if (a.i == b.i) return a.j < b.j;
             return a.i < b.i; });
@@ -2461,7 +2461,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
             }
         }
 
-        auto get_dvar = [&](const FATCAT_AFP &prv, const FATCAT_AFP &curr) -> double
+        auto get_dvar = [&](const USBCAT_AFP &prv, const USBCAT_AFP &curr) -> double
         {
             double rms_sq = 0;
             for (int i_idx = 0; i_idx < fragLen; i_idx++)
@@ -2489,7 +2489,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
             return std::sqrt(rms_sq / (fragLen * fragLen));
         };
 
-        auto calc_block_rmsd = [&](const std::vector<FATCAT_AFP> &afp_list) -> double
+        auto calc_block_rmsd = [&](const std::vector<USBCAT_AFP> &afp_list) -> double
         {
             std::vector<int> r1, r2;
             for (size_t a = 0; a < afp_list.size(); a++)
@@ -2666,7 +2666,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
         struct Block
         {
-            std::vector<FATCAT_AFP> afps;
+            std::vector<USBCAT_AFP> afps;
             std::vector<double> dvars;
         };
         std::vector<Block> candidate_blocks;
@@ -2676,8 +2676,8 @@ int flexalign_fatcat_main(double **xa, double **ya,
 
         for (size_t k = 1; k < path.size(); k++)
         {
-            FATCAT_AFP curr = merged_afps[path[k]];
-            FATCAT_AFP prv = merged_afps[path[k - 1]];
+            USBCAT_AFP curr = merged_afps[path[k]];
+            USBCAT_AFP prv = merged_afps[path[k - 1]];
             double dvar = get_dvar(prv, curr);
 
             if (dvar >= disCut)
@@ -2769,7 +2769,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
             int min_b = -1;
             for (size_t b = 0; b < candidate_blocks.size() - 1; b++)
             {
-                std::vector<FATCAT_AFP> temp_merged = candidate_blocks[b].afps;
+                std::vector<USBCAT_AFP> temp_merged = candidate_blocks[b].afps;
                 temp_merged.insert(temp_merged.end(), candidate_blocks[b + 1].afps.begin(), candidate_blocks[b + 1].afps.end());
                 double cur_rmsd = calc_block_rmsd(temp_merged);
                 if (cur_rmsd < min_rmsd)
@@ -2787,14 +2787,14 @@ int flexalign_fatcat_main(double **xa, double **ya,
             }
         }
 
-        std::vector<Region> fatcat_domains;
+        std::vector<Region> usbcat_domains;
         int last_i = 0, last_j = 0;
         for (size_t b = 0; b < candidate_blocks.size(); b++)
         {
             int b_s1 = -1, b_e1 = -1, b_s2 = -1, b_e2 = -1;
             for (size_t a = 0; a < candidate_blocks[b].afps.size(); a++)
             {
-                FATCAT_AFP afp = candidate_blocks[b].afps[a];
+                USBCAT_AFP afp = candidate_blocks[b].afps[a];
                 int skip = std::max(std::max(last_i - afp.i, last_j - afp.j), 0);
                 if (skip >= afp.len)
                     continue;
@@ -2817,20 +2817,20 @@ int flexalign_fatcat_main(double **xa, double **ya,
                 if (b_e1 - b_s1 >= 4 && b_e2 - b_s2 >= 4)
                 {
                     Region r = {b_s1, b_e1, b_s2, b_e2};
-                    fatcat_domains.push_back(r);
+                    usbcat_domains.push_back(r);
                 }
             }
         }
 
-        if (fatcat_domains.empty())
+        if (usbcat_domains.empty())
             return std::make_pair(ret_b1, ret_b2);
 
         ret_b1.push_back(0);
         ret_b2.push_back(0);
-        for (size_t k = 0; k < fatcat_domains.size() - 1; k++)
+        for (size_t k = 0; k < usbcat_domains.size() - 1; k++)
         {
-            ret_b1.push_back((fatcat_domains[k].e1 + fatcat_domains[k + 1].s1) / 2);
-            ret_b2.push_back((fatcat_domains[k].e2 + fatcat_domains[k + 1].s2) / 2);
+            ret_b1.push_back((usbcat_domains[k].e1 + usbcat_domains[k + 1].s1) / 2);
+            ret_b2.push_back((usbcat_domains[k].e2 + usbcat_domains[k + 1].s2) / 2);
         }
         ret_b1.push_back(xlen);
         ret_b2.push_back(ylen);
@@ -2838,12 +2838,12 @@ int flexalign_fatcat_main(double **xa, double **ya,
         return std::make_pair(ret_b1, ret_b2);
     };
 
-    auto bounds_fatcat = generate_bounds(3.0, 4.0, 4.0);
+    auto bounds_usbcat = generate_bounds(3.0, 4.0, 4.0);
     auto bounds_strict = generate_bounds(2.0, 3.0, 2.0);
 
     std::vector<std::pair<std::vector<int>, std::vector<int>>> all_bounds;
-    all_bounds.push_back(bounds_fatcat);
-    if (bounds_strict.first != bounds_fatcat.first || bounds_strict.second != bounds_fatcat.second)
+    all_bounds.push_back(bounds_usbcat);
+    if (bounds_strict.first != bounds_usbcat.first || bounds_strict.second != bounds_usbcat.second)
     {
         all_bounds.push_back(bounds_strict);
     }
@@ -2862,7 +2862,7 @@ int flexalign_fatcat_main(double **xa, double **ya,
         // ================== DEBUG START ==================
         // Output the interval mapping for the current boundary set
         // std::cout << "\n[DEBUG] --- Region Mapping Table ---" << std::endl;
-        // std::cout << "[DEBUG] Mode: " << (b_idx == 0 ? "FATCAT Bounds" : "Strict Bounds") << std::endl;
+        // std::cout << "[DEBUG] Mode: " << (b_idx == 0 ? "USBCAT Bounds" : "Strict Bounds") << std::endl;
         // std::cout << "[DEBUG] Total Blocks: " << (bounds1.size() - 1) << std::endl;
 
         // for (size_t k = 0; k < bounds1.size() - 1; k++)
