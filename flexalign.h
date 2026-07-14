@@ -2161,7 +2161,6 @@ int flexalign_usbcat_main(double **xa, double **ya,
     // ==========================================
     // TRUE flexalign_greedy BASELINE (Defender)
     // Run full sequence without generate_bounds slicing!
-    // This perfectly simulates FLEX_BEST (flexalign_greedy) behavior.
     // ==========================================
     double best_global_max_TM = -1.0;
     std::vector<std::vector<double>> best_tu_vec;
@@ -2179,12 +2178,11 @@ int flexalign_usbcat_main(double **xa, double **ya,
     for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
     {
         FlexAlignResult base_res;
-        // Pass full unbroken sequences directly to flexalign (identical to flexalign_greedy)
         execute_flexalign_with_fallback(
             xa, ya, (char *)seqx, (char *)seqy, (char *)secx, (char *)secy,
             xlen, ylen, local_sequence, Lnorm_ass, d0_scale,
             i_opt, a_opt, u_opt, d_opt, force_fast_opt_global,
-            mol_type, hinge_opt, cur_ss_opt, base_res); // flexalign_greedy explicitly uses 9 hinges
+            mol_type, hinge_opt, cur_ss_opt, base_res);
 
         double cur_max_TM = (base_res.TM1 > base_res.TM2) ? base_res.TM1 : base_res.TM2;
         if (cur_max_TM > best_global_max_TM)
@@ -2220,12 +2218,8 @@ int flexalign_usbcat_main(double **xa, double **ya,
         }
     }
 
-    // Early exit if the true flexalign_greedy baseline is already excellent
     if (best_global_max_TM >= 0.85)
     {
-        // <--- ADD DEBUG HERE: Output early exit confirmation
-        // std::cout << "[DEBUG] MM9" << std::endl;
-
         TM1 = best_TM1;
         TM2 = best_TM2;
         TM3 = best_TM3;
@@ -2259,8 +2253,6 @@ int flexalign_usbcat_main(double **xa, double **ya,
     // ==========================================
     // Proceed to USBCAT sliced bounds logic...
     // ==========================================
-
-    // USBCAT base parameters
     int fragLen = 8;
     double resScore = 3.0;
     double gap_ext = -0.5;
@@ -2310,7 +2302,8 @@ int flexalign_usbcat_main(double **xa, double **ya,
             for (int j = 0; j <= ylen - fragLen; j += step)
             {
                 int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
-                if (d3_term < 0.3 * std::min(xlen, ylen))
+                double d3_cutoff = std::max(0.3, best_global_max_TM - 0.3);
+                if (d3_term < d3_cutoff * std::min(xlen, ylen))
                     continue;
 
                 double dist1 = disTable1[i][fragLen - 1];
@@ -2384,7 +2377,6 @@ int flexalign_usbcat_main(double **xa, double **ya,
                     if (nxt.i + nxt.len > curr.i + curr.len)
                     {
                         int new_len = (nxt.i + nxt.len) - curr.i;
-
                         for (int k = 0; k < new_len; k++)
                         {
                             r1_merge[k][0] = xa[curr.i + k][0];
@@ -2848,152 +2840,116 @@ int flexalign_usbcat_main(double **xa, double **ya,
         all_bounds.push_back(bounds_strict);
     }
 
-    // Loop through both bound sets, updating best_global_max_TM if we beat the flexalign_greedy defender
     for (size_t b_idx = 0; b_idx < all_bounds.size(); b_idx++)
     {
         std::vector<int> &bounds1 = all_bounds[b_idx].first;
         std::vector<int> &bounds2 = all_bounds[b_idx].second;
 
-        // Skip if only one interval (block) is generated, as the full unbroken sequence
-        // has already been processed by the baseline (flexalign_greedy) above.
+        // Skip if only one interval (block) is generated
         if (bounds1.size() <= 2)
             continue;
 
-        // ================== DEBUG START ==================
-        // Output the interval mapping for the current boundary set
-        // std::cout << "\n[DEBUG] --- Region Mapping Table ---" << std::endl;
-        // std::cout << "[DEBUG] Mode: " << (b_idx == 0 ? "USBCAT Bounds" : "Strict Bounds") << std::endl;
-        // std::cout << "[DEBUG] Total Blocks: " << (bounds1.size() - 1) << std::endl;
-
-        // for (size_t k = 0; k < bounds1.size() - 1; k++)
-        // {
-        //     std::cout << "[DEBUG] Block " << (k + 1) << ": "
-        //               << "Chain1 [" << bounds1[k] << " -> " << bounds1[k + 1] << "]  <==>  "
-        //               << "Chain2 [" << bounds2[k] << " -> " << bounds2[k + 1] << "]"
-        //               << std::endl;
-        // }
-        // std::cout << "[DEBUG] ----------------------------\n" << std::endl;
-        // =================== DEBUG END ===================
-
-        // Precalculate distributed local_hinge_opt for each block when hinge_set is true
+        // =========================================================================
+        // Greedy Dynamic Hinge Budgeting based on dRMSD (Strain Energy)
+        // =========================================================================
         int num_blocks = bounds1.size() - 1;
-        std::vector<int> precalc_local_hinge(num_blocks, 0);
 
-        if (hinge_set)
+        // 1. Define execution node for out-of-order processing
+        struct BlockMeta
         {
-            struct BlockMeta
-            {
-                int index;
-                double rmsd;
-            };
-            std::vector<BlockMeta> valid_blocks;
+            int original_idx;
+            double drmsd;
+            int L1_sub, L2_sub;
+        };
+        std::vector<BlockMeta> block_queue;
 
-            // Calculate target hinges to distribute based on requested hinge_opt and current implicit blocks
-            int target_total_hinges = std::max(0, hinge_opt + 1 - num_blocks);
-
-            // Calculate base amount of hinges per block
-            int base_hinge = (hinge_opt + 1) / num_blocks - 1;
-            if (base_hinge < 0)
-                base_hinge = 0;
-
-            for (int k = 0; k < num_blocks; k++)
-            {
-                int L1_sub = bounds1[k + 1] - bounds1[k];
-                int L2_sub = bounds2[k + 1] - bounds2[k];
-                int min_L = std::min(L1_sub, L2_sub);
-
-                if (min_L < 2 * fragLen)
-                {
-                    precalc_local_hinge[k] = 0; // Length < 2*fragLen gets 0
-                }
-                else
-                {
-                    // Calculate rough RMSD for this unaligned block section
-                    double block_rmsd = 0.0;
-                    if (min_L >= 3)
-                    {
-                        double **p1, **p2;
-                        NewArray(&p1, min_L, 3);
-                        NewArray(&p2, min_L, 3);
-                        for (int i = 0; i < min_L; i++)
-                        {
-                            p1[i][0] = xa[bounds1[k] + i][0];
-                            p1[i][1] = xa[bounds1[k] + i][1];
-                            p1[i][2] = xa[bounds1[k] + i][2];
-                            p2[i][0] = ya[bounds2[k] + i][0];
-                            p2[i][1] = ya[bounds2[k] + i][1];
-                            p2[i][2] = ya[bounds2[k] + i][2];
-                        }
-                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
-                        Kabsch(p1, p2, min_L, 0, &rms_sum_sq, t_tmp, u_tmp);
-                        block_rmsd = std::sqrt(rms_sum_sq / min_L);
-                        DeleteArray(&p1, min_L);
-                        DeleteArray(&p2, min_L);
-                    }
-                    valid_blocks.push_back({k, block_rmsd});
-                    precalc_local_hinge[k] = base_hinge; // Assign base hinges to valid blocks
-                }
-            }
-
-            // Distribute remaining hinges strictly prioritizing top RMSD blocks
-            int assigned = valid_blocks.size() * base_hinge;
-            int remainder = target_total_hinges - assigned;
-
-            if (remainder > 0 && !valid_blocks.empty())
-            {
-                // Sort valid blocks by RMSD descending
-                std::sort(valid_blocks.begin(), valid_blocks.end(), [](const BlockMeta &a, const BlockMeta &b)
-                          { return a.rmsd > b.rmsd; });
-
-                int v_idx = 0;
-                while (remainder > 0)
-                {
-                    precalc_local_hinge[valid_blocks[v_idx].index]++; // Give +1 to the front runners
-                    remainder--;
-                    v_idx = (v_idx + 1) % valid_blocks.size();
-                }
-            }
-        }
-
-        // Step 5: Iteratively align each block
-        std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
-        cur_global_seqM.reserve(xlen + ylen + max_gap);
-        cur_global_seqxA.reserve(xlen + ylen + max_gap);
-        cur_global_seqyA.reserve(xlen + ylen + max_gap);
-
-        std::vector<std::vector<double>> cur_tu_vec;
-        std::vector<int> cur_global_res_tu(xlen, -1);
-
-        for (size_t k = 0; k < bounds1.size() - 1; k++)
+        // 2. Calculate proxy dRMSD for each block to evaluate internal strain energy
+        for (int k = 0; k < num_blocks; k++)
         {
             int x_s = bounds1[k], x_e = bounds1[k + 1];
             int y_s = bounds2[k], y_e = bounds2[k + 1];
             int L1_sub = x_e - x_s;
             int L2_sub = y_e - y_s;
+            int min_L = std::min(L1_sub, L2_sub);
 
-            if (L1_sub < 3 || L2_sub < 3)
+            double block_drmsd = 0.0;
+            // Only calculate if the block is long enough
+            if (min_L >= 2 * fragLen)
             {
-                for (int i = 0; i < L1_sub; i++)
+                double rms_sq = 0.0;
+                int count = 0;
+                for (int i = 0; i < min_L; i++)
                 {
-                    cur_global_seqxA += seqx[x_s + i];
-                    cur_global_seqyA += '-';
-                    cur_global_seqM += ' ';
+                    // DOUBLE OPTIMIZATION:
+                    // 1. Start from i + 2 to skip adjacent amino acids (peptide bond noise).
+                    // 2. Cap j at i + max_dist_window to SAFELY reuse precomputed disTable!
+                    //    This perfectly evaluates "local" strain energy and reduces time complexity to O(N).
+                    int j_end = std::min((int)min_L, i + max_dist_window);
+
+                    for (int j = i + 2; j < j_end; j++)
+                    {
+                        // Directly query the precomputed distance tables
+                        double d1 = disTable1[x_s + i][j - i];
+                        double d2 = disTable2[y_s + i][j - i];
+                        rms_sq += (d1 - d2) * (d1 - d2);
+                        count++;
+                    }
                 }
-                for (int i = 0; i < L2_sub; i++)
-                {
-                    cur_global_seqxA += '-';
-                    cur_global_seqyA += seqy[y_s + i];
-                    cur_global_seqM += ' ';
-                }
+                if (count > 0)
+                    block_drmsd = std::sqrt(rms_sq / count);
+            }
+            block_queue.push_back({k, block_drmsd, L1_sub, L2_sub});
+        }
+
+        // 3. Sort blocks by dRMSD descending (most twisted blocks get priority)
+        if (hinge_set)
+        {
+            std::sort(block_queue.begin(), block_queue.end(), [](const BlockMeta &a, const BlockMeta &b)
+                      { return a.drmsd > b.drmsd; });
+        }
+
+        // 4. Initialize global hinge pool
+        // N blocks intrinsically use N-1 cut points, remaining hinges = hinge_opt + 1 - N
+        int remaining_hinges = hinge_set ? std::max(0, hinge_opt + 1 - num_blocks) : 0;
+
+        // Structure to store out-of-order execution results
+        struct BlockResult
+        {
+            bool valid;
+            double t0[3];
+            double u0[3][3];
+            std::string seqM, seqxA, seqyA;
+            std::vector<std::vector<double>> tu_vec;
+            BlockResult() : valid(false) {}
+        };
+        std::vector<BlockResult> block_results(num_blocks);
+
+        // 5. Greedy execution: Allocate all available hinges to the current most twisted block
+        for (size_t q = 0; q < block_queue.size(); q++)
+        {
+            int k = block_queue[q].original_idx;
+            int L1_sub = block_queue[q].L1_sub;
+            int L2_sub = block_queue[q].L2_sub;
+            int x_s = bounds1[k], y_s = bounds2[k];
+
+            // Skip invalid or too short blocks
+            if (L1_sub < 3 || L2_sub < 3)
                 continue;
+
+            // CORE LOGIC: Pass all remaining budget to the current block
+            int local_hinge_opt = 0;
+            if (remaining_hinges > 0 && std::min(L1_sub, L2_sub) >= 2 * fragLen)
+            {
+                local_hinge_opt = remaining_hinges;
             }
 
+            // Reuse variables from the original logic for sub-block allocation
             double **xa_sub, **ya_sub;
             NewArray(&xa_sub, L1_sub, 3);
             NewArray(&ya_sub, L2_sub, 3);
             char *seqx_sub = new char[L1_sub + 1];
-            char *seqy_sub = new char[L2_sub + 1];
             char *secx_sub = new char[L1_sub + 1];
+            char *seqy_sub = new char[L2_sub + 1];
             char *secy_sub = new char[L2_sub + 1];
 
             for (int i = 0; i < L1_sub; i++)
@@ -3018,26 +2974,10 @@ int flexalign_usbcat_main(double **xa, double **ya,
             seqy_sub[L2_sub] = '\0';
             secy_sub[L2_sub] = '\0';
 
-            double t0_best[3], u0_best[3][3];
-            double TM_best_max = -1.0;
-            std::string seqM_best, seqxA_best, seqyA_best;
-            std::vector<std::vector<double>> tu_vec_best;
-
             bool force_fast_opt = (std::min(L1_sub, L2_sub) > 1500) ? true : fast_opt;
+            double TM_best_max = -1.0;
 
-            // Determine local_hinge_opt based on user requirements.
-            // If hinge_set is true, we use the precalculated distributed hinges.
-            // Otherwise, set to 0 if the block length is less than 2 * fragLen, else 2.
-            int local_hinge_opt;
-            if (hinge_set)
-            {
-                local_hinge_opt = precalc_local_hinge[k];
-            }
-            else
-            {
-                local_hinge_opt = (std::min(L1_sub, L2_sub) < 2 * fragLen) ? 0 : 2;
-            }
-
+            // Try both secondary structure configurations
             for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
             {
                 FlexAlignResult cur_res;
@@ -3053,58 +2993,85 @@ int flexalign_usbcat_main(double **xa, double **ya,
                     TM_best_max = cur_max_TM;
                     for (int a = 0; a < 3; a++)
                     {
-                        t0_best[a] = cur_res.t0[a];
+                        block_results[k].t0[a] = cur_res.t0[a];
                         for (int b = 0; b < 3; b++)
-                            u0_best[a][b] = cur_res.u0[a][b];
+                            block_results[k].u0[a][b] = cur_res.u0[a][b];
                     }
-                    seqM_best = cur_res.seqM;
-                    seqxA_best = cur_res.seqxA;
-                    seqyA_best = cur_res.seqyA;
-                    tu_vec_best = cur_res.tu_vec;
+                    block_results[k].seqM = cur_res.seqM;
+                    block_results[k].seqxA = cur_res.seqxA;
+                    block_results[k].seqyA = cur_res.seqyA;
+                    block_results[k].tu_vec = cur_res.tu_vec;
+                    block_results[k].valid = true;
                 }
             }
 
-            if (TM_best_max <= 0)
+            // Deduct actually consumed hinges from the global budget
+            if (block_results[k].valid && !block_results[k].tu_vec.empty())
             {
+                int consumed_hinges = block_results[k].tu_vec.size() - 1;
+                if (consumed_hinges > 0)
+                {
+                    remaining_hinges -= consumed_hinges;
+                    if (remaining_hinges < 0)
+                        remaining_hinges = 0; // Guard against negative budget
+                }
+            }
+
+            // Clean up sub-block memory
+            DeleteArray(&xa_sub, L1_sub);
+            DeleteArray(&ya_sub, L2_sub);
+            delete[] seqx_sub;
+            delete[] seqy_sub;
+            delete[] secx_sub;
+            delete[] secy_sub;
+        }
+
+        // 6. Chronological Stitching: Reassemble results in spatial sequence order
+        std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
+        std::vector<std::vector<double>> cur_tu_vec;
+        std::vector<int> cur_global_res_tu(xlen, -1);
+
+        for (int k = 0; k < num_blocks; k++)
+        {
+            int L1_sub = bounds1[k + 1] - bounds1[k];
+            int L2_sub = bounds2[k + 1] - bounds2[k];
+
+            if (!block_results[k].valid)
+            {
+                // Fill gaps if block was invalid or bypassed
                 for (int i = 0; i < L1_sub; i++)
                 {
-                    cur_global_seqxA += seqx_sub[i];
+                    cur_global_seqxA += seqx[bounds1[k] + i];
                     cur_global_seqyA += '-';
                     cur_global_seqM += ' ';
                 }
                 for (int i = 0; i < L2_sub; i++)
                 {
                     cur_global_seqxA += '-';
-                    cur_global_seqyA += seqy_sub[i];
+                    cur_global_seqyA += seqy[bounds2[k] + i];
                     cur_global_seqM += ' ';
                 }
-                DeleteArray(&xa_sub, L1_sub);
-                DeleteArray(&ya_sub, L2_sub);
-                delete[] seqx_sub;
-                delete[] seqy_sub;
-                delete[] secx_sub;
-                delete[] secy_sub;
                 continue;
             }
 
-            if (tu_vec_best.empty())
+            BlockResult &res = block_results[k];
+            if (res.tu_vec.empty())
             {
                 std::vector<double> tu_tmp(12);
-                t_u2tu(t0_best, u0_best, tu_tmp);
-                tu_vec_best.push_back(tu_tmp);
+                t_u2tu(res.t0, res.u0, tu_tmp);
+                res.tu_vec.push_back(tu_tmp);
             }
 
             int base_tu_idx = cur_tu_vec.size();
-            for (size_t m = 0; m < tu_vec_best.size(); m++)
-                cur_tu_vec.push_back(tu_vec_best[m]);
+            for (size_t m = 0; m < res.tu_vec.size(); m++)
+                cur_tu_vec.push_back(res.tu_vec[m]);
 
-            int rx = x_s;
+            int rx = bounds1[k];
             int current_global_idx = base_tu_idx;
 
-            for (size_t i = 0; i < seqxA_best.length(); i++)
+            for (size_t i = 0; i < res.seqxA.length(); i++)
             {
-                char c = seqM_best[i];
-
+                char c = res.seqM[i];
                 if (c != ' ' && c != '.' && c != ':')
                 {
                     int local_hinge_idx = -1;
@@ -3114,17 +3081,20 @@ int flexalign_usbcat_main(double **xa, double **ya,
                         local_hinge_idx = c - 'a' + 10;
                     else if (c >= 'A' && c <= 'Z')
                         local_hinge_idx = c - 'A' + 36;
-                    if (local_hinge_idx >= 0 && local_hinge_idx < tu_vec_best.size())
+
+                    if (local_hinge_idx >= 0 && local_hinge_idx < res.tu_vec.size())
+                    {
                         current_global_idx = base_tu_idx + local_hinge_idx;
+                    }
                 }
 
-                if (seqxA_best[i] != '-')
+                if (res.seqxA[i] != '-')
                 {
                     cur_global_res_tu[rx] = current_global_idx;
                     rx++;
                 }
 
-                if (seqxA_best[i] != '-' && seqyA_best[i] != '-')
+                if (res.seqxA[i] != '-' && res.seqyA[i] != '-')
                 {
                     if (c != ' ' && c != '.' && c != ':')
                     {
@@ -3137,38 +3107,28 @@ int flexalign_usbcat_main(double **xa, double **ya,
                             global_c = 'A' + (current_global_idx - 36);
                         else
                             global_c = '*';
-                        seqM_best[i] = global_c;
+                        res.seqM[i] = global_c;
                     }
                     else
                     {
-                        seqM_best[i] = c;
+                        res.seqM[i] = c;
                     }
                 }
                 else
                 {
-                    seqM_best[i] = ' ';
+                    res.seqM[i] = ' ';
                 }
             }
 
-            cur_global_seqM += seqM_best;
-            cur_global_seqxA += seqxA_best;
-            cur_global_seqyA += seqyA_best;
-
-            DeleteArray(&xa_sub, L1_sub);
-            DeleteArray(&ya_sub, L2_sub);
-            delete[] seqx_sub;
-            delete[] seqy_sub;
-            delete[] secx_sub;
-            delete[] secy_sub;
+            cur_global_seqM += res.seqM;
+            cur_global_seqxA += res.seqxA;
+            cur_global_seqyA += res.seqyA;
         }
 
-        // Step 6: Recalculate global metrics correctly for current DP boundary
-        // Variables to receive dummy outputs from parameter_set4final
+        // Step 7: Recalculate global metrics correctly for current DP boundary
         double dummy_D0_MIN, dummy_Lnorm, dummy_d0_search;
         double cur_d0A, cur_d0B, cur_d0a, cur_d0u = 0.0;
 
-        // Calculate d0 using parameter_set4final to correctly handle both proteins and RNA/DNA,
-        // and to prevent std::pow domain errors (NaN) when sequence length <= 15.
         parameter_set4final(ylen, dummy_D0_MIN, dummy_Lnorm, cur_d0A, dummy_d0_search, mol_type);
         parameter_set4final(xlen, dummy_D0_MIN, dummy_Lnorm, cur_d0B, dummy_d0_search, mol_type);
         parameter_set4final((xlen + ylen) * 0.5, dummy_D0_MIN, dummy_Lnorm, cur_d0a, dummy_d0_search, mol_type);
@@ -3238,7 +3198,6 @@ int flexalign_usbcat_main(double **xa, double **ya,
                 j_res++;
         }
 
-        // Normalize TM-scores
         cur_TM2 /= xlen;
         cur_TM1 /= ylen;
         if (a_opt)
@@ -3252,17 +3211,10 @@ int flexalign_usbcat_main(double **xa, double **ya,
         else
             cur_rmsd0 = 0.0;
 
-        // Compare against the flexalign_greedy defender!
         double cur_global_max_TM = (cur_TM1 > cur_TM2) ? cur_TM1 : cur_TM2;
 
         if (cur_global_max_TM > best_global_max_TM)
         {
-            // <--- ADD DEBUG HERE
-            // if (b_idx == 1)
-            // {
-            //     std::cout << "[DEBUG] strict" << std::endl;
-            // }
-
             best_global_max_TM = cur_global_max_TM;
             best_tu_vec = cur_tu_vec;
             best_TM1 = cur_TM1;
@@ -3329,5 +3281,4 @@ int flexalign_usbcat_main(double **xa, double **ya,
 
     return tu_vec.size();
 }
-
 #endif

@@ -94,7 +94,7 @@ void print_extra_help()
             "\n"
             " -hinge   Maximum number of hinge allowed in flexible alignment. default: 9\n"
             "\n"
-            " -usbcat  Enable USBCAT mechanism. Only functional when used in combination\n"
+            " -afp  Enable USBCAT mechanism. Only functional when used in combination\n"
             "          with '-mm 7' (calls flexalign_usbcat).\n"
             "\n"
             "   -se    Do not perform superposition. Useful for extracting alignment from\n"
@@ -3137,7 +3137,7 @@ int main(int argc, char *argv[])
     int mirror_opt = 0;         // do not align mirror
     int het_opt = 0;            // do not read HETATM residues
     int mm_opt = 0;             // do not perform MM-align
-    bool usbcat_opt = false;    // flag for -usbcat, only valid with -mm 7
+    bool usbcat_opt = false;    // flag for -afp, only valid with -mm 7
     string atom_opt = "auto";   // use C alpha atom for protein and C3' for RNA
     string mol_opt = "auto";    // auto-detect the molecule type as protein/RNA
     string suffix_opt = "";     // set -suffix to empty
@@ -3490,7 +3490,7 @@ int main(int argc, char *argv[])
             mm_opt = atoi(argv[i + 1]);
             i++;
         }
-        else if (!strcmp(argv[i], "-usbcat"))
+        else if (!strcmp(argv[i], "-afp"))
         {
             usbcat_opt = true;
         }
@@ -3652,7 +3652,7 @@ int main(int argc, char *argv[])
         PrintErrorAndQuit("ERROR! -hinge must be <10");
 
     if (usbcat_opt && mm_opt != 7)
-        PrintErrorAndQuit("ERROR! -usbcat parameter can only be used when -mm 7 is set");
+        PrintErrorAndQuit("ERROR! -afp parameter can only be used when -mm 7 is set");
 
     if (chainmapfile.size() && mm_opt != 1)
         PrintErrorAndQuit("ERROR! -chainmap must be used with -mm 1");
