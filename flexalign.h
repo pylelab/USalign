@@ -2302,8 +2302,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
             for (int j = 0; j <= ylen - fragLen; j += step)
             {
                 int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
-                double d3_cutoff = std::max(0.3, best_global_max_TM - 0.3);
-                if (d3_term < d3_cutoff * std::min(xlen, ylen))
+                if (d3_term < best_global_max_TM * std::min(xlen, ylen))
                     continue;
 
                 double dist1 = disTable1[i][fragLen - 1];
@@ -2830,12 +2829,12 @@ int flexalign_usbcat_main(double **xa, double **ya,
         return std::make_pair(ret_b1, ret_b2);
     };
 
-    auto bounds_usbcat = generate_bounds(3.0, 4.0, 4.0);
+    auto bounds_default = generate_bounds(3.0, 4.0, 4.0);
     auto bounds_strict = generate_bounds(2.0, 3.0, 2.0);
 
     std::vector<std::pair<std::vector<int>, std::vector<int>>> all_bounds;
-    all_bounds.push_back(bounds_usbcat);
-    if (bounds_strict.first != bounds_usbcat.first || bounds_strict.second != bounds_usbcat.second)
+    all_bounds.push_back(bounds_default);
+    if (bounds_strict.first != bounds_default.first || bounds_strict.second != bounds_default.second)
     {
         all_bounds.push_back(bounds_strict);
     }
@@ -2850,7 +2849,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
             continue;
 
         // =========================================================================
-        // Greedy Dynamic Hinge Budgeting based on dRMSD (Strain Energy)
+        // Greedy Dynamic Hinge Budgeting based on dRMSD
         // =========================================================================
         int num_blocks = bounds1.size() - 1;
 
