@@ -2253,14 +2253,14 @@ int flexalign_usbcat_main(double **xa, double **ya,
     // ==========================================
     // Proceed to USBCAT sliced bounds logic...
     // ==========================================
-    int fragLen = 8;
+    int fragLen = 12;
     double resScore = 3.0;
     double gap_ext = -0.5;
     double disCut = 5.0;
     double disSmooth = 4.0;
-    double twist_pen = -25.0;
+    double twist_pen = -fragLen * resScore - 1;
     int max_gap = 40;
-    double max_penalty = -5.0;
+    double max_penalty = -5.0 * fragLen / 8.0;
     int misCut = 2 * fragLen;
     int maxGapFrag = fragLen + max_gap;
     double afp_dis_cut = fragLen * fragLen * (disCut * disCut);
@@ -2289,13 +2289,10 @@ int flexalign_usbcat_main(double **xa, double **ya,
         std::vector<USBCAT_AFP> initial_afps;
         int step = sparse_val + 1;
 
-        double r1_static[8][3], r2_static[8][3];
-        double *r1[8], *r2[8];
-        for (int k = 0; k < 8; k++)
-        {
-            r1[k] = r1_static[k];
-            r2[k] = r2_static[k];
-        }
+        // --- FIXED: Dynamically allocate arrays based on fragLen
+        double **r1, **r2;
+        NewArray(&r1, fragLen, 3);
+        NewArray(&r2, fragLen, 3);
 
         for (int i = 0; i <= xlen - fragLen; i += step)
         {
@@ -2311,6 +2308,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
                 if (std::fabs(dist1 - dist2) > 2.0 * cur_rmsdCut)
                     continue;
 
+                // k loop dynamically bounds to fragLen instead of fixed 8
                 for (int k = 0; k < fragLen; k++)
                 {
                     r1[k][0] = xa[i + k][0];
@@ -2322,6 +2320,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
                 }
 
                 double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                // Kabsch function already appropriately takes fragLen as size parameter
                 Kabsch(r1, r2, fragLen, 0, &rms_sum_sq, t_tmp, u_tmp);
                 double rmsd_tmp = std::sqrt(rms_sum_sq / fragLen);
 
@@ -2336,6 +2335,9 @@ int flexalign_usbcat_main(double **xa, double **ya,
                 }
             }
         }
+
+        DeleteArray(&r1, fragLen);
+        DeleteArray(&r2, fragLen);
 
         // Step 2: Merge diagonal AFPs
         int max_diagonal_idx = xlen + ylen + 1;
