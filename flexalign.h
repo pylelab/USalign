@@ -2939,9 +2939,21 @@ int flexalign_usbcat_main(double **xa, double **ya,
 
             // CORE LOGIC: Pass all remaining budget to the current block
             int local_hinge_opt = 0;
-            if (remaining_hinges > 0 && std::min(L1_sub, L2_sub) >= 2 * fragLen)
+            if (hinge_set)
             {
-                local_hinge_opt = remaining_hinges;
+                if (remaining_hinges > 0 && std::min(L1_sub, L2_sub) >= 2 * fragLen)
+                {
+                    local_hinge_opt = remaining_hinges;
+                }
+            }
+            else
+            {
+                // If -hinge is not set, allocate 2 hinges per block by default
+                // This allows a maximum of (9+1)*(2+1)=30 aligned intervals
+                if (std::min(L1_sub, L2_sub) >= 2 * fragLen)
+                {
+                    local_hinge_opt = 2;
+                }
             }
 
             // Reuse variables from the original logic for sub-block allocation
@@ -3007,7 +3019,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
             }
 
             // Deduct actually consumed hinges from the global budget
-            if (block_results[k].valid && !block_results[k].tu_vec.empty())
+            if (hinge_set && block_results[k].valid && !block_results[k].tu_vec.empty())
             {
                 int consumed_hinges = block_results[k].tu_vec.size() - 1;
                 if (consumed_hinges > 0)
