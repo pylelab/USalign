@@ -97,6 +97,8 @@ void print_extra_help()
             " -afp  Enable USBCAT mechanism. Only functional when used in combination\n"
             "          with '-mm 7' (calls flexalign_usbcat).\n"
             "\n"
+            "-TMpass  Early stopping threshold for USBCAT mechanism. default: 0.85\n"
+            "\n"
             "   -se    Do not perform superposition. Useful for extracting alignment from\n"
             "          superposed structure pairs\n"
             "\n"
@@ -2871,7 +2873,7 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                       const vector<string> &model2parse1, const vector<string> &model2parse2,
                       const int byresi_opt, const vector<string> &chain1_list,
                       const vector<string> &chain2_list, const int hinge_opt, const int ss_opt,
-                      FlexAlignMode mode = FLEX_STANDARD, bool hinge_set = false)
+                      FlexAlignMode mode = FLEX_STANDARD, bool hinge_set = false, double TMpass = 0.85)
 {
     vector<vector<string>> PDB_lines1;
     vector<vector<string>> PDB_lines2;
@@ -2967,7 +2969,7 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                             usbcat_res.TM_ali, usbcat_res.rmsd_ali, usbcat_res.n_ali, usbcat_res.n_ali8,
                             xlen, ylen, sequence, Lnorm_ass, d0_scale,
                             i_opt, a_opt, u_opt, d_opt, force_fast_opt,
-                            mol_vec1[chain_i] + mol_vec2[chain_j], hinge_opt, ss_opt, 0, hinge_set);
+                            mol_vec1[chain_i] + mol_vec2[chain_j], hinge_opt, ss_opt, 0, hinge_set, TMpass);
 
                         if (outfmt_opt == 0)
                             print_version();
@@ -3086,9 +3088,9 @@ int flexalign_greedy(string &xname, string &yname, const string &fname_super, co
     return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt is ignored in BEST mode */, FLEX_BEST);
 }
 
-int flexalign_usbcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt, bool hinge_set = false)
+int flexalign_usbcat(string &xname, string &yname, const string &fname_super, const string &fname_lign, const string &fname_matrix, vector<string> &sequence, const double Lnorm_ass, const double d0_scale, const bool m_opt, const int i_opt, const int o_opt, const int a_opt, const bool u_opt, const bool d_opt, const double TMcut, const int infmt1_opt, const int infmt2_opt, const int ter_opt, const int split_opt, const int outfmt_opt, const bool fast_opt, const int mirror_opt, const int het_opt, const string &atom_opt, const bool autojustify, const string &mol_opt, const string &dir_opt, const string &dirpair_opt, const string &dir1_opt, const string &dir2_opt, const vector<string> &chain2parse1, const vector<string> &chain2parse2, const vector<string> &model2parse1, const vector<string> &model2parse2, const int byresi_opt, const vector<string> &chain1_list, const vector<string> &chain2_list, const int hinge_opt, bool hinge_set = false, double TMpass = 0.85)
 {
-    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_USBCAT, hinge_set);
+    return flexalign_unified(xname, yname, fname_super, fname_lign, fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt, a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt, split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt, atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt, dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2, byresi_opt, chain1_list, chain2_list, hinge_opt, 0 /* ss_opt ignore */, FLEX_USBCAT, hinge_set, TMpass);
 }
 
 int main(int argc, char *argv[])
@@ -3134,6 +3136,7 @@ int main(int argc, char *argv[])
                            // 5 and 0 for -mm 5 and 6
     int hinge_opt = 9;     // maximum number of hinge allowed for flexible
     bool hinge_set = false;
+    double TMpass_opt = 0.85;
     int mirror_opt = 0;         // do not align mirror
     int het_opt = 0;            // do not read HETATM residues
     int mm_opt = 0;             // do not perform MM-align
@@ -3494,6 +3497,13 @@ int main(int argc, char *argv[])
         {
             usbcat_opt = true;
         }
+        else if (!strcmp(argv[i], "-TMpass")) // Parse the -TMpass argument
+        {
+            if (i >= (argc - 1))
+                PrintErrorAndQuit("ERROR! Missing value for -TMpass");
+            TMpass_opt = atof(argv[i + 1]);
+            i++;
+        }
         else if (xname.size() == 0)
             xname = argv[i];
         else if (yname.size() == 0)
@@ -3805,15 +3815,15 @@ int main(int argc, char *argv[])
                              split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
                              atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
                              dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2,
-                             byresi_opt, chain1_list, chain2_list, hinge_opt, hinge_set);
+                             byresi_opt, chain1_list, chain2_list, hinge_opt, hinge_set, TMpass_opt);
         else
             flexalign_greedy(xname, yname, fname_super, fname_lign,
-                           fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
-                           a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
-                           split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
-                           atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
-                           dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2,
-                           byresi_opt, chain1_list, chain2_list, hinge_opt);
+                             fname_matrix, sequence, Lnorm_ass, d0_scale, m_opt, i_opt, o_opt,
+                             a_opt, u_opt, d_opt, TMcut, infmt1_opt, infmt2_opt, ter_opt,
+                             split_opt, outfmt_opt, fast_opt, mirror_opt, het_opt,
+                             atom_opt, autojustify, mol_opt, dir_opt, dirpair_opt, dir1_opt,
+                             dir2_opt, chain2parse1, chain2parse2, model2parse1, model2parse2,
+                             byresi_opt, chain1_list, chain2_list, hinge_opt);
     }
     else
         cerr << "WARNING! -mm " << mm_opt << " not implemented" << endl;

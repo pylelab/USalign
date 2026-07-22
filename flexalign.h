@@ -2156,7 +2156,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
                           const double d0_scale, const int i_opt, const int a_opt,
                           const bool u_opt, const bool d_opt, const bool fast_opt,
                           const int mol_type, const int hinge_opt, const int ss_opt,
-                          int sparse_val = 0, bool hinge_set = false)
+                          int sparse_val = 0, bool hinge_set = false, const double TMpass = 0.85)
 {
     // ==========================================
     // TRUE flexalign_greedy BASELINE (Defender)
@@ -2218,7 +2218,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
         }
     }
 
-    if (best_global_max_TM >= 0.85)
+    if (best_global_max_TM >= TMpass)
     {
         TM1 = best_TM1;
         TM2 = best_TM2;
