@@ -10,18 +10,32 @@
 #endif
 
 int main(int argc, char* argv[]) {
-    // 1. Get the invocation path of the wrapper program itself
+    // 1. Check if the '-h' parameter is passed in command line arguments
+    bool has_help_flag = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "-h") {
+            has_help_flag = true;
+            break;
+        }
+    }
+
+    // Print notice message before executing USalign if '-h' is detected
+    if (has_help_flag) {
+        std::cout << "Notice: USalignFlex is equivalent to USalign -mm 7.\n" << std::endl;
+    }
+
+    // 2. Get the invocation path of the wrapper program itself
     std::string wrapper_path = argv[0];
     std::string dir_path = "";
     
-    // 2. Find the last slash in the path (compatible with Windows '\' and Unix '/')
+    // 3. Find the last slash in the path (compatible with Windows '\' and Unix '/')
     size_t last_slash = wrapper_path.find_last_of("/\\");
     if (last_slash != std::string::npos) {
         // If found, extract the directory path, e.g., "/home/user/bin/" or "./"
         dir_path = wrapper_path.substr(0, last_slash + 1);
     }
     
-    // 3. Look for the original USalign program in the extracted directory
+    // 4. Look for the original USalign program in the extracted directory
 #ifdef _WIN32
     std::string exe_name = dir_path + "USalign.exe";
 #else
@@ -43,7 +57,7 @@ int main(int argc, char* argv[]) {
     args.push_back(const_cast<char*>("7"));
     args.push_back(nullptr); // The argument array must be null-terminated
 
-    // 4. Transfer execution control to the original USalign
+    // 5. Transfer execution control to the original USalign
 #ifdef _WIN32
     intptr_t exit_code = _spawnvp(_P_WAIT, exe_name.c_str(), args.data());
     if (exit_code == -1) {
