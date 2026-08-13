@@ -21,6 +21,8 @@ MMalign
 TMscore
 pdbAtomName
 ca2rr
+biounitasym
+addChainID
 *.exe
 *.zip
 
