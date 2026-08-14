@@ -1279,7 +1279,7 @@ double MMalign_search(
         d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA,
         do_vec, rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-        i_opt, false, true, false, fast_opt, mol_type, -1);
+        i_opt, false, true, false, fast_opt, mol_type, -1, 0);
 
     /* clean up */
     delete [] seqx;
@@ -1460,7 +1460,7 @@ void MMalign_final(
         d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-        3, a_opt, false, d_opt, fast_opt, mol_type, -1);
+        3, a_opt, false, d_opt, fast_opt, mol_type, -1, 0);
 
     /* prepare full complex alignment */
     string chainID1="";
