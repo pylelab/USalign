@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20260813)                                      *\n"
+" * US-align (Version 20260814)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
 " *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
@@ -160,6 +160,7 @@ void print_help(bool h_opt = false)
             "             $ USalign -dir chains/ list -suffix .pdb -mm 4\n"
             "          5: fully non-sequential (fNS) alignment\n"
             "          6: semi-non-sequential (sNS) alignment\n"
+            "          7: flexible structure alignment\n"
             "          To use -mm 1 or -mm 2, '-ter' option must be 0 or 1.\n"
             "\n"
             "    -ter  Number of chains to align.\n"
