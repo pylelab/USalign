@@ -3131,6 +3131,7 @@ int main(int argc, char *argv[])
         {
             if (i>=(argc-1)) 
                 PrintErrorAndQuit("ERROR! Missing value for -hinge");
+            hinge_set = true;
             hinge_opt = atoi(argv[i + 1]); i++;
         }
         else if ( !strcmp(argv[i],"-v") )
