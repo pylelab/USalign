@@ -58,7 +58,7 @@ int flexalign_main(double **xa, double **ya,
     const vector<string> sequence, const double Lnorm_ass,
     const double d0_scale, const int i_opt, const int a_opt,
     const bool u_opt, const bool d_opt, const bool fast_opt,
-    const int mol_type, const int hinge_opt)
+    const int mol_type, const int hinge_opt, const int ss_opt)
 {
     vector<double> tu_tmp(12,0);
     int round2=tu_vec.size();
@@ -69,7 +69,7 @@ int flexalign_main(double **xa, double **ya,
             d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
             xlen, ylen, sequence, Lnorm_ass,
-            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, -1, ss_opt);
     
         t_u2tu(t0,u0,tu_tmp);
         tu_vec.push_back(tu_tmp);
@@ -152,7 +152,7 @@ int flexalign_main(double **xa, double **ya,
             d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
             xlen_h, ylen_h, sequence, Lnorm_ass,
-            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, -1, ss_opt);
         
         do_rotation(xa, xt, xlen, t0, u0);
         t_u2tu(t0,u0,tu_vec[0]);
@@ -213,7 +213,7 @@ int flexalign_main(double **xa, double **ya,
             d0u_h, d0a_h, d0_out_h, seqM, seqxA, seqyA, do_vec,
             rmsd0, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali, n_ali8,
             xlen_h, ylen_h, sequence, Lnorm_ass,
-            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, -1, ss_opt);
         
         do_rotation(xa, xt, xlen, t0, u0);
         
@@ -328,7 +328,7 @@ int flexalign_main(double **xa, double **ya,
             d0u_h, d0a_h, d0_out_h, seqM_h, seqxA_h, seqyA_h, do_vec,
             rmsd0_h, L_ali_h, Liden_h, TM_ali_h, rmsd_ali_h, n_ali_h, n_ali8_h,
             xlen_h, ylen_h, sequence, Lnorm_ass,
-            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type);
+            d0_scale, i_opt, a_opt, u_opt, d_opt, fast_opt, mol_type, -1, ss_opt);
         
         do_rotation(xa, xt, xlen, t0, u0);
         
@@ -1823,4 +1823,1244 @@ void output_flexalign_results(const string xname, const string yname,
             xlen, ylen, d0A, n_ali8, rmsd, TM1, Liden);
 }
 
+// Data structure to hold outputs of flexalign_main to avoid parameter clutter
+struct FlexAlignResult
+{
+    double t0[3];
+    double u0[3][3];
+    vector<vector<double>> tu_vec;
+    double TM1, TM2, TM3, TM4, TM5;
+    double d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out;
+    string seqM, seqxA, seqyA;
+    vector<double> do_vec;
+    double rmsd0, Liden, TM_ali, rmsd_ali;
+    int L_ali, n_ali, n_ali8, hingeNum;
+
+    FlexAlignResult() : TM1(-1.0), TM2(-1.0), TM3(-1.0), TM4(-1.0), TM5(-1.0),
+                        d0_0(0.0), TM_0(0.0), d0A(0.0), d0B(0.0), d0u(0.0), d0a(0.0), d0_out(5.0),
+                        rmsd0(0.0), Liden(0.0), TM_ali(0.0), rmsd_ali(0.0),
+                        L_ali(0), n_ali(0), n_ali8(0), hingeNum(0)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            t0[i] = 0.0;
+            for (int j = 0; j < 3; j++)
+                u0[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+};
+
+enum FlexAlignMode
+{
+    FLEX_STANDARD = 0,
+    FLEX_BEST = 1,
+    FLEX_USBCAT = 2
+};
+
+// Encapsulates the execution of flexalign_main and its fallback refinement logic
+void execute_flexalign_with_fallback(
+    double **xa, double **ya, char *seqx, char *seqy, char *secx, char *secy,
+    int xlen, int ylen, vector<string> &sequence, const double Lnorm_ass, const double d0_scale,
+    const int i_opt, const int a_opt, const bool u_opt, const bool d_opt, const bool force_fast_opt,
+    const int mol_type, const int hinge_opt, const int ss_opt, FlexAlignResult &res)
+{
+    res.hingeNum = flexalign_main(
+        xa, ya, seqx, seqy, secx, secy,
+        res.t0, res.u0, res.tu_vec, res.TM1, res.TM2, res.TM3, res.TM4, res.TM5,
+        res.d0_0, res.TM_0, res.d0A, res.d0B, res.d0u, res.d0a, res.d0_out,
+        res.seqM, res.seqxA, res.seqyA, res.do_vec,
+        res.rmsd0, res.L_ali, res.Liden, res.TM_ali, res.rmsd_ali, res.n_ali, res.n_ali8,
+        xlen, ylen, sequence, Lnorm_ass, d0_scale,
+        i_opt, a_opt, u_opt, d_opt, force_fast_opt,
+        mol_type, hinge_opt, ss_opt);
+
+    // Fallback compensation when too few hinges are found
+    if (hinge_opt && res.hingeNum <= 1 && res.n_ali8 < 0.6 * getmin(xlen, ylen))
+    {
+        FlexAlignResult res_h;
+        res_h.tu_vec.push_back(res.tu_vec[0]);
+        tu2t_u(res.tu_vec[0], res_h.t0, res_h.u0);
+
+        res_h.hingeNum = flexalign_main(
+            xa, ya, seqx, seqy, secx, secy,
+            res_h.t0, res_h.u0, res_h.tu_vec,
+            res_h.TM1, res_h.TM2, res_h.TM3, res_h.TM4, res_h.TM5,
+            res_h.d0_0, res_h.TM_0, res.d0A, res.d0B, res.d0u, res.d0a, res_h.d0_out,
+            res_h.seqM, res_h.seqxA, res_h.seqyA, res_h.do_vec,
+            res_h.rmsd0, res_h.L_ali, res_h.Liden, res_h.TM_ali, res_h.rmsd_ali,
+            res_h.n_ali, res_h.n_ali8,
+            xlen, ylen, sequence, Lnorm_ass, d0_scale, i_opt,
+            a_opt, u_opt, d_opt, force_fast_opt,
+            mol_type, hinge_opt, ss_opt);
+
+        double TM = (res.TM1 > res.TM2) ? res.TM1 : res.TM2;
+        double TM_h = (res_h.TM1 > res_h.TM2) ? res_h.TM1 : res_h.TM2;
+        if (TM_h > TM)
+        {
+            res = res_h; // Safely overwrite with the better refined results
+        }
+    }
+}
+
+// ==========================================
+// USBCAT Core Algorithm (flexalign_usbcat_main)
+// ==========================================
+struct USBCAT_AFP
+{
+    int i, j, len;
+    double score;
+};
+
+int flexalign_usbcat_main(double **xa, double **ya,
+                          const char *seqx, const char *seqy, const char *secx, const char *secy,
+                          double t0[3], double u0[3][3], std::vector<std::vector<double>> &tu_vec,
+                          double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
+                          double &d0_0, double &TM_0,
+                          double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
+                          std::string &seqM, std::string &seqxA, std::string &seqyA, std::vector<double> &do_vec,
+                          double &rmsd0, int &L_ali, double &Liden,
+                          double &TM_ali, double &rmsd_ali, int &n_ali, int &n_ali8,
+                          const int xlen, const int ylen,
+                          const std::vector<std::string> sequence, const double Lnorm_ass,
+                          const double d0_scale, const int i_opt, const int a_opt,
+                          const bool u_opt, const bool d_opt, const bool fast_opt,
+                          const int mol_type, const int hinge_opt, const int ss_opt,
+                          int sparse_val = 0, bool hinge_set = false, const double TMpass = 0.85)
+{
+    // ==========================================
+    // TRUE flexalign_greedy BASELINE (Defender)
+    // Run full sequence without generate_bounds slicing!
+    // ==========================================
+    double best_global_max_TM = -1.0;
+    std::vector<std::vector<double>> best_tu_vec;
+    double best_t0[3], best_u0[3][3];
+    double best_TM1 = 0.0, best_TM2 = 0.0, best_TM3 = 0.0, best_TM4 = 0.0, best_TM5 = 0.0;
+    double best_rmsd0 = 0.0, best_Liden = 0.0, best_TM_ali = 0.0, best_rmsd_ali = 0.0;
+    int best_L_ali = 0, best_n_ali = 0, best_n_ali8 = 0;
+    std::string best_seqM = "", best_seqxA = "", best_seqyA = "";
+    std::vector<double> best_do_vec;
+    double best_d0A = 0.0, best_d0B = 0.0, best_d0a = 0.0, best_d0u = 0.0;
+
+    bool force_fast_opt_global = (std::min(xlen, ylen) > 1500) ? true : fast_opt;
+    std::vector<std::string> local_sequence = sequence;
+
+    for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
+    {
+        FlexAlignResult base_res;
+        execute_flexalign_with_fallback(
+            xa, ya, (char *)seqx, (char *)seqy, (char *)secx, (char *)secy,
+            xlen, ylen, local_sequence, Lnorm_ass, d0_scale,
+            i_opt, a_opt, u_opt, d_opt, force_fast_opt_global,
+            mol_type, hinge_opt, cur_ss_opt, base_res);
+
+        double cur_max_TM = (base_res.TM1 > base_res.TM2) ? base_res.TM1 : base_res.TM2;
+        if (cur_max_TM > best_global_max_TM)
+        {
+            best_global_max_TM = cur_max_TM;
+            for (int a = 0; a < 3; a++)
+            {
+                best_t0[a] = base_res.t0[a];
+                for (int b = 0; b < 3; b++)
+                    best_u0[a][b] = base_res.u0[a][b];
+            }
+            best_tu_vec = base_res.tu_vec;
+            best_TM1 = base_res.TM1;
+            best_TM2 = base_res.TM2;
+            best_TM3 = base_res.TM3;
+            best_TM4 = base_res.TM4;
+            best_TM5 = base_res.TM5;
+            best_rmsd0 = base_res.rmsd0;
+            best_Liden = base_res.Liden;
+            best_TM_ali = base_res.TM_ali;
+            best_rmsd_ali = base_res.rmsd_ali;
+            best_L_ali = base_res.L_ali;
+            best_n_ali = base_res.n_ali;
+            best_n_ali8 = base_res.n_ali8;
+            best_seqM = base_res.seqM;
+            best_seqxA = base_res.seqxA;
+            best_seqyA = base_res.seqyA;
+            best_do_vec = base_res.do_vec;
+            best_d0A = base_res.d0A;
+            best_d0B = base_res.d0B;
+            best_d0a = base_res.d0a;
+            best_d0u = base_res.d0u;
+        }
+    }
+
+    if (best_global_max_TM >= TMpass)
+    {
+        TM1 = best_TM1;
+        TM2 = best_TM2;
+        TM3 = best_TM3;
+        TM4 = best_TM4;
+        TM5 = best_TM5;
+        rmsd0 = best_rmsd0;
+        Liden = best_Liden;
+        TM_ali = best_TM_ali;
+        rmsd_ali = best_rmsd_ali;
+        L_ali = best_L_ali;
+        n_ali = best_n_ali;
+        n_ali8 = best_n_ali8;
+        seqM = best_seqM;
+        seqxA = best_seqxA;
+        seqyA = best_seqyA;
+        do_vec = best_do_vec;
+        tu_vec = best_tu_vec;
+        d0A = best_d0A;
+        d0B = best_d0B;
+        d0a = best_d0a;
+        d0u = best_d0u;
+        for (int a = 0; a < 3; a++)
+        {
+            t0[a] = best_t0[a];
+            for (int b = 0; b < 3; b++)
+                u0[a][b] = best_u0[a][b];
+        }
+        return tu_vec.size();
+    }
+
+    // ==========================================
+    // Proceed to USBCAT sliced bounds logic...
+    // ==========================================
+    int fragLen = 12;
+    double resScore = 3.0;
+    double gap_ext = -0.5;
+    double disCut = 5.0;
+    double disSmooth = 4.0;
+    double twist_pen = -fragLen * resScore - 1;
+    int max_gap = 40;
+    double max_penalty = -5.0 * fragLen / 8.0;
+    int misCut = 2 * fragLen;
+    int maxGapFrag = fragLen + max_gap;
+    double afp_dis_cut = fragLen * fragLen * (disCut * disCut);
+    int max_twists = hinge_opt;
+
+    // OPTIMIZATION 1: Precompute local intra-protein distance matrices
+    int max_dist_window = max_gap + 2 * fragLen + 1;
+    std::vector<std::vector<double>> disTable1(xlen, std::vector<double>(max_dist_window, 0.0));
+    std::vector<std::vector<double>> disTable2(ylen, std::vector<double>(max_dist_window, 0.0));
+
+    for (int i = 0; i < xlen; i++)
+    {
+        for (int j = i; j < std::min(xlen, i + max_dist_window); j++)
+            disTable1[i][j - i] = std::sqrt(dist(xa[i], xa[j]));
+    }
+    for (int i = 0; i < ylen; i++)
+    {
+        for (int j = i; j < std::min(ylen, i + max_dist_window); j++)
+            disTable2[i][j - i] = std::sqrt(dist(ya[i], ya[j]));
+    }
+
+    // Wrapper for generating bounds
+    auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int>>
+    {
+        // Step 1: Extract initial AFPs in batches
+        std::vector<USBCAT_AFP> initial_afps;
+        int step = sparse_val + 1;
+
+        // --- FIXED: Dynamically allocate arrays based on fragLen
+        double **r1, **r2;
+        NewArray(&r1, fragLen, 3);
+        NewArray(&r2, fragLen, 3);
+
+        for (int i = 0; i <= xlen - fragLen; i += step)
+        {
+            for (int j = 0; j <= ylen - fragLen; j += step)
+            {
+                int d3_term = std::min(i, j) + std::min(xlen - (i + fragLen - 1), ylen - (j + fragLen)) + fragLen;
+                if (d3_term < best_global_max_TM * std::min(xlen, ylen))
+                    continue;
+
+                double dist1 = disTable1[i][fragLen - 1];
+                double dist2 = disTable2[j][fragLen - 1];
+
+                if (std::fabs(dist1 - dist2) > 2.0 * cur_rmsdCut)
+                    continue;
+
+                // k loop dynamically bounds to fragLen instead of fixed 8
+                for (int k = 0; k < fragLen; k++)
+                {
+                    r1[k][0] = xa[i + k][0];
+                    r1[k][1] = xa[i + k][1];
+                    r1[k][2] = xa[i + k][2];
+                    r2[k][0] = ya[j + k][0];
+                    r2[k][1] = ya[j + k][1];
+                    r2[k][2] = ya[j + k][2];
+                }
+
+                double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                // Kabsch function already appropriately takes fragLen as size parameter
+                Kabsch(r1, r2, fragLen, 0, &rms_sum_sq, t_tmp, u_tmp);
+                double rmsd_tmp = std::sqrt(rms_sum_sq / fragLen);
+
+                if (rmsd_tmp < cur_rmsdCut)
+                {
+                    USBCAT_AFP afp;
+                    afp.i = i;
+                    afp.j = j;
+                    afp.len = fragLen;
+                    afp.score = resScore * fragLen * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                    initial_afps.push_back(afp);
+                }
+            }
+        }
+
+        DeleteArray(&r1, fragLen);
+        DeleteArray(&r2, fragLen);
+
+        // Step 2: Merge diagonal AFPs
+        int max_diagonal_idx = xlen + ylen + 1;
+        std::vector<std::vector<USBCAT_AFP>> diagonals(max_diagonal_idx);
+        for (size_t k = 0; k < initial_afps.size(); k++)
+        {
+            diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
+        }
+
+        std::vector<USBCAT_AFP> merged_afps;
+        int max_merge_len = std::min(xlen, ylen);
+        double **r1_merge, **r2_merge;
+        NewArray(&r1_merge, max_merge_len, 3);
+        NewArray(&r2_merge, max_merge_len, 3);
+
+        for (int d = 0; d < max_diagonal_idx; d++)
+        {
+            if (diagonals[d].empty())
+                continue;
+            std::vector<USBCAT_AFP> &group = diagonals[d];
+
+            std::sort(group.begin(), group.end(), [](const USBCAT_AFP &a, const USBCAT_AFP &b)
+                      { return a.i < b.i; });
+
+            int n_group = group.size();
+            std::vector<bool> invalid(n_group, false);
+            for (int idx = 0; idx < n_group; idx++)
+            {
+                if (invalid[idx])
+                    continue;
+                USBCAT_AFP curr = group[idx];
+                for (int nxt_idx = idx + 1; nxt_idx < n_group; nxt_idx++)
+                {
+                    USBCAT_AFP nxt = group[nxt_idx];
+                    if (nxt.i > curr.i + curr.len)
+                        break;
+
+                    if (nxt.i + nxt.len > curr.i + curr.len)
+                    {
+                        int new_len = (nxt.i + nxt.len) - curr.i;
+                        for (int k = 0; k < new_len; k++)
+                        {
+                            r1_merge[k][0] = xa[curr.i + k][0];
+                            r1_merge[k][1] = xa[curr.i + k][1];
+                            r1_merge[k][2] = xa[curr.i + k][2];
+                            r2_merge[k][0] = ya[curr.j + k][0];
+                            r2_merge[k][1] = ya[curr.j + k][1];
+                            r2_merge[k][2] = ya[curr.j + k][2];
+                        }
+
+                        double rms_sum_sq, t_tmp[3], u_tmp[3][3];
+                        Kabsch(r1_merge, r2_merge, new_len, 0, &rms_sum_sq, t_tmp, u_tmp);
+                        double rmsd_tmp = std::sqrt(rms_sum_sq / new_len);
+
+                        if (rmsd_tmp < cur_rmsdCut)
+                        {
+                            curr.len = new_len;
+                            curr.score = resScore * new_len * (1.0 - (rmsd_tmp / cur_badRmsd) * (rmsd_tmp / cur_badRmsd));
+                            invalid[nxt_idx] = true;
+                        }
+                    }
+                }
+                merged_afps.push_back(curr);
+            }
+        }
+        DeleteArray(&r1_merge, max_merge_len);
+        DeleteArray(&r2_merge, max_merge_len);
+
+        std::sort(merged_afps.begin(), merged_afps.end(), [](const USBCAT_AFP &a, const USBCAT_AFP &b)
+                  {
+            if (a.i == b.i) return a.j < b.j;
+            return a.i < b.i; });
+
+        int n_afps = merged_afps.size();
+        std::vector<int> ret_b1, ret_b2;
+        if (n_afps == 0)
+            return std::make_pair(ret_b1, ret_b2);
+
+        // Step 3 & 4: Dual Dynamic Programming and Domain Splitting
+        std::vector<int> afp_aft_index(xlen * ylen, -1);
+        std::vector<int> afp_bef_index(xlen * ylen, -1);
+
+        std::vector<std::vector<std::pair<int, int>>> i_to_j(xlen);
+        for (int m = 0; m < n_afps; m++)
+        {
+            i_to_j[merged_afps[m].i].push_back(std::make_pair(merged_afps[m].j, m));
+        }
+
+        for (int i_val = 0; i_val < xlen; i_val++)
+        {
+            if (i_to_j[i_val].empty())
+                continue;
+            for (size_t p = 0; p < i_to_j[i_val].size(); p++)
+            {
+                int j_val = i_to_j[i_val][p].first;
+                afp_aft_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+                afp_bef_index[i_val * ylen + j_val] = i_to_j[i_val][p].second;
+            }
+            int curr_bef = -1;
+            for (int j_val = 0; j_val < ylen; j_val++)
+            {
+                if (afp_bef_index[i_val * ylen + j_val] != -1)
+                    curr_bef = afp_bef_index[i_val * ylen + j_val];
+                else
+                    afp_bef_index[i_val * ylen + j_val] = curr_bef;
+            }
+            int curr_aft = -1;
+            for (int j_val = ylen - 1; j_val >= 0; j_val--)
+            {
+                if (afp_aft_index[i_val * ylen + j_val] != -1)
+                    curr_aft = afp_aft_index[i_val * ylen + j_val];
+                else
+                    afp_aft_index[i_val * ylen + j_val] = curr_aft;
+            }
+        }
+
+        auto get_dvar = [&](const USBCAT_AFP &prv, const USBCAT_AFP &curr) -> double
+        {
+            double rms_sq = 0;
+            for (int i_idx = 0; i_idx < fragLen; i_idx++)
+            {
+                for (int j_idx = 0; j_idx < fragLen; j_idx++)
+                {
+                    double dist1, dist2;
+                    int idx1_a = curr.i + i_idx, idx1_b = prv.i + j_idx;
+                    if (idx1_a >= idx1_b)
+                        dist1 = disTable1[idx1_b][idx1_a - idx1_b];
+                    else
+                        dist1 = disTable1[idx1_a][idx1_b - idx1_a];
+
+                    int idx2_a = curr.j + i_idx, idx2_b = prv.j + j_idx;
+                    if (idx2_a >= idx2_b)
+                        dist2 = disTable2[idx2_b][idx2_a - idx2_b];
+                    else
+                        dist2 = disTable2[idx2_a][idx2_b - idx2_a];
+
+                    rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                }
+            }
+            if (rms_sq > afp_dis_cut)
+                return 1e9;
+            return std::sqrt(rms_sq / (fragLen * fragLen));
+        };
+
+        auto calc_block_rmsd = [&](const std::vector<USBCAT_AFP> &afp_list) -> double
+        {
+            std::vector<int> r1, r2;
+            for (size_t a = 0; a < afp_list.size(); a++)
+            {
+                for (int l = 0; l < afp_list[a].len; l++)
+                {
+                    r1.push_back(afp_list[a].i + l);
+                    r2.push_back(afp_list[a].j + l);
+                }
+            }
+            int n = r1.size();
+            if (n < 3)
+                return 0.0;
+            double **p1;
+            NewArray(&p1, n, 3);
+            double **p2;
+            NewArray(&p2, n, 3);
+            for (int i = 0; i < n; i++)
+            {
+                p1[i][0] = xa[r1[i]][0];
+                p1[i][1] = xa[r1[i]][1];
+                p1[i][2] = xa[r1[i]][2];
+                p2[i][0] = ya[r2[i]][0];
+                p2[i][1] = ya[r2[i]][1];
+                p2[i][2] = ya[r2[i]][2];
+            }
+            double rms_sq_sum, t_tmp[3], u_tmp[3][3];
+            Kabsch(p1, p2, n, 0, &rms_sq_sum, t_tmp, u_tmp);
+            DeleteArray(&p1, n);
+            DeleteArray(&p2, n);
+            return std::sqrt(rms_sq_sum / n);
+        };
+
+        struct Region
+        {
+            int s1, e1, s2, e2;
+        };
+
+        std::vector<double> sco(n_afps);
+        std::vector<int> twi(n_afps, 0);
+        std::vector<int> pre(n_afps, -1);
+        for (int m = 0; m < n_afps; m++)
+            sco[m] = merged_afps[m].score;
+
+        for (int m = 0; m < n_afps; m++)
+        {
+            int curr_i = merged_afps[m].i;
+            int curr_j = merged_afps[m].j;
+            int a3 = curr_i - fragLen;
+            int a2 = std::max(0, a3 - misCut);
+            int a1 = std::max(0, curr_i - maxGapFrag);
+            int b3 = curr_j - fragLen;
+            int b2 = std::max(0, b3 - misCut);
+            int b1 = std::max(0, curr_j - maxGapFrag);
+
+            std::vector<int> valid_prevs;
+            for (int st = 0; st < 2; st++)
+            {
+                int a_s, a_e, b_s, b_e;
+                if (st == 0)
+                {
+                    a_s = std::max(a1, 0);
+                    a_e = std::min(a3, xlen - 1);
+                    b_s = std::max(b2, 0);
+                    b_e = std::min(b3, ylen - 1);
+                }
+                else
+                {
+                    a_s = std::max(a2, 0);
+                    a_e = std::min(a3, xlen - 1);
+                    b_s = std::max(b1, 0);
+                    b_e = std::min(b2 - 1, ylen - 1);
+                }
+
+                if (b_s >= ylen || b_e < 0)
+                    continue;
+                for (int prev_i = a_s; prev_i <= a_e; prev_i++)
+                {
+                    int s1 = afp_aft_index[prev_i * ylen + b_s];
+                    int s2 = afp_bef_index[prev_i * ylen + b_e];
+                    if (s1 != -1 && s2 != -1 && s1 <= s2)
+                        for (int s = s1; s <= s2; s++)
+                            valid_prevs.push_back(s);
+                }
+            }
+
+            double curr_sco = merged_afps[m].score;
+            for (size_t v = 0; v < valid_prevs.size(); v++)
+            {
+                int prev = valid_prevs[v];
+                int prev_twi = twi[prev];
+                if (prev_twi > max_twists)
+                    continue;
+
+                int gap_i = curr_i - (merged_afps[prev].i + merged_afps[prev].len);
+                int gap_j = curr_j - (merged_afps[prev].j + merged_afps[prev].len);
+                int m_gap = std::max(gap_i, gap_j);
+
+                double gp = 0.0;
+                int m_mis = 0;
+                if (gap_i < 0 || gap_j < 0)
+                    m_mis = (gap_i < gap_j) ? -gap_i : -gap_j;
+                gp = gap_ext * m_mis;
+                if (m_gap > 0)
+                    gp += gap_ext * m_gap;
+                if (gp < max_penalty)
+                    gp = max_penalty;
+
+                double rms_sq = 0;
+                for (int k = 0; k < fragLen; k++)
+                {
+                    for (int l = 0; l < fragLen; l++)
+                    {
+                        double dist1, dist2;
+                        int idx1_a = curr_i + k, idx1_b = merged_afps[prev].i + l;
+                        if (idx1_a >= idx1_b)
+                            dist1 = disTable1[idx1_b][idx1_a - idx1_b];
+                        else
+                            dist1 = disTable1[idx1_a][idx1_b - idx1_a];
+
+                        int idx2_a = curr_j + k, idx2_b = merged_afps[prev].j + l;
+                        if (idx2_a >= idx2_b)
+                            dist2 = disTable2[idx2_b][idx2_a - idx2_b];
+                        else
+                            dist2 = disTable2[idx2_a][idx2_b - idx2_a];
+
+                        rms_sq += (dist1 - dist2) * (dist1 - dist2);
+                    }
+                }
+
+                double tp = 0.0;
+                int is_twist = 0;
+                if (rms_sq >= afp_dis_cut)
+                {
+                    tp = twist_pen;
+                    is_twist = 1;
+                }
+                else
+                {
+                    double dvar = std::sqrt(rms_sq / (fragLen * fragLen));
+                    if (dvar > disCut - disSmooth)
+                        tp = twist_pen * std::sqrt((dvar - disCut + disSmooth) / disSmooth);
+                }
+
+                if (prev_twi + is_twist > max_twists)
+                    continue;
+
+                double stmp = sco[prev] + curr_sco + tp + gp;
+                if (stmp > sco[m])
+                {
+                    sco[m] = stmp;
+                    pre[m] = prev;
+                    twi[m] = prev_twi + is_twist;
+                }
+            }
+        }
+
+        int best_m = 0;
+        for (int m = 1; m < n_afps; m++)
+            if (sco[m] > sco[best_m])
+                best_m = m;
+
+        std::vector<int> path;
+        int curr_m = best_m;
+        while (curr_m != -1)
+        {
+            path.push_back(curr_m);
+            curr_m = pre[curr_m];
+        }
+        std::reverse(path.begin(), path.end());
+
+        if (path.empty())
+            return std::make_pair(ret_b1, ret_b2);
+
+        struct Block
+        {
+            std::vector<USBCAT_AFP> afps;
+            std::vector<double> dvars;
+        };
+        std::vector<Block> candidate_blocks;
+        Block curr_block;
+        curr_block.afps.push_back(merged_afps[path[0]]);
+        curr_block.dvars.push_back(0.0);
+
+        for (size_t k = 1; k < path.size(); k++)
+        {
+            USBCAT_AFP curr = merged_afps[path[k]];
+            USBCAT_AFP prv = merged_afps[path[k - 1]];
+            double dvar = get_dvar(prv, curr);
+
+            if (dvar >= disCut)
+            {
+                candidate_blocks.push_back(curr_block);
+                curr_block.afps.clear();
+                curr_block.dvars.clear();
+                curr_block.afps.push_back(curr);
+                curr_block.dvars.push_back(0.0);
+            }
+            else
+            {
+                curr_block.afps.push_back(curr);
+                curr_block.dvars.push_back(dvar);
+            }
+        }
+        if (!curr_block.afps.empty())
+            candidate_blocks.push_back(curr_block);
+
+        bool splitted = true;
+        while (splitted && candidate_blocks.size() < (size_t)(max_twists + 1))
+        {
+            splitted = false;
+            double max_rmsd = 0.0;
+            int target_b = -1;
+
+            for (size_t b = 0; b < candidate_blocks.size(); b++)
+            {
+                if (candidate_blocks[b].afps.size() > 2)
+                {
+                    double cur_rmsd = calc_block_rmsd(candidate_blocks[b].afps);
+                    if (cur_rmsd > max_rmsd)
+                    {
+                        max_rmsd = cur_rmsd;
+                        target_b = b;
+                    }
+                }
+            }
+
+            if (max_rmsd >= cur_local_badRmsd && target_b != -1)
+            {
+                double max_t = 0;
+                int cut_idx = 0;
+                for (size_t i = 1; i < candidate_blocks[target_b].afps.size(); i++)
+                {
+                    if (candidate_blocks[target_b].dvars[i] > max_t)
+                    {
+                        max_t = candidate_blocks[target_b].dvars[i];
+                        cut_idx = i;
+                    }
+                }
+
+                if (cut_idx > 0)
+                {
+                    Block right_blk;
+                    right_blk.afps.assign(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    right_blk.dvars.assign(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
+                    right_blk.dvars[0] = 0.0;
+                    candidate_blocks[target_b].afps.erase(candidate_blocks[target_b].afps.begin() + cut_idx, candidate_blocks[target_b].afps.end());
+                    candidate_blocks[target_b].dvars.erase(candidate_blocks[target_b].dvars.begin() + cut_idx, candidate_blocks[target_b].dvars.end());
+                    candidate_blocks.insert(candidate_blocks.begin() + target_b + 1, right_blk);
+                    splitted = true;
+                }
+            }
+        }
+
+        for (int b = 0; b < (int)candidate_blocks.size(); b++)
+        {
+            if (candidate_blocks[b].afps.size() <= 1)
+            {
+                int e1 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().i : xlen;
+                int e2 = (b < (int)candidate_blocks.size() - 1) ? candidate_blocks[b + 1].afps.front().j : ylen;
+                int b1 = (b > 0) ? candidate_blocks[b - 1].afps.back().i + candidate_blocks[b - 1].afps.back().len : 0;
+                int b2 = (b > 0) ? candidate_blocks[b - 1].afps.back().j + candidate_blocks[b - 1].afps.back().len : 0;
+                int span = std::min(e1 - b1, e2 - b2);
+                if (span < 2 * fragLen)
+                {
+                    candidate_blocks.erase(candidate_blocks.begin() + b);
+                    b--;
+                }
+            }
+        }
+
+        bool merged = true;
+        while (merged && candidate_blocks.size() > 1)
+        {
+            merged = false;
+            double min_rmsd = 1e9;
+            int min_b = -1;
+            for (size_t b = 0; b < candidate_blocks.size() - 1; b++)
+            {
+                std::vector<USBCAT_AFP> temp_merged = candidate_blocks[b].afps;
+                temp_merged.insert(temp_merged.end(), candidate_blocks[b + 1].afps.begin(), candidate_blocks[b + 1].afps.end());
+                double cur_rmsd = calc_block_rmsd(temp_merged);
+                if (cur_rmsd < min_rmsd)
+                {
+                    min_rmsd = cur_rmsd;
+                    min_b = b;
+                }
+            }
+
+            if (min_rmsd < cur_local_badRmsd && min_b != -1)
+            {
+                candidate_blocks[min_b].afps.insert(candidate_blocks[min_b].afps.end(), candidate_blocks[min_b + 1].afps.begin(), candidate_blocks[min_b + 1].afps.end());
+                candidate_blocks.erase(candidate_blocks.begin() + min_b + 1);
+                merged = true;
+            }
+        }
+
+        std::vector<Region> usbcat_domains;
+        int last_i = 0, last_j = 0;
+        for (size_t b = 0; b < candidate_blocks.size(); b++)
+        {
+            int b_s1 = -1, b_e1 = -1, b_s2 = -1, b_e2 = -1;
+            for (size_t a = 0; a < candidate_blocks[b].afps.size(); a++)
+            {
+                USBCAT_AFP afp = candidate_blocks[b].afps[a];
+                int skip = std::max(std::max(last_i - afp.i, last_j - afp.j), 0);
+                if (skip >= afp.len)
+                    continue;
+
+                int eff_i = afp.i + skip;
+                int eff_j = afp.j + skip;
+                int eff_L = afp.len - skip;
+                if (b_s1 == -1)
+                {
+                    b_s1 = eff_i;
+                    b_s2 = eff_j;
+                }
+                b_e1 = eff_i + eff_L;
+                b_e2 = eff_j + eff_L;
+                last_i = b_e1;
+                last_j = b_e2;
+            }
+            if (b_s1 != -1)
+            {
+                if (b_e1 - b_s1 >= 4 && b_e2 - b_s2 >= 4)
+                {
+                    Region r = {b_s1, b_e1, b_s2, b_e2};
+                    usbcat_domains.push_back(r);
+                }
+            }
+        }
+
+        if (usbcat_domains.empty())
+            return std::make_pair(ret_b1, ret_b2);
+
+        ret_b1.push_back(0);
+        ret_b2.push_back(0);
+        for (size_t k = 0; k < usbcat_domains.size() - 1; k++)
+        {
+            ret_b1.push_back((usbcat_domains[k].e1 + usbcat_domains[k + 1].s1) / 2);
+            ret_b2.push_back((usbcat_domains[k].e2 + usbcat_domains[k + 1].s2) / 2);
+        }
+        ret_b1.push_back(xlen);
+        ret_b2.push_back(ylen);
+
+        return std::make_pair(ret_b1, ret_b2);
+    };
+
+    auto bounds_default = generate_bounds(3.0, 4.0, 4.0);
+    auto bounds_strict = generate_bounds(2.0, 3.0, 2.0);
+
+    std::vector<std::pair<std::vector<int>, std::vector<int>>> all_bounds;
+    all_bounds.push_back(bounds_default);
+    if (bounds_strict.first != bounds_default.first || bounds_strict.second != bounds_default.second)
+    {
+        all_bounds.push_back(bounds_strict);
+    }
+
+    for (size_t b_idx = 0; b_idx < all_bounds.size(); b_idx++)
+    {
+        std::vector<int> &bounds1 = all_bounds[b_idx].first;
+        std::vector<int> &bounds2 = all_bounds[b_idx].second;
+
+        // Skip if only one interval (block) is generated
+        if (bounds1.size() <= 2)
+            continue;
+
+        // =========================================================================
+        // Greedy Dynamic Hinge Budgeting based on dRMSD
+        // =========================================================================
+        int num_blocks = bounds1.size() - 1;
+
+        // 1. Define execution node for out-of-order processing
+        struct BlockMeta
+        {
+            int original_idx;
+            double drmsd;
+            int L1_sub, L2_sub;
+        };
+        std::vector<BlockMeta> block_queue;
+
+        // 2. Calculate proxy dRMSD for each block to evaluate internal strain energy
+        for (int k = 0; k < num_blocks; k++)
+        {
+            int x_s = bounds1[k], x_e = bounds1[k + 1];
+            int y_s = bounds2[k], y_e = bounds2[k + 1];
+            int L1_sub = x_e - x_s;
+            int L2_sub = y_e - y_s;
+            int min_L = std::min(L1_sub, L2_sub);
+
+            double block_drmsd = 0.0;
+            // Only calculate if the block is long enough
+            if (min_L >= 2 * fragLen)
+            {
+                double rms_sq = 0.0;
+                int count = 0;
+                for (int i = 0; i < min_L; i++)
+                {
+                    // DOUBLE OPTIMIZATION:
+                    // 1. Start from i + 2 to skip adjacent amino acids (peptide bond noise).
+                    // 2. Cap j at i + max_dist_window to SAFELY reuse precomputed disTable!
+                    //    This perfectly evaluates "local" strain energy and reduces time complexity to O(N).
+                    int j_end = std::min((int)min_L, i + max_dist_window);
+
+                    for (int j = i + 2; j < j_end; j++)
+                    {
+                        // Directly query the precomputed distance tables
+                        double d1 = disTable1[x_s + i][j - i];
+                        double d2 = disTable2[y_s + i][j - i];
+                        rms_sq += (d1 - d2) * (d1 - d2);
+                        count++;
+                    }
+                }
+                if (count > 0)
+                    block_drmsd = std::sqrt(rms_sq / count);
+            }
+            block_queue.push_back({k, block_drmsd, L1_sub, L2_sub});
+        }
+
+        // 3. Sort blocks by dRMSD descending (most twisted blocks get priority)
+        if (hinge_set)
+        {
+            std::sort(block_queue.begin(), block_queue.end(), [](const BlockMeta &a, const BlockMeta &b)
+                      { return a.drmsd > b.drmsd; });
+        }
+
+        // 4. Initialize global hinge pool
+        // N blocks intrinsically use N-1 cut points, remaining hinges = hinge_opt + 1 - N
+        int remaining_hinges = hinge_set ? std::max(0, hinge_opt + 1 - num_blocks) : 0;
+
+        // Structure to store out-of-order execution results
+        struct BlockResult
+        {
+            bool valid;
+            double t0[3];
+            double u0[3][3];
+            std::string seqM, seqxA, seqyA;
+            std::vector<std::vector<double>> tu_vec;
+            BlockResult() : valid(false) {}
+        };
+        std::vector<BlockResult> block_results(num_blocks);
+
+        // 5. Greedy execution: Allocate all available hinges to the current most twisted block
+        for (size_t q = 0; q < block_queue.size(); q++)
+        {
+            int k = block_queue[q].original_idx;
+            int L1_sub = block_queue[q].L1_sub;
+            int L2_sub = block_queue[q].L2_sub;
+            int x_s = bounds1[k], y_s = bounds2[k];
+
+            // Skip invalid or too short blocks
+            if (L1_sub < 3 || L2_sub < 3)
+                continue;
+
+            // CORE LOGIC: Pass all remaining budget to the current block
+            int local_hinge_opt = 0;
+            if (hinge_set)
+            {
+                if (remaining_hinges > 0 && std::min(L1_sub, L2_sub) >= 2 * fragLen)
+                {
+                    local_hinge_opt = remaining_hinges;
+                }
+            }
+            else
+            {
+                // If -hinge is not set, allocate 2 hinges per block by default
+                // This allows a maximum of (9+1)*(2+1)=30 aligned intervals
+                if (std::min(L1_sub, L2_sub) >= 2 * fragLen)
+                {
+                    local_hinge_opt = 2;
+                }
+            }
+
+            // Reuse variables from the original logic for sub-block allocation
+            double **xa_sub, **ya_sub;
+            NewArray(&xa_sub, L1_sub, 3);
+            NewArray(&ya_sub, L2_sub, 3);
+            char *seqx_sub = new char[L1_sub + 1];
+            char *secx_sub = new char[L1_sub + 1];
+            char *seqy_sub = new char[L2_sub + 1];
+            char *secy_sub = new char[L2_sub + 1];
+
+            for (int i = 0; i < L1_sub; i++)
+            {
+                xa_sub[i][0] = xa[x_s + i][0];
+                xa_sub[i][1] = xa[x_s + i][1];
+                xa_sub[i][2] = xa[x_s + i][2];
+                seqx_sub[i] = seqx[x_s + i];
+                secx_sub[i] = secx[x_s + i];
+            }
+            seqx_sub[L1_sub] = '\0';
+            secx_sub[L1_sub] = '\0';
+
+            for (int i = 0; i < L2_sub; i++)
+            {
+                ya_sub[i][0] = ya[y_s + i][0];
+                ya_sub[i][1] = ya[y_s + i][1];
+                ya_sub[i][2] = ya[y_s + i][2];
+                seqy_sub[i] = seqy[y_s + i];
+                secy_sub[i] = secy[y_s + i];
+            }
+            seqy_sub[L2_sub] = '\0';
+            secy_sub[L2_sub] = '\0';
+
+            bool force_fast_opt = (std::min(L1_sub, L2_sub) > 1500) ? true : fast_opt;
+            double TM_best_max = -1.0;
+
+            // Try both secondary structure configurations
+            for (int cur_ss_opt = 0; cur_ss_opt <= 1; cur_ss_opt++)
+            {
+                FlexAlignResult cur_res;
+                execute_flexalign_with_fallback(
+                    xa_sub, ya_sub, seqx_sub, seqy_sub, secx_sub, secy_sub,
+                    L1_sub, L2_sub, local_sequence, Lnorm_ass, d0_scale,
+                    i_opt, a_opt, u_opt, d_opt, force_fast_opt,
+                    mol_type, local_hinge_opt, cur_ss_opt, cur_res);
+
+                double cur_max_TM = (cur_res.TM1 > cur_res.TM2) ? cur_res.TM1 : cur_res.TM2;
+                if (cur_max_TM > TM_best_max)
+                {
+                    TM_best_max = cur_max_TM;
+                    for (int a = 0; a < 3; a++)
+                    {
+                        block_results[k].t0[a] = cur_res.t0[a];
+                        for (int b = 0; b < 3; b++)
+                            block_results[k].u0[a][b] = cur_res.u0[a][b];
+                    }
+                    block_results[k].seqM = cur_res.seqM;
+                    block_results[k].seqxA = cur_res.seqxA;
+                    block_results[k].seqyA = cur_res.seqyA;
+                    block_results[k].tu_vec = cur_res.tu_vec;
+                    block_results[k].valid = true;
+                }
+            }
+
+            // Deduct actually consumed hinges from the global budget
+            if (hinge_set && block_results[k].valid && !block_results[k].tu_vec.empty())
+            {
+                int consumed_hinges = block_results[k].tu_vec.size() - 1;
+                if (consumed_hinges > 0)
+                {
+                    remaining_hinges -= consumed_hinges;
+                    if (remaining_hinges < 0)
+                        remaining_hinges = 0; // Guard against negative budget
+                }
+            }
+
+            // Clean up sub-block memory
+            DeleteArray(&xa_sub, L1_sub);
+            DeleteArray(&ya_sub, L2_sub);
+            delete[] seqx_sub;
+            delete[] seqy_sub;
+            delete[] secx_sub;
+            delete[] secy_sub;
+        }
+
+        // 6. Chronological Stitching: Reassemble results in spatial sequence order
+        std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
+        std::vector<std::vector<double>> cur_tu_vec;
+        std::vector<int> cur_global_res_tu(xlen, -1);
+
+        for (int k = 0; k < num_blocks; k++)
+        {
+            int L1_sub = bounds1[k + 1] - bounds1[k];
+            int L2_sub = bounds2[k + 1] - bounds2[k];
+
+            if (!block_results[k].valid)
+            {
+                // Fill gaps if block was invalid or bypassed
+                for (int i = 0; i < L1_sub; i++)
+                {
+                    cur_global_seqxA += seqx[bounds1[k] + i];
+                    cur_global_seqyA += '-';
+                    cur_global_seqM += ' ';
+                }
+                for (int i = 0; i < L2_sub; i++)
+                {
+                    cur_global_seqxA += '-';
+                    cur_global_seqyA += seqy[bounds2[k] + i];
+                    cur_global_seqM += ' ';
+                }
+                continue;
+            }
+
+            BlockResult &res = block_results[k];
+            if (res.tu_vec.empty())
+            {
+                std::vector<double> tu_tmp(12);
+                t_u2tu(res.t0, res.u0, tu_tmp);
+                res.tu_vec.push_back(tu_tmp);
+            }
+
+            int base_tu_idx = cur_tu_vec.size();
+            for (size_t m = 0; m < res.tu_vec.size(); m++)
+                cur_tu_vec.push_back(res.tu_vec[m]);
+
+            int rx = bounds1[k];
+            int current_global_idx = base_tu_idx;
+
+            for (size_t i = 0; i < res.seqxA.length(); i++)
+            {
+                char c = res.seqM[i];
+                if (c != ' ' && c != '.' && c != ':')
+                {
+                    int local_hinge_idx = -1;
+                    if (c >= '0' && c <= '9')
+                        local_hinge_idx = c - '0';
+                    else if (c >= 'a' && c <= 'z')
+                        local_hinge_idx = c - 'a' + 10;
+                    else if (c >= 'A' && c <= 'Z')
+                        local_hinge_idx = c - 'A' + 36;
+
+                    if (local_hinge_idx >= 0 && local_hinge_idx < res.tu_vec.size())
+                    {
+                        current_global_idx = base_tu_idx + local_hinge_idx;
+                    }
+                }
+
+                if (res.seqxA[i] != '-')
+                {
+                    cur_global_res_tu[rx] = current_global_idx;
+                    rx++;
+                }
+
+                if (res.seqxA[i] != '-' && res.seqyA[i] != '-')
+                {
+                    if (c != ' ' && c != '.' && c != ':')
+                    {
+                        char global_c;
+                        if (current_global_idx < 10)
+                            global_c = '0' + current_global_idx;
+                        else if (current_global_idx < 36)
+                            global_c = 'a' + (current_global_idx - 10);
+                        else if (current_global_idx < 62)
+                            global_c = 'A' + (current_global_idx - 36);
+                        else
+                            global_c = '*';
+                        res.seqM[i] = global_c;
+                    }
+                    else
+                    {
+                        res.seqM[i] = c;
+                    }
+                }
+                else
+                {
+                    res.seqM[i] = ' ';
+                }
+            }
+
+            cur_global_seqM += res.seqM;
+            cur_global_seqxA += res.seqxA;
+            cur_global_seqyA += res.seqyA;
+        }
+
+        // Step 7: Recalculate global metrics correctly for current DP boundary
+        double dummy_D0_MIN, dummy_Lnorm, dummy_d0_search;
+        double cur_d0A, cur_d0B, cur_d0a, cur_d0u = 0.0;
+
+        parameter_set4final(ylen, dummy_D0_MIN, dummy_Lnorm, cur_d0A, dummy_d0_search, mol_type);
+        parameter_set4final(xlen, dummy_D0_MIN, dummy_Lnorm, cur_d0B, dummy_d0_search, mol_type);
+        parameter_set4final((xlen + ylen) * 0.5, dummy_D0_MIN, dummy_Lnorm, cur_d0a, dummy_d0_search, mol_type);
+
+        if (u_opt)
+        {
+            parameter_set4final(Lnorm_ass, dummy_D0_MIN, dummy_Lnorm, cur_d0u, dummy_d0_search, mol_type);
+        }
+
+        double cur_TM1 = 0.0, cur_TM2 = 0.0, cur_TM3 = 0.0, cur_TM4 = 0.0, cur_TM5 = 0.0;
+        double cur_rmsd0 = 0.0, cur_Liden = 0.0;
+        int cur_n_ali8 = 0, cur_n_ali = 0;
+        std::vector<double> cur_do_vec;
+
+        int i_res = 0, j_res = 0;
+        for (size_t r = 0; r < cur_global_seqxA.length(); r++)
+        {
+            bool x_valid = (cur_global_seqxA[r] != '-');
+            bool y_valid = (cur_global_seqyA[r] != '-');
+
+            if (x_valid && y_valid)
+            {
+                int matrix_idx = cur_global_res_tu[i_res];
+                if (matrix_idx >= 0 && matrix_idx < cur_tu_vec.size())
+                {
+                    double t_k[3], u_k[3][3];
+                    tu2t_u(cur_tu_vec[matrix_idx], t_k, u_k);
+
+                    double x_rot[3];
+                    transform(t_k, u_k, xa[i_res], x_rot);
+                    double dist2 = dist(x_rot, ya[j_res]);
+                    double d = std::sqrt(dist2);
+
+                    cur_TM2 += 1.0 / (1.0 + dist2 / (cur_d0B * cur_d0B));
+                    cur_TM1 += 1.0 / (1.0 + dist2 / (cur_d0A * cur_d0A));
+                    if (a_opt)
+                        cur_TM3 += 1.0 / (1.0 + dist2 / (cur_d0a * cur_d0a));
+                    if (u_opt)
+                        cur_TM4 += 1.0 / (1.0 + dist2 / (cur_d0u * cur_d0u));
+                    if (d_opt)
+                        cur_TM5 += 1.0 / (1.0 + dist2 / (d0_scale * d0_scale));
+
+                    cur_n_ali++;
+                    cur_do_vec.push_back(d);
+
+                    if (d <= d0_out)
+                    {
+                        cur_rmsd0 += dist2;
+                        cur_n_ali8++;
+                        if (seqx[i_res] == seqy[j_res])
+                            cur_Liden += 1.0;
+                    }
+                }
+                else
+                {
+                    cur_do_vec.push_back(-1);
+                }
+            }
+            else
+            {
+                cur_do_vec.push_back(-1);
+            }
+
+            if (x_valid)
+                i_res++;
+            if (y_valid)
+                j_res++;
+        }
+
+        cur_TM2 /= xlen;
+        cur_TM1 /= ylen;
+        if (a_opt)
+            cur_TM3 /= (xlen + ylen) * 0.5;
+        if (u_opt)
+            cur_TM4 /= Lnorm_ass;
+        if (d_opt)
+            cur_TM5 /= ylen;
+        if (cur_n_ali8 > 0)
+            cur_rmsd0 = std::sqrt(cur_rmsd0 / cur_n_ali8);
+        else
+            cur_rmsd0 = 0.0;
+
+        double cur_global_max_TM = (cur_TM1 > cur_TM2) ? cur_TM1 : cur_TM2;
+
+        if (cur_global_max_TM > best_global_max_TM)
+        {
+            best_global_max_TM = cur_global_max_TM;
+            best_tu_vec = cur_tu_vec;
+            best_TM1 = cur_TM1;
+            best_TM2 = cur_TM2;
+            best_TM3 = cur_TM3;
+            best_TM4 = cur_TM4;
+            best_TM5 = cur_TM5;
+            best_rmsd0 = cur_rmsd0;
+            best_Liden = cur_Liden;
+            best_TM_ali = cur_TM1;
+            best_rmsd_ali = cur_rmsd0;
+            best_L_ali = cur_n_ali;
+            best_n_ali = cur_n_ali;
+            best_n_ali8 = cur_n_ali8;
+            best_seqM = cur_global_seqM;
+            best_seqxA = cur_global_seqxA;
+            best_seqyA = cur_global_seqyA;
+            best_do_vec = cur_do_vec;
+            best_d0A = cur_d0A;
+            best_d0B = cur_d0B;
+            best_d0a = cur_d0a;
+            best_d0u = cur_d0u;
+
+            if (!best_tu_vec.empty())
+            {
+                tu2t_u(best_tu_vec[0], best_t0, best_u0);
+            }
+        }
+    }
+
+    // Safety check
+    if (best_global_max_TM < 0)
+        return 0;
+
+    // Output best values back to the reference parameters
+    TM1 = best_TM1;
+    TM2 = best_TM2;
+    TM3 = best_TM3;
+    TM4 = best_TM4;
+    TM5 = best_TM5;
+    rmsd0 = best_rmsd0;
+    Liden = best_Liden;
+    TM_ali = best_TM_ali;
+    rmsd_ali = best_rmsd_ali;
+    L_ali = best_L_ali;
+    n_ali = best_n_ali;
+    n_ali8 = best_n_ali8;
+    seqM = best_seqM;
+    seqxA = best_seqxA;
+    seqyA = best_seqyA;
+    do_vec = best_do_vec;
+    tu_vec = best_tu_vec;
+    d0A = best_d0A;
+    d0B = best_d0B;
+    d0a = best_d0a;
+    d0u = best_d0u;
+
+    for (int a = 0; a < 3; a++)
+    {
+        t0[a] = best_t0[a];
+        for (int b = 0; b < 3; b++)
+            u0[a][b] = best_u0[a][b];
+    }
+
+    return tu_vec.size();
+}
 #endif
