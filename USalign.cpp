@@ -98,7 +98,7 @@ void print_extra_help()
             "    -afp  Enable AFP-enhancement mechanism. Only functional with '-mm 7'.\n"
             "\n"
             " -TMpass  Early stopping threshold for AFP-enhancement mechanism.\n"
-            "          Only functional with '-mm 7'. default: 0.85\n"
+            "          Only functional with '-mm 7 -afp'. default: 0.85\n"
             "\n"
             "     -se  Do not perform superposition. Useful for extracting alignment from\n"
             "          superposed structure pairs\n"
