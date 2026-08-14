@@ -8,16 +8,17 @@ using namespace std;
 
 void print_version()
 {
-    cout << "\n"
-            " ********************************************************************\n"
-            " * US-align (Version 20260527)                                      *\n"
-            " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
-            " * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
-            " *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
-            " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
-            " * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
-            " ********************************************************************"
-         << endl;
+    cout << 
+"\n"
+" ********************************************************************\n"
+" * US-align (Version 20260813)                                      *\n"
+" * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
+" * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
+" *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
+" *            C Zhang, AM Pyle (2022) iScience.                     *\n"
+" * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
+" ********************************************************************"
+    << endl;
 }
 
 void print_extra_help()
@@ -805,12 +806,12 @@ int MMalign(const string &xname, const string &yname,
     vector<string> tmp_str_vec(chain2_num, "");
     double **TMave_mat;
     double **ut_mat; // rotation matrices for all-against-all alignment
-    int ui, uj, ut_idx;
-    NewArray(&TMave_mat, chain_num, chain_num);
-    NewArray(&ut_mat, chain1_num * chain2_num, 4 * 3);
-    vector<vector<string>> seqxA_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqM_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqyA_mat(chain1_num, tmp_str_vec);
+    int ui,uj,ut_idx;
+    NewArray(&TMave_mat,chain1_num,chain2_num);
+    NewArray(&ut_mat,chain1_num*chain2_num,4*3);
+    vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
 
     double maxTMmono = -1;
     int maxTMmono_i, maxTMmono_j;
@@ -823,8 +824,7 @@ int MMalign(const string &xname, const string &yname,
         xlen = xlen_vec[i];
         if (xlen < 3)
         {
-            for (j = 0; j < chain2_num; j++)
-                TMave_mat[i][j] = TMave_mat[j][i] = -1;
+            for (j=0;j<chain2_num;j++) TMave_mat[i][j]=-1;
             continue;
         }
         seqx = new char[xlen + 1];
@@ -845,19 +845,19 @@ int MMalign(const string &xname, const string &yname,
 
             if (mol_vec1[i] * mol_vec2[j] < 0) // no protein-RNA alignment
             {
-                TMave_mat[i][j] = TMave_mat[j][i] = -1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
             if (chainmap.size() && (!chainmap.count(i) || chainmap[i] != j))
             {
-                TMave_mat[i][j] = TMave_mat[j][i] = -1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
 
             ylen = ylen_vec[j];
             if (ylen < 3)
             {
-                TMave_mat[i][j] = TMave_mat[j][i] = -1;
+                TMave_mat[i][j]=-1;
                 continue;
             }
             seqy = new char[ylen + 1];
@@ -894,12 +894,10 @@ int MMalign(const string &xname, const string &yname,
                 seqyA_mat[i][j] = sequence[1];
                 if (total_aln > xlen + ylen - 3)
                 {
-                    for (ui = 0; ui < 3; ui++)
-                        for (uj = 0; uj < 3; uj++)
-                            ut_mat[ut_idx][ui * 3 + uj] = (ui == uj) ? 1 : 0;
-                    for (uj = 0; uj < 3; uj++)
-                        ut_mat[ut_idx][9 + uj] = 0;
-                    TMave_mat[i][j] = TMave_mat[j][i] = 0;
+                    for (ui=0;ui<3;ui++) for (uj=0;uj<3;uj++) 
+                        ut_mat[ut_idx][ui*3+uj]=(ui==uj)?1:0;
+                    for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=0;
+                    TMave_mat[i][j]=0;
                     seqM.clear();
                     seqxA.clear();
                     seqyA.clear();
@@ -953,15 +951,13 @@ int MMalign(const string &xname, const string &yname,
                              mol_vec1[i] + mol_vec2[j], TMcut, 0);
 
             /* store result */
-            for (ui = 0; ui < 3; ui++)
-                for (uj = 0; uj < 3; uj++)
-                    ut_mat[ut_idx][ui * 3 + uj] = u0[ui][uj];
-            for (uj = 0; uj < 3; uj++)
-                ut_mat[ut_idx][9 + uj] = t0[uj];
-            seqxA_mat[i][j] = seqxA;
-            seqyA_mat[i][j] = seqyA;
-            TMave_mat[i][j] = TMave_mat[j][i] = TM4 * Lnorm_tmp;
-            if (TMave_mat[i][j] > maxTMmono)
+            for (ui=0;ui<3;ui++)
+                for (uj=0;uj<3;uj++) ut_mat[ut_idx][ui*3+uj]=u0[ui][uj];
+            for (uj=0;uj<3;uj++) ut_mat[ut_idx][9+uj]=t0[uj];
+            seqxA_mat[i][j]=seqxA;
+            seqyA_mat[i][j]=seqyA;
+            TMave_mat[i][j]=TM4*Lnorm_tmp;
+            if (TMave_mat[i][j]>maxTMmono)
             {
                 maxTMmono = TMave_mat[i][j];
                 maxTMmono_i = i;
@@ -1203,13 +1199,13 @@ int MMalign(const string &xname, const string &yname,
                       a_opt, d_opt, fast_opt, full_opt, mirror_opt, resi_vec1, resi_vec2);
 
     /* clean up everything */
-    delete[] assign1_list;
-    delete[] assign2_list;
-    DeleteArray(&TMave_mat, chain_num);
-    DeleteArray(&ut_mat, chain1_num * chain2_num);
-    vector<vector<string>>().swap(seqxA_mat);
-    vector<vector<string>>().swap(seqM_mat);
-    vector<vector<string>>().swap(seqyA_mat);
+    delete [] assign1_list;
+    delete [] assign2_list;
+    DeleteArray(&TMave_mat,chain1_num);
+    DeleteArray(&ut_mat,   chain1_num*chain2_num);
+    vector<vector<string> >().swap(seqxA_mat);
+    vector<vector<string> >().swap(seqM_mat);
+    vector<vector<string> >().swap(seqyA_mat);
     vector<string>().swap(tmp_str_vec);
 
     delete[] assign1_init;

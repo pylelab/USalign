@@ -5,8 +5,6 @@
 .*.sw*
 
 # binary executables
-addChainID
-biounitasym
 cif2pdb
 TMalign
 TMalignc
@@ -23,6 +21,8 @@ MMalign
 TMscore
 pdbAtomName
 ca2rr
+biounitasym
+addChainID
 *.exe
 *.zip
 
