@@ -54,7 +54,7 @@ void aln2invmap(const string &seqxA, const string &seqyA, int *invmap)
 
 int flexalign_main(double **xa, double **ya,
                    const char *seqx, const char *seqy, const char *secx, const char *secy,
-                   double t0[3], double u0[3][3], vector<vector<double>> &tu_vec,
+                   double t0[3], double u0[3][3], vector<vector<double> > &tu_vec,
                    double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
                    double &d0_0, double &TM_0,
                    double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
@@ -663,7 +663,7 @@ int flexalign_main(double **xa, double **ya,
 
 /* extract rotation matrix based on TMscore8 */
 void output_flexalign_rotation_matrix(const char *fname_matrix,
-                                      const vector<vector<double>> &tu_vec, double t[3], double u[3][3])
+                                      const vector<vector<double> > &tu_vec, double t[3], double u[3][3])
 {
     stringstream ss;
     char dest[1000];
@@ -704,7 +704,7 @@ void output_flexalign_rotation_matrix(const char *fname_matrix,
 }
 
 void output_flexalign_rasmol(const string xname, const string yname,
-                             const string fname_super, const vector<vector<double>> &tu_vec,
+                             const string fname_super, const vector<vector<double> > &tu_vec,
                              double t[3], double u[3][3], const int ter_opt,
                              const int mm_opt, const int split_opt, const int mirror_opt,
                              const char *seqM, const char *seqxA, const char *seqyA,
@@ -1516,7 +1516,7 @@ void output_flexalign_rasmol(const string xname, const string yname,
 }
 
 void output_flexalign_pymol(const string xname, const string yname,
-                            const string fname_super, const vector<vector<double>> &tu_vec,
+                            const string fname_super, const vector<vector<double> > &tu_vec,
                             double t[3], double u[3][3], const int ter_opt,
                             const int mm_opt, const int split_opt, const int mirror_opt,
                             const char *seqM, const char *seqxA, const char *seqyA,
@@ -1961,7 +1961,7 @@ void output_flexalign_pymol(const string xname, const string yname,
 void output_flexalign_results(const string xname, const string yname,
                               const string chainID1, const string chainID2,
                               const int xlen, const int ylen, double t[3], double u[3][3],
-                              const vector<vector<double>> &tu_vec, const double TM1, const double TM2,
+                              const vector<vector<double> > &tu_vec, const double TM1, const double TM2,
                               const double TM3, const double TM4, const double TM5,
                               const double rmsd, const double d0_out, const char *seqM,
                               const char *seqxA, const char *seqyA, const double Liden,
@@ -2059,7 +2059,7 @@ struct FlexAlignResult
 {
     double t0[3];
     double u0[3][3];
-    vector<vector<double>> tu_vec;
+    vector<vector<double> > tu_vec;
     double TM1, TM2, TM3, TM4, TM5;
     double d0_0, TM_0, d0A, d0B, d0u, d0a, d0_out;
     string seqM, seqxA, seqyA;
@@ -2144,7 +2144,7 @@ struct USBCAT_AFP
 
 int flexalign_usbcat_main(double **xa, double **ya,
                           const char *seqx, const char *seqy, const char *secx, const char *secy,
-                          double t0[3], double u0[3][3], std::vector<std::vector<double>> &tu_vec,
+                          double t0[3], double u0[3][3], std::vector<std::vector<double> > &tu_vec,
                           double &TM1, double &TM2, double &TM3, double &TM4, double &TM5,
                           double &d0_0, double &TM_0,
                           double &d0A, double &d0B, double &d0u, double &d0a, double &d0_out,
@@ -2163,7 +2163,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
     // Run full sequence without generate_bounds slicing!
     // ==========================================
     double best_global_max_TM = -1.0;
-    std::vector<std::vector<double>> best_tu_vec;
+    std::vector<std::vector<double> > best_tu_vec;
     double best_t0[3], best_u0[3][3];
     double best_TM1 = 0.0, best_TM2 = 0.0, best_TM3 = 0.0, best_TM4 = 0.0, best_TM5 = 0.0;
     double best_rmsd0 = 0.0, best_Liden = 0.0, best_TM_ali = 0.0, best_rmsd_ali = 0.0;
@@ -2268,8 +2268,8 @@ int flexalign_usbcat_main(double **xa, double **ya,
 
     // OPTIMIZATION 1: Precompute local intra-protein distance matrices
     int max_dist_window = max_gap + 2 * fragLen + 1;
-    std::vector<std::vector<double>> disTable1(xlen, std::vector<double>(max_dist_window, 0.0));
-    std::vector<std::vector<double>> disTable2(ylen, std::vector<double>(max_dist_window, 0.0));
+    std::vector<std::vector<double> > disTable1(xlen, std::vector<double>(max_dist_window, 0.0));
+    std::vector<std::vector<double> > disTable2(ylen, std::vector<double>(max_dist_window, 0.0));
 
     for (int i = 0; i < xlen; i++)
     {
@@ -2283,7 +2283,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
     }
 
     // Wrapper for generating bounds
-    auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int>>
+    auto generate_bounds = [&](double cur_rmsdCut, double cur_badRmsd, double cur_local_badRmsd) -> std::pair<std::vector<int>, std::vector<int> >
     {
         // Step 1: Extract initial AFPs in batches
         std::vector<USBCAT_AFP> initial_afps;
@@ -2341,7 +2341,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
 
         // Step 2: Merge diagonal AFPs
         int max_diagonal_idx = xlen + ylen + 1;
-        std::vector<std::vector<USBCAT_AFP>> diagonals(max_diagonal_idx);
+        std::vector<std::vector<USBCAT_AFP> > diagonals(max_diagonal_idx);
         for (size_t k = 0; k < initial_afps.size(); k++)
         {
             diagonals[initial_afps[k].i - initial_afps[k].j + ylen].push_back(initial_afps[k]);
@@ -2420,7 +2420,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
         std::vector<int> afp_aft_index(xlen * ylen, -1);
         std::vector<int> afp_bef_index(xlen * ylen, -1);
 
-        std::vector<std::vector<std::pair<int, int>>> i_to_j(xlen);
+        std::vector<std::vector<std::pair<int, int> > > i_to_j(xlen);
         for (int m = 0; m < n_afps; m++)
         {
             i_to_j[merged_afps[m].i].push_back(std::make_pair(merged_afps[m].j, m));
@@ -2834,7 +2834,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
     auto bounds_default = generate_bounds(3.0, 4.0, 4.0);
     auto bounds_strict = generate_bounds(2.0, 3.0, 2.0);
 
-    std::vector<std::pair<std::vector<int>, std::vector<int>>> all_bounds;
+    std::vector<std::pair<std::vector<int>, std::vector<int> > > all_bounds;
     all_bounds.push_back(bounds_default);
     if (bounds_strict.first != bounds_default.first || bounds_strict.second != bounds_default.second)
     {
@@ -2920,7 +2920,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
             double t0[3];
             double u0[3][3];
             std::string seqM, seqxA, seqyA;
-            std::vector<std::vector<double>> tu_vec;
+            std::vector<std::vector<double> > tu_vec;
             BlockResult() : valid(false) {}
         };
         std::vector<BlockResult> block_results(num_blocks);
@@ -3041,7 +3041,7 @@ int flexalign_usbcat_main(double **xa, double **ya,
 
         // 6. Chronological Stitching: Reassemble results in spatial sequence order
         std::string cur_global_seqM = "", cur_global_seqxA = "", cur_global_seqyA = "";
-        std::vector<std::vector<double>> cur_tu_vec;
+        std::vector<std::vector<double> > cur_tu_vec;
         std::vector<int> cur_global_res_tu(xlen, -1);
 
         for (int k = 0; k < num_blocks; k++)

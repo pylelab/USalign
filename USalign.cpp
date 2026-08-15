@@ -270,8 +270,8 @@ int TMalign(string &xname, string &yname, const string &fname_super,
             const bool se_opt, const bool do_opt)
 {
     /* declare previously global variables */
-    vector<vector<string>> PDB_lines1; // text of chain1
-    vector<vector<string>> PDB_lines2; // text of chain2
+    vector<vector<string> >PDB_lines1; // text of chain1
+    vector<vector<string> >PDB_lines2; // text of chain2
     vector<int> mol_vec1;              // molecule type of chain1, RNA if >0
     vector<int> mol_vec2;              // molecule type of chain2, RNA if >0
     vector<string> chainID_list1;      // list of chainID1
@@ -575,12 +575,12 @@ int MMalign(const string &xname, const string &yname,
             const int byresi_opt, const string &chainmapfile, const bool se_opt)
 {
     /* declare previously global variables */
-    vector<vector<vector<double>>> xa_vec; // structure of complex1
-    vector<vector<vector<double>>> ya_vec; // structure of complex2
-    vector<vector<char>> seqx_vec;         // sequence of complex1
-    vector<vector<char>> seqy_vec;         // sequence of complex2
-    vector<vector<char>> secx_vec;         // secondary structure of complex1
-    vector<vector<char>> secy_vec;         // secondary structure of complex2
+    vector<vector<vector<double> > > xa_vec;// structure of complex1
+    vector<vector<vector<double> > > ya_vec;// structure of complex2
+    vector<vector<char> > seqx_vec;         // sequence of complex1
+    vector<vector<char> > seqy_vec;         // sequence of complex2
+    vector<vector<char> > secx_vec;         // secondary structure of complex1
+    vector<vector<char> > secy_vec;         // secondary structure of complex2
     vector<int> mol_vec1;                  // molecule type of complex1, RNA if >0
     vector<int> mol_vec2;                  // molecule type of complex2, RNA if >0
     vector<string> chainID_list1;          // list of chainID1
@@ -785,12 +785,12 @@ int MMalign(const string &xname, const string &yname,
         DeleteArray(&ya, ylen);
         do_vec.clear();
 
-        vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-        vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-        vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-        vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-        vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-        vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+        vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+        vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+        vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+        vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+        vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+        vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
         mol_vec1.clear();                              // molecule type of complex1, RNA if >0
         mol_vec2.clear();                              // molecule type of complex2, RNA if >0
         chainID_list1.clear();                         // list of chainID1
@@ -1060,8 +1060,8 @@ int MMalign(const string &xname, const string &yname,
     assign2_init = new int[chain2_num];
     double **TMave_init;
     NewArray(&TMave_init, chain1_num, chain2_num);
-    vector<vector<string>> seqxA_init(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqyA_init(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqxA_init(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqyA_init(chain1_num, tmp_str_vec);
     vector<string> sequence_init;
     copy_chain_assign_data(chain1_num, chain2_num, sequence_init,
                            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
@@ -1212,15 +1212,15 @@ int MMalign(const string &xname, const string &yname,
     delete[] assign1_init;
     delete[] assign2_init;
     DeleteArray(&TMave_init, chain1_num);
-    vector<vector<string>>().swap(seqxA_init);
-    vector<vector<string>>().swap(seqyA_init);
+    vector<vector<string> >().swap(seqxA_init);
+    vector<vector<string> >().swap(seqyA_init);
 
-    vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-    vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-    vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-    vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-    vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-    vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+    vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+    vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+    vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+    vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+    vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+    vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
     mol_vec1.clear();                              // molecule type of complex1, RNA if >0
     mol_vec2.clear();                              // molecule type of complex2, RNA if >0
     vector<string>().swap(chainID_list1);          // list of chainID1
@@ -1249,12 +1249,12 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
            const bool do_opt)
 {
     /* declare previously global variables */
-    vector<vector<vector<double>>> xa_vec; // structure of complex1
-    vector<vector<vector<double>>> ya_vec; // structure of complex2
-    vector<vector<char>> seqx_vec;         // sequence of complex1
-    vector<vector<char>> seqy_vec;         // sequence of complex2
-    vector<vector<char>> secx_vec;         // secondary structure of complex1
-    vector<vector<char>> secy_vec;         // secondary structure of complex2
+    vector<vector<vector<double> > > xa_vec; // structure of complex1
+    vector<vector<vector<double> > > ya_vec; // structure of complex2
+    vector<vector<char> > seqx_vec;         // sequence of complex1
+    vector<vector<char> > seqy_vec;         // sequence of complex2
+    vector<vector<char> > secx_vec;         // secondary structure of complex1
+    vector<vector<char> > secy_vec;         // secondary structure of complex2
     vector<int> mol_vec1;                  // molecule type of complex1, RNA if >0
     vector<int> mol_vec2;                  // molecule type of complex2, RNA if >0
     vector<string> chainID_list1;          // list of chainID1
@@ -1362,12 +1362,12 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         DeleteArray(&ya, ylen);
         do_vec.clear();
 
-        vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-        vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-        vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-        vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-        vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-        vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+        vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+        vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+        vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+        vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+        vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+        vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
         mol_vec1.clear();                              // molecule type of complex1, RNA if >0
         mol_vec2.clear();                              // molecule type of complex2, RNA if >0
         chainID_list1.clear();                         // list of chainID1
@@ -1383,14 +1383,14 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     vector<string> tmp_str_vec(chain2_num, "");
     double **TMave_mat;
     NewArray(&TMave_mat, chain1_num, chain2_num);
-    vector<vector<string>> seqxA_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqM_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqyA_mat(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqxA_mat(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqM_mat(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqyA_mat(chain1_num, tmp_str_vec);
 
     /* trimComplex */
-    vector<vector<vector<double>>> ya_trim_vec; // structure of complex2
-    vector<vector<char>> seqy_trim_vec;         // sequence of complex2
-    vector<vector<char>> secy_trim_vec;         // secondary structure of complex2
+    vector<vector<vector<double> > > ya_trim_vec; // structure of complex2
+    vector<vector<char> > seqy_trim_vec;         // sequence of complex2
+    vector<vector<char> > secy_trim_vec;         // secondary structure of complex2
     vector<int> ylen_trim_vec;                  // length of complex2
     int Lchain_aa_max1 = 0;
     int Lchain_na_max1 = 0;
@@ -1550,9 +1550,9 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
         delete[] secx;
         DeleteArray(&xa, xlen);
     }
-    vector<vector<vector<double>>>().swap(ya_trim_vec);
-    vector<vector<char>>().swap(seqy_trim_vec);
-    vector<vector<char>>().swap(secy_trim_vec);
+    vector<vector<vector<double> > >().swap(ya_trim_vec);
+    vector<vector<char> >().swap(seqy_trim_vec);
+    vector<vector<char> >().swap(secy_trim_vec);
     vector<int>().swap(ylen_trim_vec);
 
     /* calculate initial chain-chain assignment */
@@ -1709,17 +1709,17 @@ int MMdock(const string &xname, const string &yname, const string &fname_super,
     delete[] assign2_list;
     DeleteArray(&TMave_mat, chain1_num);
     DeleteArray(&ut_mat, chain1_num);
-    vector<vector<string>>().swap(seqxA_mat);
-    vector<vector<string>>().swap(seqM_mat);
-    vector<vector<string>>().swap(seqyA_mat);
+    vector<vector<string> >().swap(seqxA_mat);
+    vector<vector<string> >().swap(seqM_mat);
+    vector<vector<string> >().swap(seqyA_mat);
     vector<string>().swap(tmp_str_vec);
 
-    vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-    vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-    vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-    vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-    vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-    vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+    vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+    vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+    vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+    vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+    vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+    vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
     mol_vec1.clear();                              // molecule type of complex1, RNA if >0
     mol_vec2.clear();                              // molecule type of complex2, RNA if >0
     vector<string>().swap(chainID_list1);          // list of chainID1
@@ -1742,10 +1742,10 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
              const vector<string> &model2parse, const bool se_opt)
 {
     /* declare previously global variables */
-    vector<vector<vector<double>>> a_vec;  // atomic structure
-    vector<vector<vector<double>>> ua_vec; // unchanged atomic structure
-    vector<vector<char>> seq_vec;          // sequence of complex
-    vector<vector<char>> sec_vec;          // secondary structure of complex
+    vector<vector<vector<double> > > a_vec;  // atomic structure
+    vector<vector<vector<double> > > ua_vec; // unchanged atomic structure
+    vector<vector<char> > seq_vec;          // sequence of complex
+    vector<vector<char> > sec_vec;          // secondary structure of complex
     vector<int> mol_vec;                   // molecule type of complex1, RNA if >0
     vector<string> chainID_list;           // list of chainID
     vector<int> len_vec;                   // length of complex
@@ -1789,8 +1789,8 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     double **TMave_mat;
     NewArray(&TMave_mat, chain_num, chain_num);
     vector<string> tmp_str_vec(chain_num, "");
-    vector<vector<string>> seqxA_mat(chain_num, tmp_str_vec);
-    vector<vector<string>> seqyA_mat(chain_num, tmp_str_vec);
+    vector<vector<string> > seqxA_mat(chain_num, tmp_str_vec);
+    vector<vector<string> > seqyA_mat(chain_num, tmp_str_vec);
     for (i = 0; i < chain_num; i++)
         for (j = 0; j < chain_num; j++)
             TMave_mat[i][j] = 0;
@@ -1938,9 +1938,9 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     vector<double> TM_vec(chain_num, 0);
     vector<double> d0_vec(chain_num, 0);
     vector<double> seqID_vec(chain_num, 0);
-    vector<vector<double>> TM_mat(chain_num, TM_vec);
-    vector<vector<double>> d0_mat(chain_num, d0_vec);
-    vector<vector<double>> seqID_mat(chain_num, seqID_vec);
+    vector<vector<double> > TM_mat(chain_num, TM_vec);
+    vector<vector<double> > d0_mat(chain_num, d0_vec);
+    vector<vector<double> > seqID_mat(chain_num, seqID_vec);
     for (iter = 0; iter < max_iter; iter++)
     {
         /* select representative */
@@ -1970,7 +1970,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
         /* superpose */
         yname = chain_list[repr_idx].substr(dir_opt.size()) + chainID_list[repr_idx];
         double **xt;
-        vector<pair<double, int>> TM_pair_vec; // TM vs chain
+        vector<pair<double, int> > TM_pair_vec; // TM vs chain
 
         for (i = 0; i < chain_num; i++)
             assign_list[i] = -1;
@@ -2259,7 +2259,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             do_vec.clear();
         }
         vector<string>().swap(msa_ext);
-        vector<pair<double, int>>().swap(TM_pair_vec);
+        vector<pair<double, int> >().swap(TM_pair_vec);
         for (i = 0; i < chain_num; i++)
         {
             tm_idx = assign_list[i];
@@ -2513,7 +2513,7 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
             DeleteArray(&xa, xlen);
             DeleteArray(&ya, xlen);
         }
-        vector<vector<vector<double>>>().swap(ua_vec);
+        vector<vector<vector<double> > >().swap(ua_vec);
 
         if (m_opt)
         {
@@ -2534,24 +2534,24 @@ int mTMalign(string &xname, string &yname, const string &fname_super,
     /* clean up */
     vector<string>().swap(msa);
     vector<string>().swap(tmp_str_vec);
-    vector<vector<string>>().swap(seqxA_mat);
-    vector<vector<string>>().swap(seqyA_mat);
+    vector<vector<string> >().swap(seqxA_mat);
+    vector<vector<string> >().swap(seqyA_mat);
     vector<string>().swap(xname_vec);
     vector<string>().swap(yname_vec);
     delete[] TMave_list;
     DeleteArray(&TMave_mat, chain_num);
-    vector<vector<vector<double>>>().swap(a_vec); // structure of complex
-    vector<vector<char>>().swap(seq_vec);         // sequence of complex
-    vector<vector<char>>().swap(sec_vec);         // secondary structure of complex
+    vector<vector<vector<double> > >().swap(a_vec); // structure of complex
+    vector<vector<char> >().swap(seq_vec);         // sequence of complex
+    vector<vector<char> >().swap(sec_vec);         // secondary structure of complex
     vector<int>().swap(mol_vec);                  // molecule type of complex1, RNA if >0
     vector<string>().swap(chainID_list);          // list of chainID
     vector<int>().swap(len_vec);                  // length of complex
     vector<double>().swap(TM_vec);
     vector<double>().swap(d0_vec);
     vector<double>().swap(seqID_vec);
-    vector<vector<double>>().swap(TM_mat);
-    vector<vector<double>>().swap(d0_mat);
-    vector<vector<double>>().swap(seqID_mat);
+    vector<vector<double> >().swap(TM_mat);
+    vector<vector<double> >().swap(d0_mat);
+    vector<vector<double> >().swap(seqID_mat);
     return 1;
 }
 
@@ -2573,8 +2573,8 @@ int SOIalign(string &xname, string &yname, const string &fname_super,
              const int closeK_opt, const int mm_opt)
 {
     /* declare previously global variables */
-    vector<vector<string>> PDB_lines1; // text of chain1
-    vector<vector<string>> PDB_lines2; // text of chain2
+    vector<vector<string> > PDB_lines1; // text of chain1
+    vector<vector<string> > PDB_lines2; // text of chain2
     vector<int> mol_vec1;              // molecule type of chain1, RNA if >0
     vector<int> mol_vec2;              // molecule type of chain2, RNA if >0
     vector<string> chainID_list1;      // list of chainID1
@@ -2873,8 +2873,8 @@ int flexalign_unified(string &xname, string &yname, const string &fname_super,
                       const vector<string> &chain2_list, const int hinge_opt, const int ss_opt,
                       FlexAlignMode mode = FLEX_STANDARD, bool hinge_set = false, double TMpass = 0.85)
 {
-    vector<vector<string>> PDB_lines1;
-    vector<vector<string>> PDB_lines2;
+    vector<vector<string> > PDB_lines1;
+    vector<vector<string> > PDB_lines2;
     vector<int> mol_vec1;
     vector<int> mol_vec2;
     vector<string> chainID_list1;
@@ -3154,7 +3154,7 @@ int main(int argc, char *argv[])
     vector<string> chain2parse2;
     vector<string> model2parse1;
     vector<string> model2parse2;
-    vector<pair<string, string>> chain_pair_list; // only when -dirpair is set
+    vector<pair<string, string> > chain_pair_list; // only when -dirpair is set
 
     for (int i = 1; i < argc; i++)
     {
@@ -3834,7 +3834,7 @@ int main(int argc, char *argv[])
     vector<string>().swap(model2parse1);
     vector<string>().swap(model2parse2);
     vector<string>().swap(sequence);
-    vector<pair<string, string>>().swap(chain_pair_list);
+    vector<pair<string, string> >().swap(chain_pair_list);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1) / CLOCKS_PER_SEC;

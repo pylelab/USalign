@@ -828,7 +828,7 @@ bool overlap(const int a1, const int b1, const int c1, const int d1,
 }
 
 /* find base pairing stacks in RNA*/
-void sec_str(int len, char *seq, const vector<vector<bool>> &bp,
+void sec_str(int len, char *seq, const vector<vector<bool> > &bp,
              int a, int b, int &c, int &d)
 {
     int i;
@@ -882,7 +882,7 @@ void make_sec(char *seq, double **x, int len, char *sec, const string atom_opt)
 
     float dis;
     vector<bool> bp_tmp(len, false);
-    vector<vector<bool>> bp(len, bp_tmp);
+    vector<vector<bool> > bp(len, bp_tmp);
     bp_tmp.clear();
     for (i = 0; i < len; i++)
     {
