@@ -1,7 +1,6 @@
 /* command line argument parsing and document of US-align main program */
 
-#include "MMalign.h"
-#include "SOIalign.h"
+#include "se.h"
 #include "flexalign.h"
 
 using namespace std;

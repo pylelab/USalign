@@ -15,7 +15,7 @@ USalign: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h 
 USalign.exe: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${MINGW} ${CFLAGS} USalign.cpp -o $@ ${LDFLAGS}
 
-USalignFlex: USalignFlex.cpp
+USalignFlex: USalignFlex.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
 USalignFlex.exe: USalignFlex.cpp
