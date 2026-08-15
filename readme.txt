@@ -95,7 +95,7 @@
    2026/05/27: Allow both -mm 1 and -dir/-dir1/-dir2
    2026/08/13: Fix bug in -mm 1 where chain level alignment between chain i
                and j from complex A and B incorrectly overwrites alignment
-	       between chain j and i from complex A and B
+               between chain j and i from complex A and B
    2026/08/14: Implement flexible structure alignment by -mm 7
 ===============================================================================
 
