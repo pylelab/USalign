@@ -97,6 +97,7 @@
                and j from complex A and B incorrectly overwrites alignment
                between chain j and i from complex A and B
    2026/08/14: Implement flexible structure alignment by -mm 7
+   2026/08/19: Print version for -mm 1 when aligning monomers
 ===============================================================================
 
 =========================

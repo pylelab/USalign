@@ -2,7 +2,7 @@ CC=g++
 MINGW=x86_64-w64-mingw32-g++ -static
 CFLAGS=-O3 -ffast-math
 LDFLAGS=#-static# -lm
-PROGRAM=qTMclust USalign USalignFlex TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta biounitasym pdb2ss NWalign HwRMSD cif2pdb pdbAtomName addChainID
+PROGRAM=qTMclust USalign USFlexalign TMalign TMscore MMalign se pdb2xyz xyz_sfetch pdb2fasta biounitasym pdb2ss NWalign HwRMSD cif2pdb pdbAtomName addChainID
 
 all: ${PROGRAM}
 
@@ -15,10 +15,10 @@ USalign: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h 
 USalign.exe: USalign.cpp SOIalign.h MMalign.h param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${MINGW} ${CFLAGS} USalign.cpp -o $@ ${LDFLAGS}
 
-USalignFlex: USalignFlex.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
+USFlexalign: USFlexalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${CC} ${CFLAGS} $@.cpp -o $@ ${LDFLAGS}
 
-USalignFlex.exe: USalignFlex.cpp
+USFlexalign.exe: USFlexalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h se.h NWalign.h BLOSUM.h flexalign.h
 	${MINGW} ${CFLAGS} USalignFlex.cpp -o $@ ${LDFLAGS}
 
 TMalign: TMalign.cpp param_set.h basic_fun.h Kabsch.h NW.h TMalign.h pstream.h NWalign.h BLOSUM.h

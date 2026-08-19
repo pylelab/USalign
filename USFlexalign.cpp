@@ -10,7 +10,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-alignFlex (Version 20260815)                                  *\n"
+" * US-Flexalign (Version 20260819)                                  *\n"
 " * Flexible Structure Alignment of Proteins and Nucleic Acids       *\n"
 " * Reference: Y Zhu, S Yan, Y Zhang, C Zhang (2026)                 *\n"
 " * Please email comments and suggestions to cx.zhang2@siat.ac.cn    *\n"

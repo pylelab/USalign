@@ -29,4 +29,6 @@ addChainID
 .idea
 .gitignore
 cmake-build-debug
-USalignFlex
+USFlexalign
+USalign.exe
+USFlexalign.exe

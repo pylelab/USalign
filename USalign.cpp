@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20260814)                                      *\n"
+" * US-align (Version 20260819)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
 " *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
@@ -762,6 +762,8 @@ int MMalign(const string &xname, const string &yname,
                          mol_vec1[0] + mol_vec2[0], TMcut, 0);
 
         /* print result */
+        if (outfmt_opt == 0)
+            print_version();
         output_results(
             xname.substr(dir1_opt.size()),
             yname.substr(dir2_opt.size()),
