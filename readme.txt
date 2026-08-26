@@ -98,6 +98,7 @@
                between chain j and i from complex A and B
    2026/08/14: Implement flexible structure alignment by -mm 7
    2026/08/19: Print version for -mm 1 when aligning monomers
+   2026/08/26: color different regions by different colors in -mm 7 -o
 ===============================================================================
 
 =========================

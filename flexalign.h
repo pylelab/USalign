@@ -1792,33 +1792,41 @@ void output_flexalign_pymol(const string xname, const string yname,
     {
         if (split_opt == 2 && ter_opt >= 1) // align one chain from model 1
         {
-            chain1_sele = " and c. " + chainID1.substr(1);
-            chain2_sele = " and c. " + chainID2.substr(1);
+            if (chainID1.substr(1)!="_")
+                chain1_sele = " and c. " + chainID1.substr(1);
+            if (chainID2.substr(1)!="_")
+                chain2_sele = " and c. " + chainID2.substr(1);
         }
         else if (split_opt == 2 && ter_opt == 0) // align one chain from each model
         {
             for (i = 1; i < chainID1.size(); i++)
                 if (chainID1[i] == ',')
                     break;
-            chain1_sele = " and c. " + chainID1.substr(i + 1);
+            if (chainID1.substr(i+1)!="_")
+                chain1_sele = " and c. " + chainID1.substr(i + 1);
             for (i = 1; i < chainID2.size(); i++)
                 if (chainID2[i] == ',')
                     break;
-            chain2_sele = " and c. " + chainID2.substr(i + 1);
+            if (chainID2.substr(i+1)!="_")
+                chain2_sele = " and c. " + chainID2.substr(i + 1);
         }
     }
 
-    /* extract aligned region */
+    /* extract aligned region and group by hinge for PyMOL visualization */
     int i1 = -1;
     int i2 = -1;
-    string resi1_sele;
-    string resi2_sele;
-    string resi1_bond;
-    string resi2_bond;
-    string prev_resi1;
-    string prev_resi2;
+    int num_hinges = tu_vec.size(); // Total number of rigid bodies (hinges)
+
+    // Arrays to store selections and bonds separately for each hinge
+    vector<string> resi1_sele(num_hinges, "");
+    vector<string> resi2_sele(num_hinges, "");
+    vector<string> resi1_bond(num_hinges, "");
+    vector<string> resi2_bond(num_hinges, "");
+    vector<string> prev_resi1(num_hinges, "");
+    vector<string> prev_resi2(num_hinges, "");
     string curr_resi1;
     string curr_resi2;
+
     if (mm_opt)
     {
         ;
@@ -1829,34 +1837,49 @@ void output_flexalign_pymol(const string xname, const string yname,
         {
             i1 += (seqxA[i] != '-' && seqxA[i] != '*');
             i2 += (seqyA[i] != '-');
-            if (seqM[i] == ' ' || seqxA[i] == '*')
-                continue;
+            if (seqM[i] == ' ' || seqxA[i] == '*') continue;
+
             curr_resi1 = resi_vec1[i1].substr(0, 4);
             curr_resi2 = resi_vec2[i2].substr(0, 4);
-            if (resi1_sele.size() == 0)
-                resi1_sele = "i. " + curr_resi1;
+
+            // Extract hinge index from the alignment mapping (seqM)
+            char hinge_char = seqM[i];
+            int hinge_idx = 0;
+            if (hinge_char >= '0' && hinge_char <= '9') hinge_idx = hinge_char - '0';
+            else if (hinge_char >= 'a' && hinge_char <= 'z') hinge_idx = hinge_char - 'a' + 10;
+            else if (hinge_char >= 'A' && hinge_char <= 'Z') hinge_idx = hinge_char - 'A' + 36;
+
+            // Safety check to prevent index out of bounds
+            if (hinge_idx >= num_hinges) hinge_idx = num_hinges - 1;
+
+            if (resi1_sele[hinge_idx].size() == 0)
+                resi1_sele[hinge_idx] = "i. " + curr_resi1;
             else
             {
-                resi1_sele += " or i. " + curr_resi1;
-                resi1_bond += "bond structure1 and i. " + prev_resi1 +
+                resi1_sele[hinge_idx] += " or i. " + curr_resi1;
+                resi1_bond[hinge_idx] += "bond structure1 and i. " + prev_resi1[hinge_idx] +
                               ", i. " + curr_resi1 + "\n";
             }
-            if (resi2_sele.size() == 0)
-                resi2_sele = "i. " + curr_resi2;
+
+            if (resi2_sele[hinge_idx].size() == 0)
+                resi2_sele[hinge_idx] = "i. " + curr_resi2;
             else
             {
-                resi2_sele += " or i. " + curr_resi2;
-                resi2_bond += "bond structure2 and i. " + prev_resi2 +
+                resi2_sele[hinge_idx] += " or i. " + curr_resi2;
+                resi2_bond[hinge_idx] += "bond structure2 and i. " + prev_resi2[hinge_idx] +
                               ", i. " + curr_resi2 + "\n";
             }
-            prev_resi1 = curr_resi1;
-            prev_resi2 = curr_resi2;
-            // if (seqM[i]!=':') continue;
+
+            prev_resi1[hinge_idx] = curr_resi1;
+            prev_resi2[hinge_idx] = curr_resi2;
         }
-        if (resi1_sele.size())
-            resi1_sele = " and ( " + resi1_sele + ")";
-        if (resi2_sele.size())
-            resi2_sele = " and ( " + resi2_sele + ")";
+
+        // Wrap final selections in parentheses
+        for (int h = 0; h < num_hinges; h++)
+        {
+            if (resi1_sele[h].size()) resi1_sele[h] = " and ( " + resi1_sele[h] + ")";
+            if (resi2_sele[h].size()) resi2_sele[h] = " and ( " + resi2_sele[h] + ")";
+        }
     }
 
     /* write pymol script */
@@ -1867,36 +1890,51 @@ void output_flexalign_pymol(const string xname, const string yname,
     pml_list.push_back(fname_super + "_all_atm");
     pml_list.push_back(fname_super + "_all_atm_lig");
 
+    // Define 35 distinct PyMOL colors for Structure 1 
+    // The first 10 are highly contrasting for standard cases
+    const char* color1_list[] = {
+        "blue", "red", "green", "yellow", "magenta", "cyan", "orange", "purple", "brown", "pink", // Top 10 highly contrasting
+        "marine", "firebrick", "forest", "gold", "violet", "deepteal", "salmon", "aquamarine", "chocolate", "hotpink",
+        "lime", "olive", "slate", "paleblue", "palegreen", "paleyellow", "lightpink", "lightblue", "lightmagenta",
+        "dirtyviolet", "dash", "tv_blue", "tv_red", "tv_green" // Extended palette to safely cover >31 hinges
+    };
+    int color_palette_size = sizeof(color1_list) / sizeof(color1_list[0]);
+
     for (int p = 0; p < pml_list.size(); p++)
     {
-        if (mm_opt && p <= 1)
-            continue;
+        if (mm_opt && p <= 1) continue;
         buf_pymol
             << "#!/usr/bin/env pymol\n"
             << "cmd.load(\"" << fname_super_full << "\", \"structure1\")\n"
             << "cmd.load(\"" << yname << "\", \"structure2\")\n"
             << "hide all\n"
             << "set all_states, " << ((ter_opt == 0) ? "on" : "off") << '\n';
+
         if (p == 0) // .pml
         {
             if (chain1_sele.size())
-                buf_pymol
-                    << "remove structure1 and not " << chain1_sele.substr(4) << "\n";
+                buf_pymol << "remove structure1 and not " << chain1_sele.substr(4) << "\n";
             if (chain2_sele.size())
-                buf_pymol
-                    << "remove structure2 and not " << chain2_sele.substr(4) << "\n";
-            buf_pymol
-                << "remove not n. CA and not n. C3'\n"
-                << resi1_bond
-                << resi2_bond
-                << "show stick, structure1" << chain1_sele << resi1_sele << "\n"
-                << "show stick, structure2" << chain2_sele << resi2_sele << "\n";
+                buf_pymol << "remove structure2 and not " << chain2_sele.substr(4) << "\n";
+            buf_pymol << "remove not n. CA and not n. C3'\n";
+
+            // Add bonds for each hinge
+            for (int h = 0; h < num_hinges; h++) {
+                buf_pymol << resi1_bond[h] << resi2_bond[h];
+            }
+            // Show sticks for each aligned hinge region
+            for (int h = 0; h < num_hinges; h++) {
+                if (resi1_sele[h].size()) buf_pymol << "show stick, structure1" << chain1_sele << resi1_sele[h] << "\n";
+                if (resi2_sele[h].size()) buf_pymol << "show stick, structure2" << chain2_sele << resi2_sele[h] << "\n";
+            }
         }
         else if (p == 1) // _atm.pml
         {
-            buf_pymol
-                << "show cartoon, structure1" << chain1_sele << resi1_sele << "\n"
-                << "show cartoon, structure2" << chain2_sele << resi2_sele << "\n";
+            // Show cartoons for aligned hinge regions
+            for (int h = 0; h < num_hinges; h++) {
+                if (resi1_sele[h].size()) buf_pymol << "show cartoon, structure1" << chain1_sele << resi1_sele[h] << "\n";
+                if (resi2_sele[h].size()) buf_pymol << "show cartoon, structure2" << chain2_sele << resi2_sele[h] << "\n";
+            }
         }
         else if (p == 2) // _all.pml
         {
@@ -1918,9 +1956,27 @@ void output_flexalign_pymol(const string xname, const string yname,
                 << "show stick, not polymer\n"
                 << "show sphere, not polymer\n";
         }
+        
+        // Create selection groups in PyMOL for easy user interaction
+        for (int h = 0; h < num_hinges; h++) {
+            if (resi1_sele[h].size()) buf_pymol << "select hinge_" << h << "_str1, structure1" << chain1_sele << resi1_sele[h] << "\n";
+            if (resi2_sele[h].size()) buf_pymol << "select hinge_" << h << "_str2, structure2" << chain2_sele << resi2_sele[h] << "\n";
+        }
+        
+        // Global color setting: Structure 1 unaligned gets light gray, Structure 2 gets solid darker gray
         buf_pymol
-            << "color blue, structure1\n"
-            << "color red, structure2\n"
+            << "color grey, structure1\n"
+            << "color white, structure2\n";
+
+        // Color each hinge in Structure 1 with distinct colors
+        for (int h = 0; h < num_hinges; h++) {
+            if (resi1_sele[h].size()) {
+                buf_pymol << "color " << color1_list[h % color_palette_size] << ", hinge_" << h << "_str1\n";
+            }
+            // Structure 2 remains gray, so we don't apply specific colors to it
+        }
+
+        buf_pymol
             << "set ribbon_width, 6\n"
             << "set stick_radius, 0.3\n"
             << "set sphere_scale, 0.25\n"
