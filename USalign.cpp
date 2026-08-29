@@ -16,7 +16,7 @@ void print_version()
 " * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
 " *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
 " *            C Zhang, AM Pyle (2022) iScience.                     *\n"
-" * Please email comments and suggestions to zhang@zhanggroup.org    *\n"
+" * Please email comments and suggestions to zhanglab@zhanggroup.org *\n"
 " ********************************************************************"
     << endl;
 }
