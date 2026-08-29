@@ -13,7 +13,7 @@ void print_version()
 " *       0.0 < TM-score < 0.17, random structural similarity             *\n"
 " *       0.5 < TM-score < 1.00, in about the same fold                   *\n"
 " * Reference: Yang Zhang and Jeffrey Skolnick, Proteins 2004 57: 702-710 *\n"
-" * For comments, please email to: yangzhanglab@umich.edu                 *\n"
+" * For comments, please email to: zhanglab@zhanggroup.org                *\n"
 " *************************************************************************"
     << endl;
 }
