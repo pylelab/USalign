@@ -2989,23 +2989,23 @@ void output_rasmol(const string xname, const string yname,
     /* write rasmol script */
     if (!mm_opt)
     {
-        fp.open((fname_super).c_str());
+        fp.open((fname_super+".spt").c_str());
         fp << buf.str();
         fp.close();
     }
-    fp.open((fname_super + "_all").c_str());
+    fp.open((fname_super + "_all.spt").c_str());
     fp << buf_all.str();
     fp.close();
     if (!mm_opt)
     {
-        fp.open((fname_super + "_atm").c_str());
+        fp.open((fname_super + "_atm.spt").c_str());
         fp << buf_atm.str();
         fp.close();
     }
-    fp.open((fname_super + "_all_atm").c_str());
+    fp.open((fname_super + "_all_atm.spt").c_str());
     fp << buf_all_atm.str();
     fp.close();
-    fp.open((fname_super + "_all_atm_lig").c_str());
+    fp.open((fname_super + "_all_atm_lig.spt").c_str());
     fp << buf_all_atm_lig.str();
     fp.close();
     // fp.open((fname_super+".pdb").c_str());
