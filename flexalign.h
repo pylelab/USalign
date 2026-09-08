@@ -131,10 +131,10 @@ int flexalign_main(double **xa, double **ya,
                 xa_h[r1][2] = xa[i][2];
                 r1++;
             }
-            if (seqxA[r] == '-')
+            else if (seqxA[r] == '-')
             {
-                seqy_h[r2] = seqx[j];
-                secy_h[r2] = secx[j];
+                seqy_h[r2] = seqy[j];
+                secy_h[r2] = secy[j];
                 ya_h[r2][0] = ya[j][0];
                 ya_h[r2][1] = ya[j][1];
                 ya_h[r2][2] = ya[j][2];
@@ -198,10 +198,10 @@ int flexalign_main(double **xa, double **ya,
                 xa_h[r1][2] = xa[i][2];
                 r1++;
             }
-            if (seqxA[r] != '-' && seqyA[r] != '-')
+            else if (seqxA[r] != '-' && seqyA[r] != '-')
             {
-                seqy_h[r2] = seqx[j];
-                secy_h[r2] = secx[j];
+                seqy_h[r2] = seqy[j];
+                secy_h[r2] = secy[j];
                 ya_h[r2][0] = ya[j][0];
                 ya_h[r2][1] = ya[j][1];
                 ya_h[r2][2] = ya[j][2];
@@ -315,8 +315,8 @@ int flexalign_main(double **xa, double **ya,
             }
             if (seqxA[r] == '-')
             {
-                seqy_h[r2] = seqx[j];
-                secy_h[r2] = secx[j];
+                seqy_h[r2] = seqy[j];
+                secy_h[r2] = secy[j];
                 ya_h[r2][0] = ya[j][0];
                 ya_h[r2][1] = ya[j][1];
                 ya_h[r2][2] = ya[j][2];
