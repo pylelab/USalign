@@ -99,6 +99,8 @@
    2026/08/14: Implement flexible structure alignment by -mm 7
    2026/08/19: Print version for -mm 1 when aligning monomers
    2026/08/26: color different regions by different colors in -mm 7 -o
+   2026/09/08: fix bug in secondary structure-based initial alignment in 
+               flexible structure alignment
 ===============================================================================
 
 =========================
