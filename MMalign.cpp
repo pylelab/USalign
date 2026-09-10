@@ -37,7 +37,6 @@ void print_extra_help()
             "             (note the spaces before and after CA).\n"
             "\n"
             "    -mol     Types of molecules to align\n"
-            "Molecule type: RNA or protein\n"
             "             auto   : (default) align both proteins and nucleic acids\n"
             "             protein: only align proteins\n"
             "             RNA    : only align nucleic acids (RNA and DNA)\n"
@@ -56,7 +55,7 @@ void print_extra_help()
             "    -TMcut   -1: (default) do not consider TMcut\n"
             "             Values in [0.5,1): Do not proceed with TM-align for this\n"
             "                 structure pair if TM-score is unlikely to reach TMcut.\n"
-            "                 TMcut is normalized is set by -a option:\n"
+            "                 TMcut is normalized as set by -a option:\n"
             "                 -2: normalized by longer structure length\n"
             "                 -1: normalized by shorter structure length\n"
             "                  0: (default, same as F) normalized by second structure\n"
@@ -64,7 +63,7 @@ void print_extra_help()
             "\n"
             "    -mirror  Whether to align the mirror image of input structure\n"
             "             0: (default) do not align mirrored structure\n"
-            "             1: align mirror of chain1 to origin chain2\n"
+            "             1: align mirror of complex1 to origin complex2\n"
             "\n"
             "    -het     Whether to align residues marked as 'HETATM' in addition to 'ATOM  '\n"
             "             0: (default) only align 'ATOM  ' residues\n"
@@ -75,7 +74,7 @@ void print_extra_help()
             "            -1: (default) automatically detect PDB or PDBx/mmCIF format\n"
             "             0: PDB format\n"
             "             1: SPICKER format\n"
-            "             2: xyz format\n"
+            //"             2: xyz format\n"
             "             3: PDBx/mmCIF format\n"
          << endl;
 }
@@ -383,12 +382,12 @@ int main(int argc, char *argv[])
              << "RMSD\tID1\tID2\tIDali\tL1\tL2\tLali" << endl;
 
     /* declare previously global variables */
-    vector<vector<vector<double>>> xa_vec; // structure of complex1
-    vector<vector<vector<double>>> ya_vec; // structure of complex2
-    vector<vector<char>> seqx_vec;         // sequence of complex1
-    vector<vector<char>> seqy_vec;         // sequence of complex2
-    vector<vector<char>> secx_vec;         // secondary structure of complex1
-    vector<vector<char>> secy_vec;         // secondary structure of complex2
+    vector<vector<vector<double> > > xa_vec;// structure of complex1
+    vector<vector<vector<double> > > ya_vec;// structure of complex2
+    vector<vector<char> > seqx_vec;         // sequence of complex1
+    vector<vector<char> > seqy_vec;         // sequence of complex2
+    vector<vector<char> > secx_vec;         // secondary structure of complex1
+    vector<vector<char> > secy_vec;         // secondary structure of complex2
     vector<int> mol_vec1;                  // molecule type of complex1, RNA if >0
     vector<int> mol_vec2;                  // molecule type of complex2, RNA if >0
     vector<string> chainID_list1;          // list of chainID1
@@ -495,12 +494,12 @@ int main(int argc, char *argv[])
         sequence.clear();
         do_vec.clear();
 
-        vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-        vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-        vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-        vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-        vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-        vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+        vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+        vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+        vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+        vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+        vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+        vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
         mol_vec1.clear();                              // molecule type of complex1, RNA if >0
         mol_vec2.clear();                              // molecule type of complex2, RNA if >0
         chainID_list1.clear();                         // list of chainID1
@@ -520,12 +519,12 @@ int main(int argc, char *argv[])
     vector<string> tmp_str_vec(chain2_num, "");
     double **TMave_mat;
     double **ut_mat; // rotation matrices for all-against-all alignment
-    int ui, uj, ut_idx;
-    NewArray(&TMave_mat, chain1_num, chain2_num);
-    NewArray(&ut_mat, chain1_num * chain2_num, 4 * 3);
-    vector<vector<string>> seqxA_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqM_mat(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqyA_mat(chain1_num, tmp_str_vec);
+    int ui,uj,ut_idx;
+    NewArray(&TMave_mat,chain1_num,chain2_num);
+    NewArray(&ut_mat,chain1_num*chain2_num,4*3);
+    vector<vector<string> >seqxA_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> > seqM_mat(chain1_num,tmp_str_vec);
+    vector<vector<string> >seqyA_mat(chain1_num,tmp_str_vec);
 
     double maxTMmono = -1;
     int maxTMmono_i, maxTMmono_j;
@@ -558,7 +557,7 @@ int main(int argc, char *argv[])
             ut_mat[ut_idx][4] = 1;
             ut_mat[ut_idx][8] = 1;
 
-            if (mol_vec1[i] * mol_vec2[j] < 0) // no protein-RNA alignment
+            if (mol_vec1[i] * mol_vec2[j] < 0 && atom_opt!="PC4'") // no protein-RNA alignment
             {
                 TMave_mat[i][j] = -1;
                 continue;
@@ -706,8 +705,8 @@ int main(int argc, char *argv[])
     assign2_init = new int[chain2_num];
     double **TMave_init;
     NewArray(&TMave_init, chain1_num, chain2_num);
-    vector<vector<string>> seqxA_init(chain1_num, tmp_str_vec);
-    vector<vector<string>> seqyA_init(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqxA_init(chain1_num, tmp_str_vec);
+    vector<vector<string> > seqyA_init(chain1_num, tmp_str_vec);
     vector<string> sequence_init;
     copy_chain_assign_data(chain1_num, chain2_num, sequence_init,
                            seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
@@ -723,7 +722,7 @@ int main(int argc, char *argv[])
                  seqx_vec, seqy_vec, secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec,
                  ylen_vec, xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num,
                  chain2_num, TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list,
-                 sequence, d0_scale, fast_opt, chainmap);
+                 sequence, d0_scale, fast_opt, chainmap, atom_opt);
 
     if (aln_chain_num >= 4 && is_oligomer && chainmap.size() == 0) // oligomer alignment
     {
@@ -789,7 +788,7 @@ int main(int argc, char *argv[])
                      secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
                      xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
                      TMave_mat, seqxA_mat, seqyA_mat, assign1_list, assign2_list, sequence,
-                     d0_scale, fast_opt, chainmap);
+                     d0_scale, fast_opt, chainmap, atom_opt);
     }
 
     /* perform cross chain alignment
@@ -801,21 +800,13 @@ int main(int argc, char *argv[])
             seqxA_mat, seqyA_mat, assign1_list, assign2_list, TMave_mat,
             seqxA_init, seqyA_init, assign1_init, assign2_init, TMave_init);
     double max_total_score_cross = max_total_score;
-
-    // if (init_pair_num!=2 && is_oligomer==false) MMalign_cross(
-    // max_total_score_cross, max_iter, xa_vec, ya_vec, seqx_vec, seqy_vec,
-    // secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
-    // xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
-    // TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init, sequence_init,
-    // d0_scale, true);
-    // else
     if (len_aa + len_na < 10000)
     {
         MMalign_dimer(max_total_score_cross, xa_vec, ya_vec, seqx_vec, seqy_vec,
                       secx_vec, secy_vec, mol_vec1, mol_vec2, xlen_vec, ylen_vec,
                       xa, ya, seqx, seqy, secx, secy, len_aa, len_na, chain1_num, chain2_num,
                       TMave_init, seqxA_init, seqyA_init, assign1_init, assign2_init,
-                      sequence_init, d0_scale, fast_opt);
+                      sequence_init, d0_scale, fast_opt, atom_opt);
         if (max_total_score_cross > max_total_score)
         {
             max_total_score = max_total_score_cross;
@@ -840,27 +831,27 @@ int main(int argc, char *argv[])
                   a_opt, d_opt, fast_opt, full_opt, mirror_opt, resi_vec1, resi_vec2);
 
     /* clean up everything */
-    delete[] assign1_list;
-    delete[] assign2_list;
-    DeleteArray(&TMave_mat, chain1_num);
-    DeleteArray(&ut_mat, chain1_num * chain2_num);
-    vector<vector<string>>().swap(seqxA_mat);
-    vector<vector<string>>().swap(seqM_mat);
-    vector<vector<string>>().swap(seqyA_mat);
+    delete [] assign1_list;
+    delete [] assign2_list;
+    DeleteArray(&TMave_mat,chain1_num);
+    DeleteArray(&ut_mat, chain1_num*chain2_num);
+    vector<vector<string> >().swap(seqxA_mat);
+    vector<vector<string> >().swap(seqM_mat);
+    vector<vector<string> >().swap(seqyA_mat);
     vector<string>().swap(tmp_str_vec);
 
     delete[] assign1_init;
     delete[] assign2_init;
     DeleteArray(&TMave_init, chain1_num);
-    vector<vector<string>>().swap(seqxA_init);
-    vector<vector<string>>().swap(seqyA_init);
+    vector<vector<string> >().swap(seqxA_init);
+    vector<vector<string> >().swap(seqyA_init);
 
-    vector<vector<vector<double>>>().swap(xa_vec); // structure of complex1
-    vector<vector<vector<double>>>().swap(ya_vec); // structure of complex2
-    vector<vector<char>>().swap(seqx_vec);         // sequence of complex1
-    vector<vector<char>>().swap(seqy_vec);         // sequence of complex2
-    vector<vector<char>>().swap(secx_vec);         // secondary structure of complex1
-    vector<vector<char>>().swap(secy_vec);         // secondary structure of complex2
+    vector<vector<vector<double> > >().swap(xa_vec); // structure of complex1
+    vector<vector<vector<double> > >().swap(ya_vec); // structure of complex2
+    vector<vector<char> >().swap(seqx_vec);         // sequence of complex1
+    vector<vector<char> >().swap(seqy_vec);         // sequence of complex2
+    vector<vector<char> >().swap(secx_vec);         // secondary structure of complex1
+    vector<vector<char> >().swap(secy_vec);         // secondary structure of complex2
     mol_vec1.clear();                              // molecule type of complex1, RNA if >0
     mol_vec2.clear();                              // molecule type of complex2, RNA if >0
     vector<string>().swap(chainID_list1);          // list of chainID1
@@ -879,6 +870,7 @@ int main(int argc, char *argv[])
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1) / CLOCKS_PER_SEC;
-    printf("#Total CPU time is %5.2f seconds\n", diff);
+    if (outfmt_opt < 2)
+        printf("#Total CPU time is %5.2f seconds\n", diff);
     return 0;
 }
