@@ -101,6 +101,7 @@
    2026/08/26: color different regions by different colors in -mm 7 -o
    2026/09/08: fix bug in secondary structure-based initial alignment in 
                flexible structure alignment. use .spt for -rasmol output
+   2026/09/11: allow alignment of chains not specified by -chainmap
 ===============================================================================
 
 =========================
