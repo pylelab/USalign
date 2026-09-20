@@ -102,6 +102,7 @@
    2026/09/08: fix bug in secondary structure-based initial alignment in 
                flexible structure alignment. use .spt for -rasmol output
    2026/09/11: allow alignment of chains not specified by -chainmap
+   2026/09/20: fix bug in -mm 1 -se -outfmt 2
 ===============================================================================
 
 =========================

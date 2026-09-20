@@ -1699,7 +1699,7 @@ void MMalign_se_final(
         d0A, d0B, d0u, d0a, d0_out, seqM, seqxA, seqyA, do_vec,
         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
         xlen, ylen, sequence, Lnorm_ass, d0_scale,
-        3, a_opt, false, d_opt, fast_opt, mol_type, invmap);
+        3, a_opt, false, d_opt, mol_type, 0, invmap);
     delete [] invmap;
 
     /* prepare full complex alignment */
@@ -2724,7 +2724,7 @@ int TMalign_dimer_main(double **xa, double **ya,
     }
     if(!flag)
     {
-        cout << "There is no alignment between the two structures! "
+        cout << "There is no alignment between the two complexes! "
              << "Program stop with no result!" << endl;
         TM1=TM2=TM3=TM4=TM5=0;
         return 1;
