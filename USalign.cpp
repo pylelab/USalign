@@ -929,7 +929,7 @@ int MMalign(const string &xname, const string &yname,
                         rmsd0, L_ali, Liden, TM_ali, rmsd_ali, n_ali, n_ali8,
                         xlen, ylen, sequence, Lnorm_tmp, d0_scale,
                         i_opt, false, true, false,
-                        mol_vec1[i] + mol_vec2[j], outfmt_opt, invmap);
+                        mol_vec1[i] + mol_vec2[j], 0, invmap);
                 if (outfmt_opt >= 2)
                 {
                     Liden = L_ali = 0;
