@@ -608,7 +608,7 @@ double get_score_fast(double **r1, double **r2, double **xtm, double **ytm,
             if (d002t < dis_vec[2])
                 d002t = dis_vec[2];
         else if (d002t < dis_vec.back())
-            d002t < dis_vec.back();
+            d002t = dis_vec.back();
 
         dis_vec.clear();
         while (1)
