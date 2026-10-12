@@ -11,7 +11,7 @@ void print_version()
     cout << 
 "\n"
 " ********************************************************************\n"
-" * US-align (Version 20260920)                                      *\n"
+" * US-align (Version 20261012)                                      *\n"
 " * Universal Structure Alignment of Proteins and Nucleic Acids      *\n"
 " * Reference: C Zhang, L Freddolino, Y Zhang. (2026) Nat Protoc     *\n"
 " *            C Zhang, M Shine, AM Pyle, Y Zhang. (2022) Nat Methods*\n"
@@ -1047,9 +1047,15 @@ int MMalign(const string &xname, const string &yname,
         }
         else
         {
-            hetero_refined_greedy_search(TMave_mat, assign2_list,
+            double **TMave_mat_T;
+            NewArray(&TMave_mat_T, chain2_num, chain1_num);
+            for (int ti = 0; ti < chain1_num; ti++)
+                for (int tj = 0; tj < chain2_num; tj++)
+                    TMave_mat_T[tj][ti] = TMave_mat[ti][tj];
+            hetero_refined_greedy_search(TMave_mat_T, assign2_list,
                                          assign1_list, chain2_num, chain1_num, ycentroids,
                                          xcentroids, d0MM, len_aa + len_na);
+            DeleteArray(&TMave_mat_T, chain2_num);
         }
 
         /* clean up */
