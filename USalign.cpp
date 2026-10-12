@@ -1119,9 +1119,24 @@ int MMalign(const string &xname, const string &yname,
                                    assign2_list, chain1_num, chain2_num, xcentroids,
                                    ycentroids, d0MM, len_aa + len_na, ut_mat);
 
-        hetero_refined_greedy_search(TMave_mat, assign1_list,
+        if (chain1_num <= chain2_num)
+        {
+            hetero_refined_greedy_search(TMave_mat, assign1_list,
                                      assign2_list, chain1_num, chain2_num, xcentroids,
                                      ycentroids, d0MM, len_aa + len_na);
+        }
+        else
+        {
+            double **TMave_mat_T;
+            NewArray(&TMave_mat_T, chain2_num, chain1_num);
+            for (int ti = 0; ti < chain1_num; ti++)
+                for (int tj = 0; tj < chain2_num; tj++)
+                    TMave_mat_T[tj][ti] = TMave_mat[ti][tj];
+            hetero_refined_greedy_search(TMave_mat_T, assign2_list,
+                                     assign1_list, chain2_num, chain1_num, ycentroids,
+                                     xcentroids, d0MM, len_aa + len_na);
+            DeleteArray(&TMave_mat_T, chain2_num);
+        }
 
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
