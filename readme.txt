@@ -104,6 +104,7 @@
    2026/09/11: allow alignment of chains not specified by -chainmap
    2026/09/20: fix bug in -mm 1 -se -outfmt 2
    2026/10/12: fix out of boundary bug of hetero_refined_greedy_search 
+   2026/10/19: fix additional bug for -mm 1 -se -outfmt 2
 ===============================================================================
 
 =========================

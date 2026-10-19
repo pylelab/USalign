@@ -8,7 +8,7 @@ void print_version()
 {
     cout << "\n"
             " **********************************************************************\n"
-            " * MM-align (Version 20261012): complex structure alignment           *\n"
+            " * MM-align (Version 20261019): complex structure alignment           *\n"
             " * References: S Mukherjee, Y Zhang. Nucl Acids Res 37(11):e83 (2009) *\n"
             " * Please email comments and suggestions to zhanglab@zhanggroup.org   *\n"
             " **********************************************************************"
@@ -772,9 +772,24 @@ int main(int argc, char *argv[])
                                    assign2_list, chain1_num, chain2_num, xcentroids,
                                    ycentroids, d0MM, len_aa + len_na, ut_mat);
 
-        hetero_refined_greedy_search(TMave_mat, assign1_list,
+        if (chain1_num <= chain2_num)
+        {
+            hetero_refined_greedy_search(TMave_mat, assign1_list,
                                      assign2_list, chain1_num, chain2_num, xcentroids,
                                      ycentroids, d0MM, len_aa + len_na);
+        }
+        else
+        {
+            double **TMave_mat_T;
+            NewArray(&TMave_mat_T, chain2_num, chain1_num);
+            for (int ti = 0; ti < chain1_num; ti++)
+                for (int tj = 0; tj < chain2_num; tj++)
+                    TMave_mat_T[tj][ti] = TMave_mat[ti][tj];
+            hetero_refined_greedy_search(TMave_mat_T, assign2_list,
+                                     assign1_list, chain2_num, chain1_num, ycentroids,
+                                     xcentroids, d0MM, len_aa + len_na);
+            DeleteArray(&TMave_mat_T, chain2_num);
+        }
 
         /* clean up */
         DeleteArray(&xcentroids, chain1_num);
@@ -880,13 +895,13 @@ int main(int argc, char *argv[])
     ylen_vec.clear();                              // length of complex2
     vector<string>().swap(chain1_list);
     vector<string>().swap(chain2_list);
-    vector<string>().swap(sequence);
     vector<string>().swap(resi_vec1); // residue index for chain1
     vector<string>().swap(resi_vec2); // residue index for chain2
     vector<string>().swap(chain2parse1);
     vector<string>().swap(chain2parse2);
     vector<string>().swap(model2parse1);
     vector<string>().swap(model2parse2);
+    vector<string>().swap(sequence);
 
     t2 = clock();
     float diff = ((float)t2 - (float)t1) / CLOCKS_PER_SEC;
